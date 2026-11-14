@@ -14,7 +14,8 @@ test('import: struttura del piano di esempio', () => {
   assert.equal(plan.weeks.length, 3);
   assert.equal(exercises.length, 7); // 4 esercizi comuni + 3 varianti di hang (85/90/70%)
   assert.deepEqual(plan.weeks.map(weekMinutes), [135, 135, 135]);
-  assert.deepEqual(plan.weeks[0].map(d => d.sessions.length), [2, 0, 1, 1, 0, 1, 0]);
+  assert.deepEqual(plan.weeks[0].map(d => d.sessions.length), [1, 0, 1, 1, 0, 1, 0]); // la seconda sessione di Blok si accoda alla prima
+  assert.deepEqual(plan.weeks[0][0].sessions[0].blocks.map(b => b.minutes), [20, 7, 30, 4]);
   assert.equal(plan.weeks[2][0].sessions[0].period, 'deload');
 });
 
@@ -144,7 +145,7 @@ test('analisi: settimane, carico sRPE e aderenza al piano', () => {
   const extras = [{ id: 'x1', date: '2026-11-17', type: 'wall', period: 'base', blocks: [{ id: 'b', exId: 'e', minutes: 45 }] },
     { id: 'x2', date: '2026-11-18', type: 'wall', period: 'base', blocks: [] }];
   const sched = C.scheduled(plan, extras);
-  assert.equal(sched.length, 16); // 5 a settimana × 3 + 1 extra (quella senza esercizi non conta)
+  assert.equal(sched.length, 13); // 4 a settimana × 3 + 1 extra (quella senza esercizi non conta)
   const mon = plan.weeks[0][0].sessions[0], wed = plan.weeks[0][2].sessions[0];
   const logs = [
     { date: '2026-11-16', sid: mon.id, type: 'wall', minutes: 60, rpe: 8, feel: 4 },
@@ -156,12 +157,12 @@ test('analisi: settimane, carico sRPE e aderenza al piano', () => {
   ];
   const wk = C.weeklyStats(logs, sched, '2026-11-16', '2026-11-29');
   assert.deepEqual(wk, [
-    { week: '2026-11-16', sessions: 3, minutes: 150, load: 780, rpe: 7, feel: 3, plannedMinutes: 180, plannedSessions: 6 },
-    { week: '2026-11-23', sessions: 1, minutes: 30, load: 150, rpe: 5, feel: null, plannedMinutes: 135, plannedSessions: 5 },
+    { week: '2026-11-16', sessions: 3, minutes: 150, load: 780, rpe: 7, feel: 3, plannedMinutes: 180, plannedSessions: 5 },
+    { week: '2026-11-23', sessions: 1, minutes: 30, load: 150, rpe: 5, feel: null, plannedMinutes: 135, plannedSessions: 4 },
   ]);
-  // al 19 nov erano in programma 5 sessioni (lun ×2, extra di martedì, mer, gio) e 3 hanno una registrazione
+  // al 19 nov erano in programma 4 sessioni (lun, extra di martedì, mer, gio) e 3 hanno una registrazione
   const sum = C.summary(logs, sched, '2026-11-16', '2026-11-29', '2026-11-19');
-  assert.deepEqual(sum, { sessions: 4, minutes: 180, rpe: 19 / 3, rpeN: 3, feel: 3, due: 5, dueDone: 3 });
+  assert.deepEqual(sum, { sessions: 4, minutes: 180, rpe: 19 / 3, rpeN: 3, feel: 3, due: 4, dueDone: 3 });
   assert.deepEqual(C.minutesByType(logs, '2026-11-16', '2026-11-29'), [
     { type: 'wall', minutes: 100, sessions: 2 }, { type: 'skills', minutes: 50, sessions: 1 }, { type: 'other', minutes: 30, sessions: 1 }]);
   assert.deepEqual(C.weeklyStats([], [], '2026-11-20', '2026-11-10'), []);

@@ -187,7 +187,8 @@
           sessions.push({ id: uid(), type: d.type, period: PERIODS[d.period] ? d.period : 'base', blocks: blocksOf(d.plannedBlocks) });
         if (d && d.secondType && DAY_TYPES[d.secondType])
           sessions.push({ id: uid(), type: d.secondType, period: PERIODS[d.secondPeriod] ? d.secondPeriod : 'base', blocks: blocksOf(d.secondPlannedBlocks) });
-        return { sessions };
+        // Un giorno = una sessione: la seconda sessione di Blok (es. il conditioning) si accoda alla prima.
+        return { sessions: sessions.length > 1 ? [{ ...sessions[0], blocks: sessions.flatMap(x => x.blocks) }] : sessions };
       });
       while (days.length < 7) days.push({ sessions: [] });
       return days;

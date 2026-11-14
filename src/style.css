@@ -88,3 +88,13 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
 #player .ctl{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}#player .ctl2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
 #player .btn{min-height:54px;font-size:17px}
 [hidden]{display:none!important}
+
+/* Sessione in corso: elenco degli esercizi, uno alla volta */
+#runner{position:fixed;inset:0;z-index:15;background:var(--bg);overflow:auto;padding:calc(var(--st) + 16px) 16px calc(var(--sb) + 24px)}
+#runner .in{max-width:640px;margin:0 auto}
+.run-r{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line)}.run-r:first-child{border-top:0}
+.run-r .st{width:26px;height:26px;border-radius:50%;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--mu);flex:none}
+.run-r.done .st{background:#173322;border-color:#173322;color:var(--ok)}.run-r.done .n{color:var(--mu)}
+/* Riordino per trascinamento */
+.grip{touch-action:none;cursor:grab;color:var(--mu);font-size:20px;line-height:1;padding:10px 10px 10px 2px;margin:-10px 0;user-select:none;-webkit-user-select:none;align-self:center}
+.blk.drag{background:#22262b;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.45);position:relative;z-index:1}

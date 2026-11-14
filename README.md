@@ -10,7 +10,7 @@ Al primo avvio l'app è vuota: ogni utente importa o crea i propri piani. Nessun
 |---|---|
 | `src/core.js` | Logica pura (date, carichi, passi del player, import/export). Unico file coperto da unit test. |
 | `src/charts.js` | Grafici SVG senza dipendenze (colonne, linee, barre orizzontali) con tooltip e vista tabella. |
-| `src/app.js` | Interfaccia: viste, calendario, editor, player, analisi. |
+| `src/app.js` | Interfaccia: Home, calendario, sessione in corso (un esercizio alla volta), diario, analisi. |
 | `src/style.css`, `src/index.html` | Stile e scheletro della pagina. |
 | `public/` | Manifest, service worker e icona per la versione installabile. |
 | `build.mjs` | Produce `dist/index.html` (file unico) e `docs/` (installabile). |

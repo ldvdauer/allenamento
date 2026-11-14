@@ -99,18 +99,28 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
 #player .ctl{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}#player .ctl2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
 #player .btn{min-height:54px;font-size:17px}
 [hidden]{display:none!important}
+
+/* Sessione in corso: elenco degli esercizi, uno alla volta */
+#runner{position:fixed;inset:0;z-index:15;background:var(--bg);overflow:auto;padding:calc(var(--st) + 16px) 16px calc(var(--sb) + 24px)}
+#runner .in{max-width:640px;margin:0 auto}
+.run-r{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line)}.run-r:first-child{border-top:0}
+.run-r .st{width:26px;height:26px;border-radius:50%;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--mu);flex:none}
+.run-r.done .st{background:#173322;border-color:#173322;color:var(--ok)}.run-r.done .n{color:var(--mu)}
+/* Riordino per trascinamento */
+.grip{touch-action:none;cursor:grab;color:var(--mu);font-size:20px;line-height:1;padding:10px 10px 10px 2px;margin:-10px 0;user-select:none;-webkit-user-select:none;align-self:center}
+.blk.drag{background:#22262b;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.45);position:relative;z-index:1}
 </style>
 </head>
 <body>
 <main id="view"></main>
 <nav id="tabs">
-  <a href="#oggi"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Oggi</a>
+  <a href="#home"><svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v9h-5v-6h-6v6H4z"/></svg>Home</a>
   <a href="#calendario"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Calendario</a>
-  <a href="#piano"><svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/></svg>Piano</a>
   <a href="#diario"><svg viewBox="0 0 24 24"><path d="M5 4h12a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2zM9 9h6M9 13h6"/></svg>Diario</a>
   <a href="#analisi"><svg viewBox="0 0 24 24"><path d="M3 20h18M7 20v-7M12 20V5M17 20v-10"/></svg>Analisi</a>
   <a href="#altro"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>Altro</a>
 </nav>
+<section id="runner" hidden></section>
 <section id="player" hidden>
   <div class="bar"><i id="p-bar"></i></div>
   <div class="ph" id="p-ph"></div>
@@ -127,7 +137,7 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
   </div>
   <div class="ctl2">
     <button class="btn" id="p-plus" type="button">+30 s</button>
-    <button class="btn danger" id="p-quit" type="button">Esci</button>
+    <button class="btn" id="p-quit" type="button">Termina esercizio</button>
   </div>
 </section>
 <div id="toast" hidden></div>
@@ -320,7 +330,8 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
           sessions.push({ id: uid(), type: d.type, period: PERIODS[d.period] ? d.period : 'base', blocks: blocksOf(d.plannedBlocks) });
         if (d && d.secondType && DAY_TYPES[d.secondType])
           sessions.push({ id: uid(), type: d.secondType, period: PERIODS[d.secondPeriod] ? d.secondPeriod : 'base', blocks: blocksOf(d.secondPlannedBlocks) });
-        return { sessions };
+        // Un giorno = una sessione: la seconda sessione di Blok (es. il conditioning) si accoda alla prima.
+        return { sessions: sessions.length > 1 ? [{ ...sessions[0], blocks: sessions.flatMap(x => x.blocks) }] : sessions };
       });
       while (days.length < 7) days.push({ sessions: [] });
       return days;
@@ -705,8 +716,6 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
   const WD_FULL = ['lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato', 'domenica'];
   const MONTHS = ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic'];
   const MONTHS_FULL = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'];
-  const TYPES = Object.entries(C.DAY_TYPES).filter(([k]) => k !== 'rest');
-  const LOG_TYPES = TYPES.concat([['other', 'Altro']]);
   const FEEL = [['', '—'], ['1', '1 · Distrutto'], ['2', '2 · Stanco'], ['3', '3 · Così così'], ['4', '4 · Bene'], ['5', '5 · Ottimo']];
   const wdIdx = iso => (C.fromISO(iso).getDay() + 6) % 7;
   const fmtDate = iso => { const d = C.fromISO(iso); return `${d.getDate()} ${MONTHS[d.getMonth()]}`; };
@@ -716,7 +725,7 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
 
   /* ---------- Stato e persistenza ---------- */
   // Primo avvio: nessun piano precaricato, ogni utente importa o crea i propri.
-  const fresh = () => migrate({ v: 2, plans: [], activePlan: null, exercises: {}, logs: [], tests: [] });
+  const fresh = () => migrate({ v: 3, plans: [], activePlan: null, exercises: {}, logs: [], tests: [] });
   function migrate(s) { // completa i campi mancanti di backup vecchi o parziali
     s.extras = Array.isArray(s.extras) ? s.extras : [];
     s.surfaces = Array.isArray(s.surfaces) && s.surfaces.length ? s.surfaces : C.DEFAULT_SURFACES.map(x => ({ ...x }));
@@ -733,8 +742,17 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
       if (!l.type) l.type = x ? x.type : 'other';
     }
     if (s.live && !s.live.sid) { const x = s.live.planId ? at(s.live) : null; s.live = x ? { sid: x.id, idx: s.live.idx || 0, startedAt: s.live.startedAt || Date.now() } : null; }
+    // v3: nei programmi un giorno ha una sola sessione (niente più "Muro" / "Fuori muro" separati)
+    const moved = {};
+    for (const p of s.plans) for (const w of p.weeks) for (const d of w) if (d.sessions.length > 1) {
+      const first = d.sessions[0];
+      for (const x of d.sessions.slice(1)) { first.blocks.push(...x.blocks); moved[x.id] = first.id; }
+      d.sessions = [first];
+    }
+    for (const l of s.logs) if (moved[l.sid]) l.sid = moved[l.sid];
+    if (s.live) s.live = { sid: moved[s.live.sid] || s.live.sid, startedAt: s.live.startedAt || Date.now(), done: s.live.done || {} }; // la v2 riprendeva per passo, ora per esercizio
     s.live = s.live || null;
-    s.v = 2;
+    s.v = 3;
     return s;
   }
   function load() {
@@ -754,7 +772,6 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
     }
   }
   let S = load();
-  const plan = () => S.plans.find(p => p.id === S.activePlan) || null;
   const maxes = () => C.latestMaxes(S.tests);
   const surfName = k => (S.surfaces.find(x => x.key === k) || { name: k }).name;
   const surfOpts = () => [['', '—']].concat(S.surfaces.map(x => [x.key, x.name]));
@@ -832,8 +849,8 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
      Diario e player la riconoscono dal suo id, quindi spostare o copiare settimane non sposta lo stato "fatta". */
   const sessOf = r => (r.x ? r.x : r.p.weeks[r.w][r.d].sessions[r.si]);
   const isDone = r => { const id = sessOf(r).id; return S.logs.some(l => l.sid === id); };
-  const sessTitle = s => `${C.DAY_TYPES[s.type]} · ${C.PERIODS[s.period]}`;
-  const refTitle = r => (r.x ? r.x.title || sessTitle(r.x) : `${sessTitle(sessOf(r))} · ${r.p.title} S${r.w + 1}`);
+  // Titolo per diario e sessione in corso: quello scelto, altrimenti i primi due esercizi che non sono riscaldamento.
+  const autoTitle = s => s.title || s.blocks.map(b => S.exercises[b.exId]).filter(e => e && e.slot !== 'warmup').slice(0, 2).map(e => e.name).join(' · ') || 'Sessione';
   function findRef(sid) {
     const x = S.extras.find(e => e.id === sid);
     if (x) return { x };
@@ -843,10 +860,10 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
     }
     return null;
   }
-  /** Sessioni di una data: quelle del piano attivo più le extra. */
+  /** Sessioni di una data: quelle di tutti i programmi importati più quelle create a mano. */
   function refsOn(iso) {
-    const out = [], p = plan(), pos = p ? C.locate(p, iso) : null;
-    if (pos) p.weeks[pos.w][pos.d].sessions.forEach((_, si) => out.push({ p, w: pos.w, d: pos.d, si }));
+    const out = [];
+    for (const p of S.plans) { const pos = C.locate(p, iso); if (pos) p.weeks[pos.w][pos.d].sessions.forEach((_, si) => out.push({ p, w: pos.w, d: pos.d, si })); }
     for (const x of S.extras) if (x.date === iso) out.push({ x });
     return out;
   }
@@ -866,26 +883,49 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
     return out.join(' · ');
   }
   const exLine = e => [e.prescription, e.surface ? surfName(e.surface) : ''].filter(Boolean).join(' · ');
-  function blockRow(b, onclick) {
+  function blockRow(b, onclick, drag) {
     const ex = S.exercises[b.exId];
-    if (!ex) return h('div', { class: 'blk' }, h('span', { class: 'p' }, 'Esercizio rimosso'));
+    const grip = drag ? h('span', { class: 'grip', 'data-grip': '', role: 'img', 'aria-label': 'Trascina per riordinare', onclick: e => e.stopPropagation() }, '≡') : null;
+    if (!ex) return h('div', { class: 'blk', 'data-id': b.id }, grip, h('span', { class: 'p' }, 'Esercizio rimosso'));
     const hint = loadHint(ex);
-    return h('div', { class: 'blk', onclick, style: onclick ? 'cursor:pointer' : null },
+    return h('div', { class: 'blk', 'data-id': b.id, onclick, style: onclick ? 'cursor:pointer' : null }, grip,
       h('div', { class: 'grow' }, h('div', { class: 'n' }, ex.name), h('div', { class: 'p' }, exLine(ex)), hint ? h('div', { class: 'kg' }, hint) : null),
       h('div', { class: 'm' }, b.minutes + ' min'));
   }
+  /** Riordino per trascinamento dalla maniglia: la riga segue il dito, l'ordine si salva al rilascio. */
+  function enableDrag(list, s) {
+    list.addEventListener('pointerdown', e => {
+      const grip = e.target.closest('[data-grip]');
+      if (!grip) return;
+      const row = grip.closest('.blk');
+      e.preventDefault();
+      row.classList.add('drag');
+      const move = ev => {
+        const after = [...list.children].filter(x => x !== row).find(x => { const b = x.getBoundingClientRect(); return ev.clientY < b.top + b.height / 2; });
+        if (after) { if (row.nextSibling !== after) list.insertBefore(row, after); } else if (list.lastChild !== row) list.append(row);
+      };
+      // In ascolto sul documento: spostare la riga nel DOM fa perdere la cattura del puntatore alla maniglia.
+      const up = () => {
+        for (const [k, f] of [['pointermove', move], ['pointerup', up], ['pointercancel', up]]) document.removeEventListener(k, f);
+        const order = [...list.children].map(x => x.dataset.id);
+        s.blocks.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+        save(); render();
+      };
+      document.addEventListener('pointermove', move); document.addEventListener('pointerup', up); document.addEventListener('pointercancel', up);
+    });
+  }
+  const addBlock = (s, id) => s.blocks.push({ id: C.uid(), exId: id, minutes: C.intervalMinutes(S.exercises[id].interval) || 10 });
   function sessionCard(r, edit) {
-    const s = sessOf(r), done = isDone(r), named = r.x && r.x.title;
+    const s = sessOf(r), done = isDone(r);
+    const list = h('div', {}, s.blocks.map((b, bi) => blockRow(b, edit ? () => blockSheet(r, bi) : null, edit)));
+    if (edit) enableDrag(list, s);
     return h('div', { class: 'card' },
-      h('div', { class: 'row' }, h('div', { class: 'grow big', style: 'font-size:17px' }, named ? r.x.title : sessTitle(s)),
-        r.x ? h('span', { class: 'tag ac' }, 'Extra') : null, done ? h('span', { class: 'tag ok' }, 'Fatta') : null, h('span', { class: 'tag' }, C.sessionMinutes(s) + ' min')),
-      named ? h('div', { class: 'sub' }, sessTitle(s)) : null,
-      s.blocks.map((b, bi) => blockRow(b, edit ? () => blockSheet(r, bi) : null)),
-      s.blocks.length ? null : h('p', { class: 'sub' }, edit ? 'Nessun esercizio: aggiungine uno.' : 'Nessun esercizio.'),
+      h('div', { class: 'row' }, h('div', { class: 'grow big', style: 'font-size:17px' }, s.title || 'Sessione'),
+        done ? h('span', { class: 'tag ok' }, 'Fatta') : null, h('span', { class: 'tag' }, C.sessionMinutes(s) + ' min')),
+      list, s.blocks.length ? null : h('p', { class: 'sub' }, 'Nessun esercizio: aggiungili qui oppure durante la sessione.'),
       h('div', { class: 'btns' },
-        btn(done ? 'Ripeti' : 'Avvia', () => startSession(r, 0), 'pri'),
-        edit ? [btn('+ Esercizio', () => pickExercise(id => { s.blocks.push({ id: C.uid(), exId: id, minutes: C.intervalMinutes(S.exercises[id].interval) || 10 }); save(); render(); }), 'sm'),
-          btn('Sessione…', () => sessionSheet(r), 'sm')] : null));
+        btn(done ? 'Ripeti' : 'Avvia', () => startSession(r), 'pri'),
+        edit ? [btn('+ Esercizio', () => pickExercise(id => { addBlock(s, id); save(); render(); }), 'sm'), btn('Sessione…', () => sessionSheet(r), 'sm')] : null));
   }
   const climbText = c => surfName(c.surface) + (c.top ? ' ' + fmtG(c.top) : '') + (c.sends != null ? ` · ${c.sends} ${c.sends === 1 ? 'blocco' : 'blocchi'}` : '');
   const logCard = l => h('div', { class: 'card tap', onclick: () => logSheet(l) },
@@ -893,66 +933,45 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
     h('div', { class: 'sub' }, `${wdOf(l.date)} ${fmtDate(l.date)}${l.rpe ? ' · RPE ' + dec(l.rpe) : ''}${l.feel ? ' · sensazione ' + l.feel + '/5' : ''}`),
     (l.climbs || []).length ? h('div', { class: 'sub', style: 'color:var(--tx)' }, l.climbs.map(climbText).join('  |  ')) : null,
     (l.loads || []).length ? h('div', { class: 'p', style: 'color:var(--ac);font-size:13px' }, l.loads.map(x => `${x.name}: ${x.kg}`).join(' · ')) : null,
+    (l.blocks || []).some(b => b.note) ? h('div', { class: 'sub' }, l.blocks.filter(b => b.note).map(b => `${b.name}: ${b.note}`).join(' · ')) : null,
     l.notes ? h('div', { class: 'sub', style: 'margin-top:4px;color:var(--tx)' }, l.notes) : null);
 
-  /* ---------- Oggi ---------- */
-  let curWeek = null;
-  function viewToday() {
-    const p = plan(), t = C.todayISO(), out = [h('div', { class: 'sub' }, `${wdOf(t)} ${fmtDate(t)}`), h('h1', {}, 'Oggi')];
+  /* ---------- Home ---------- */
+  function viewHome() {
+    const t = C.todayISO(), refs = refsOn(t), out = [h('div', { class: 'sub', style: 'text-transform:capitalize' }, `${WD_FULL[wdIdx(t)]} ${fmtDate(t)}`), h('h1', {}, 'Home')];
     if (S.live) {
       const lr = findRef(S.live.sid);
-      if (lr) out.push(h('div', { class: 'card', style: 'border-color:var(--warn)' }, h('div', { class: 'n' }, 'Sessione interrotta'), h('div', { class: 'sub' }, refTitle(lr)),
-        h('div', { class: 'btns' }, btn('Riprendi', () => startSession(lr, S.live.idx), 'pri'), btn('Scarta', () => { S.live = null; save(); render(); }))));
+      if (lr) out.push(h('div', { class: 'card', style: 'border-color:var(--warn)' }, h('div', { class: 'n' }, 'Sessione in corso'), h('div', { class: 'sub' }, autoTitle(sessOf(lr))),
+        h('div', { class: 'btns' }, btn('Riprendi', () => startSession(lr), 'pri'), btn('Scarta', () => { S.live = null; save(); render(); }))));
       else S.live = null;
     }
-    const pos = p ? C.locate(p, t) : null, refs = refsOn(t);
-    if (!p) out.push(h('div', { class: 'card' }, h('div', { class: 'big' }, 'Benvenuto'),
-      h('p', { class: 'sub' }, 'Non c\'è ancora nessun piano. Importa un file .blokplan esportato da Blok Sessions, creane uno da zero, oppure aggiungi una sessione solo per oggi.'),
-      h('div', { class: 'btns' }, fileBtn('Importa .blokplan'), btn('Crea un piano', () => { location.hash = 'piano'; planSheet(); }, 'sm pri'))));
-    else {
-      out.push(h('div', { class: 'sub' }, p.title + (pos ? ` · settimana ${pos.w + 1} di ${p.weeks.length}` : '')));
-      if (!pos) {
-        const before = C.diffDays(t, p.startDate) < 0;
-        out.push(h('div', { class: 'card' }, h('p', {}, before ? `Il piano inizia ${wdOf(p.startDate)} ${fmtDate(p.startDate)} (tra ${-C.diffDays(t, p.startDate)} giorni).` : 'Il piano è concluso.'),
-          btn(before ? 'Apri il primo giorno' : 'Apri il piano', () => { location.hash = before ? 'giorno-0-0' : 'piano'; }, 'sm')));
-      } else if (!refs.length) out.push(h('div', { class: 'card' }, h('div', { class: 'big' }, 'Recupero'), h('p', { class: 'sub' }, 'Nessuna sessione in programma.')));
-    }
-    refs.forEach(r => out.push(sessionCard(r, !!r.x))); // le sessioni extra si modificano qui, quelle del piano dal piano
-    out.push(h('div', { class: 'btns' }, btn('+ Nuova sessione', () => newSessionSheet(t), 'sm' + (refs.length ? '' : ' pri')),
-      pos ? btn('Modifica il giorno', () => { location.hash = `giorno-${pos.w}-${pos.d}`; }, 'sm') : null));
-    const mon = C.mondayOf(t), wk = S.logs.filter(l => l.date >= mon && l.date <= C.addDays(mon, 6));
-    out.push(h('h2', {}, 'Questa settimana'), h('div', { class: 'card row' },
-      h('div', { class: 'grow' }, h('div', { class: 'big' }, wk.length), h('div', { class: 'sub' }, 'sessioni')),
-      h('div', { class: 'grow' }, h('div', { class: 'big' }, wk.reduce((a, l) => a + (l.minutes || 0), 0)), h('div', { class: 'sub' }, 'minuti'))));
+    refs.forEach(r => out.push(sessionCard(r, false)));
+    if (!refs.length) out.push(h('div', { class: 'card' }, h('div', { class: 'big' }, 'Rest day'), h('p', { class: 'sub', style: 'margin-bottom:0' }, 'Nessuna sessione in programma oggi.')));
+    out.push(h('div', { class: 'btns' }, btn('Crea sessione', () => newSessionSheet(t), 'pri'), btn('Registra sessione', () => logSheet(null))));
     return out;
   }
 
   /* ---------- Sessioni extra e calendario ---------- */
-  function showDate(iso) { // dopo aver creato o spostato una sessione: resta su Oggi se è oggi, altrimenti apre il giorno nel calendario
-    const onToday = (location.hash.slice(1) || 'oggi') === 'oggi';
-    go(onToday && iso === C.todayISO() ? 'oggi' : 'calendario-' + iso);
+  function showDate(iso) { // dopo aver creato o spostato una sessione si apre quel giorno nel calendario, dove si aggiungono gli esercizi
+    go('calendario-' + iso);
   }
   function newSessionSheet(dateDefault) {
-    const p = plan(), pos = p ? C.locate(p, dateDefault) : null;
-    const guess = pos ? (p.weeks[pos.w].flatMap(d => d.sessions)[0] || {}).period || 'base' : 'base';
-    const date = h('input', { type: 'date', value: dateDefault }), ty = opts(TYPES, 'wall'), pe = opts(C.PERIODS, guess), title = h('input', { placeholder: 'Es. Board con amici' });
-    const ov = openSheet('Nuova sessione', [h('div', { class: 'cols' }, field('Data', date), field('Tipo', ty)),
-      h('div', { class: 'cols' }, field('Periodo', pe), field('Titolo (facoltativo)', title)),
-      h('p', { class: 'sub' }, 'Resta legata alla data scelta e non modifica il piano. Dopo averla creata aggiungi gli esercizi.'),
+    const date = h('input', { type: 'date', value: dateDefault }), title = h('input', { placeholder: 'Es. Board con amici' });
+    const ov = openSheet('Crea sessione', [h('div', { class: 'cols' }, field('Data', date), field('Titolo (facoltativo)', title)),
       btn('Crea sessione', () => {
         const iso = C.validISO(date.value);
         if (!iso) return toast('Scegli una data valida.');
-        S.extras.push({ id: C.uid(), date: iso, type: ty.value, period: pe.value, title: title.value.trim().slice(0, 80), blocks: [] });
+        S.extras.push({ id: C.uid(), date: iso, type: 'wall', period: 'base', title: title.value.trim().slice(0, 80), blocks: [] });
         save(); ov.remove(); showDate(iso);
       }, 'pri block')]);
   }
   function copyToDateSheet(r) {
     const s = sessOf(r), date = h('input', { type: 'date', value: C.todayISO() });
-    const ov = openSheet('Copia su una data', [h('p', { class: 'sub' }, `"${r.x && r.x.title ? r.x.title : sessTitle(s)}" viene copiata come sessione extra, con gli stessi esercizi.`), field('Data', date),
+    const ov = openSheet('Copia su una data', [h('p', { class: 'sub' }, `"${autoTitle(s)}" viene copiata su un'altra data con gli stessi esercizi.`), field('Data', date),
       btn('Copia', () => {
         const iso = C.validISO(date.value);
         if (!iso) return toast('Scegli una data valida.');
-        S.extras.push({ ...C.cloneSession(s), date: iso, title: r.x ? r.x.title || '' : '' });
+        S.extras.push({ ...C.cloneSession(s), date: iso, title: s.title || '' });
         save(); ov.remove(); toast(`Copiata su ${wdOf(iso)} ${fmtDate(iso)}.`); render();
       }, 'pri block')]);
   }
@@ -968,7 +987,7 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
     for (let iso = C.mondayOf(calMonth); !(cells.length % 7 === 0 && iso > lastDay); iso = C.addDays(iso, 1)) cells.push(iso);
     const cell = iso => {
       const refs = refsOn(iso), ids = new Set(refs.map(r => sessOf(r).id));
-      const dots = refs.slice(0, 3).map(r => h('i', { class: isDone(r) ? 'ok' : r.x ? 'ex' : '' }));
+      const dots = refs.slice(0, 3).map(r => h('i', { class: isDone(r) ? 'ok' : '' }));
       // registrazioni di quel giorno non legate a una sessione in programma lì (diario manuale, sessione fatta in un altro giorno)
       if (dots.length < 3 && S.logs.some(l => l.date === iso && !ids.has(l.sid))) dots.push(h('i', { class: 'ok' }));
       const d = C.fromISO(iso);
@@ -976,78 +995,28 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
         'aria-label': `${WD_FULL[wdIdx(iso)]} ${d.getDate()} ${MONTHS_FULL[d.getMonth()]}, ${refs.length} sessioni`, 'aria-pressed': iso === calSel ? 'true' : 'false',
         onclick: () => go('calendario-' + iso) }, d.getDate(), h('span', { class: 'dots' }, dots));
     };
-    const refs = refsOn(calSel), planRef = refs.find(r => !r.x), logs = S.logs.filter(l => l.date === calSel);
+    const refs = refsOn(calSel), logs = S.logs.filter(l => l.date === calSel);
     return [h('h1', {}, 'Calendario'),
       h('div', { class: 'week' }, btn('‹', () => shift(-1), 'sm'), h('div', { class: 't big', style: 'font-size:17px;text-transform:capitalize' }, `${MONTHS_FULL[first.getMonth()]} ${first.getFullYear()}`),
         btn('Oggi', () => { calMonth = t.slice(0, 7) + '-01'; go('calendario-' + t); }, 'sm'), btn('›', () => shift(1), 'sm')),
       h('div', { class: 'cal' }, ['L', 'M', 'M', 'G', 'V', 'S', 'D'].map(x => h('div', { class: 'wh' }, x)), cells.map(cell)),
-      h('div', { class: 'cal-key sub' }, h('span', {}, h('i', {}), 'in programma'), h('span', {}, h('i', { class: 'ex' }), 'extra'), h('span', {}, h('i', { class: 'ok' }), 'fatta')),
+      h('div', { class: 'cal-key sub' }, h('span', {}, h('i', {}), 'in programma'), h('span', {}, h('i', { class: 'ok' }), 'fatta')),
       h('div', { class: 'row', style: 'margin-top:18px' }, h('h2', { class: 'grow', style: 'margin:0;text-transform:capitalize' }, `${WD_FULL[wdIdx(calSel)]} ${fmtDate(calSel)}`),
-        btn('+ Nuova sessione', () => newSessionSheet(calSel), 'sm pri')),
-      refs.map(r => sessionCard(r, !!r.x)),
+        btn('Crea sessione', () => newSessionSheet(calSel), 'sm pri')),
+      refs.map(r => sessionCard(r, true)),
       refs.length ? null : h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin:0' }, 'Nessuna sessione in programma.')),
-      planRef ? h('div', { class: 'btns' }, btn('Modifica nel piano', () => { location.hash = `giorno-${planRef.w}-${planRef.d}`; }, 'sm')) : null,
       logs.length ? [h('h2', {}, 'Registrate in questa data'), logs.map(logCard)] : null];
   }
 
-  /* ---------- Piano ---------- */
-  function viewPlan() {
-    const p = plan(), out = [h('h1', {}, 'Piano')];
-    out.push(h('div', { class: 'row' },
-      S.plans.length ? h('select', { class: 'inp grow', style: 'margin:0', value: S.activePlan, onchange: e => { S.activePlan = e.target.value; curWeek = null; save(); render(); } },
-        S.plans.map(x => h('option', { value: x.id }, x.title))) : h('div', { class: 'grow sub' }, 'Nessun piano'),
-      btn('Gestisci', planSheet, 'sm')));
-    if (!p) return out;
-    if (curWeek == null || curWeek >= p.weeks.length) { const pos = C.locate(p, C.todayISO()); curWeek = pos ? pos.w : 0; }
-    const w = curWeek, week = p.weeks[w], t = C.todayISO();
-    const periods = [...new Set(week.flatMap(d => d.sessions.map(s => C.PERIODS[s.period])))].join(', ');
-    const tot = week.reduce((a, d) => a + d.sessions.reduce((x, s) => x + C.sessionMinutes(s), 0), 0);
-    const prev = btn('‹', () => { curWeek--; render(); }, 'sm'), next = btn('›', () => { curWeek++; render(); }, 'sm');
-    prev.disabled = w === 0; next.disabled = w === p.weeks.length - 1;
-    out.push(h('div', { class: 'week' }, prev,
-      h('div', { class: 't' }, h('div', { class: 'big', style: 'font-size:17px' }, `Settimana ${w + 1} / ${p.weeks.length}`),
-        h('div', { class: 'sub' }, `${fmtDate(C.dateOf(p, w, 0))} – ${fmtDate(C.dateOf(p, w, 6))} · ${tot} min${periods ? ' · ' + periods : ''}`)), next));
-    week.forEach((day, d) => {
-      const iso = C.dateOf(p, w, d);
-      out.push(h('div', { class: 'card tap day row' + (iso === t ? ' today' : ''), onclick: () => { location.hash = `giorno-${w}-${d}`; } },
-        h('div', { class: 'wd' }, WD[d], h('div', { style: 'font-weight:400;text-transform:none' }, fmtDate(iso))),
-        h('div', { class: 'grow' }, day.sessions.length ? day.sessions.map((s, si) => h('div', { style: 'margin:2px 0' },
-          h('div', { class: 'n', style: 'font-weight:600' }, C.DAY_TYPES[s.type], ' ', h('span', { class: 'sub' }, C.sessionMinutes(s) + ' min'), isDone({ p, w, d, si }) ? h('span', { class: 'tag ok', style: 'margin-left:6px' }, '✓') : null),
-          h('div', { class: 'sub', style: 'white-space:nowrap;overflow:hidden;text-overflow:ellipsis' }, s.blocks.map(b => (S.exercises[b.exId] || {}).name).filter(Boolean).join(' · ')))) : h('div', { class: 'sub' }, 'Recupero'))));
-    });
-    return out;
-  }
-
-  function planSheet() {
-    const p = plan(), body = [];
-    let ov;
+  /* ---------- Programmi: insiemi di sessioni importati, visibili solo nel calendario ---------- */
+  function planSheet(p) {
+    const title = h('input', { value: p.title }), start = h('input', { type: 'date', value: p.startDate });
     const done = () => { save(); ov.remove(); render(); };
-    if (p) {
-      const title = h('input', { value: p.title }), start = h('input', { type: 'date', value: p.startDate });
-      const target = h('select', {}, p.weeks.map((_, i) => i === curWeek ? null : h('option', { value: i }, 'Settimana ' + (i + 1))));
-      body.push(field('Nome', title), field('Inizio (viene portato al lunedì)', start),
-        btn('Salva nome e data', () => { p.title = title.value.trim() || p.title; if (C.validISO(start.value)) p.startDate = C.mondayOf(start.value); done(); }, 'pri block'),
-        h('h2', {}, `Settimane (${p.weeks.length})`),
-        h('div', { class: 'btns' }, btn('+ Aggiungi in fondo', () => { p.weeks.push(C.emptyWeek()); done(); }, 'sm'),
-          btn('Duplica la settimana ' + (curWeek + 1), () => { p.weeks.splice(curWeek + 1, 0, p.weeks[curWeek].map(C.cloneDay)); done(); }, 'sm'),
-          btn('Elimina la settimana ' + (curWeek + 1), async () => { if (p.weeks.length > 1 && await confirmDlg(`Eliminare la settimana ${curWeek + 1}? Le successive scalano di una.`, 'Elimina')) { p.weeks.splice(curWeek, 1); done(); } }, 'sm danger')),
-        p.weeks.length > 1 ? h('div', { class: 'row', style: 'margin-top:10px' }, h('span', { class: 'sub' }, `Copia la ${curWeek + 1} su`), h('div', { class: 'grow' }, target),
-          btn('Copia', async () => { const i = +target.value; if (await confirmDlg(`Sovrascrivere la settimana ${i + 1} con la ${curWeek + 1}?`, 'Sovrascrivi')) { p.weeks[i] = p.weeks[curWeek].map(C.cloneDay); done(); } }, 'sm')) : null,
-        h('h2', {}, 'File'),
-        h('div', { class: 'btns' }, btn('Esporta .blokplan', () => {
-          if (p.weeks.some(w => w.some(d => d.sessions.length > 2))) toast('Nota: Blok accetta 2 sessioni al giorno, le altre non vengono esportate.');
-          exportSheet('Esporta piano', p.title.replace(/[^\w+-]+/g, '_') + '.blokplan', JSON.stringify(C.exportBlokplan(p, S.exercises)));
-        }, 'sm'),
-          btn('Elimina piano', async () => { if (await confirmDlg(`Eliminare "${p.title}"? Il diario resta.`, 'Elimina')) { S.plans = S.plans.filter(x => x !== p); S.activePlan = S.plans[0] ? S.plans[0].id : null; curWeek = null; done(); } }, 'sm danger')));
-    }
-    const nTitle = h('input', { placeholder: 'Blocco di forza' }), nWeeks = numInp(4);
-    body.push(h('h2', {}, 'Nuovo piano'), h('div', { class: 'cols' }, field('Nome', nTitle), field('Settimane', nWeeks)),
-      h('div', { class: 'btns' }, btn('Crea', () => {
-        const n = Math.min(52, Math.max(1, Math.round(val(nWeeks) || 4)));
-        const np = { id: C.uid(), title: nTitle.value.trim() || 'Nuovo piano', startDate: C.mondayOf(C.todayISO()), weeks: Array.from({ length: n }, C.emptyWeek) };
-        S.plans.push(np); S.activePlan = np.id; curWeek = 0; done();
-      }, 'sm pri'), fileBtn('Importa .blokplan', () => ov.remove())));
-    ov = openSheet('Gestisci piani', body);
+    const ov = openSheet('Programma', [field('Nome', title), field('Inizio (viene portato al lunedì di quella settimana)', start),
+      h('p', { class: 'sub' }, `${p.weeks.length} settimane · fino a ${fmtDate(C.dateOf(p, p.weeks.length - 1, 6))}. Le sessioni si modificano dal calendario.`),
+      btn('Salva', () => { p.title = title.value.trim().slice(0, 80) || p.title; if (C.validISO(start.value)) p.startDate = C.mondayOf(start.value); done(); }, 'pri block'),
+      h('div', { class: 'btns' }, btn('Esporta .blokplan', () => exportSheet('Esporta programma', p.title.replace(/[^\w+-]+/g, '_') + '.blokplan', JSON.stringify(C.exportBlokplan(p, S.exercises))), 'sm'),
+        btn('Elimina programma', async () => { if (await confirmDlg(`Eliminare "${p.title}"? Le sue sessioni spariscono dal calendario, il diario resta.`, 'Elimina')) { S.plans = S.plans.filter(x => x !== p); done(); } }, 'sm danger'))]);
   }
 
   function fileBtn(label, after) {
@@ -1063,54 +1032,39 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
     const obj = JSON.parse(text);
     if (C.validState(obj)) { // backup completo
       if (!await confirmDlg('Questo è un backup completo: sostituire TUTTI i dati attuali?', 'Sostituisci')) return;
-      S = migrate(obj); curWeek = null; calSel = calMonth = null; save(); render(); toast('Backup ripristinato.'); log('import', 'backup ripristinato');
+      S = migrate(obj); calSel = calMonth = null; save(); render(); toast('Backup ripristinato.'); log('import', 'backup ripristinato');
       return;
     }
     const r = C.importBlokplan(obj, S.exercises); // lancia se non valido: lo stato non viene toccato
-    for (const e of r.exercises) S.exercises[e.id] = e;
-    S.plans.push(r.plan); S.activePlan = r.plan.id; curWeek = null; save(); render();
-    toast(`Importato ${r.plan.title}.`); log('import', 'piano importato', { title: r.plan.title, weeks: r.plan.weeks.length, nuoviEsercizi: r.exercises.length });
+    const title = h('input', { value: r.plan.title }), start = h('input', { type: 'date', value: r.plan.startDate });
+    const ov = openSheet('Importa programma', [h('p', { class: 'sub' }, `${r.plan.weeks.length} settimane. Scegli da quando parte: le sessioni compaiono nel calendario.`),
+      field('Nome', title), field('Inizio (viene portato al lunedì di quella settimana)', start),
+      btn('Importa', () => {
+        const iso = C.validISO(start.value);
+        if (!iso) return toast('Scegli una data valida.');
+        r.plan.title = title.value.trim().slice(0, 80) || r.plan.title; r.plan.startDate = C.mondayOf(iso);
+        for (const e of r.exercises) S.exercises[e.id] = e;
+        S.plans.push(r.plan); save(); ov.remove();
+        toast(`Importato ${r.plan.title}.`); log('import', 'programma importato', { title: r.plan.title, weeks: r.plan.weeks.length, nuoviEsercizi: r.exercises.length });
+        go('calendario-' + r.plan.startDate);
+      }, 'pri block')]);
   }
 
-  function viewDay(w, d) {
-    const p = plan();
-    if (!p || !p.weeks[w] || !p.weeks[w][d]) return [h('p', {}, 'Giorno non trovato.'), btn('Al piano', () => { location.hash = 'piano'; })];
-    curWeek = w;
-    const day = p.weeks[w][d], iso = C.dateOf(p, w, d);
-    return [h('div', { class: 'row' }, btn('‹ Piano', () => { location.hash = 'piano'; }, 'sm'), h('div', { class: 'sub right' }, `Settimana ${w + 1}`)),
-      h('h1', { style: 'margin-top:10px;text-transform:capitalize' }, `${wdOf(iso)} ${fmtDate(iso)}`), h('div', { class: 'sub' }, 'Tocca un esercizio per modificarlo.'),
-      day.sessions.map((_, si) => sessionCard({ p, w, d, si }, true)),
-      day.sessions.length ? null : h('div', { class: 'card' }, h('div', { class: 'big' }, 'Recupero')),
-      h('div', { class: 'btns' }, btn('+ Sessione', () => { day.sessions.push({ id: C.uid(), type: 'wall', period: (day.sessions[0] || {}).period || 'base', blocks: [] }); save(); render(); }, 'sm'),
-        btn('Copia su un altro giorno…', () => copyDaySheet(p, w, d), 'sm'))];
-  }
-  function copyDaySheet(p, w, d) {
-    const wk = h('select', { value: w }, p.weeks.map((_, i) => h('option', { value: i }, 'Settimana ' + (i + 1))));
-    const dd = h('select', { value: (d + 1) % 7 }, WD.map((n, i) => h('option', { value: i }, n)));
-    const ov = openSheet('Copia giorno', [h('div', { class: 'cols' }, field('Settimana', wk), field('Giorno', dd)),
-      btn('Sovrascrivi il giorno scelto', () => { p.weeks[+wk.value][+dd.value] = C.cloneDay(p.weeks[w][d]); save(); ov.remove(); toast('Giorno copiato.'); render(); }, 'pri block')]);
-  }
   function sessionSheet(r) {
-    const s = sessOf(r), ty = opts(TYPES, s.type), pe = opts(C.PERIODS, s.period);
-    const title = r.x ? h('input', { value: r.x.title || '' }) : null, date = r.x ? h('input', { type: 'date', value: r.x.date }) : null;
-    const close = () => { save(); ov.remove(); render(); };
-    const ov = openSheet('Sessione', [h('div', { class: 'cols' }, field('Tipo', ty), field('Periodo', pe)),
-      r.x ? h('div', { class: 'cols' }, field('Data', date), field('Titolo', title)) : null,
+    const s = sessOf(r), title = h('input', { value: s.title || '', placeholder: 'Sessione' }), date = r.x ? h('input', { type: 'date', value: r.x.date }) : null;
+    const ov = openSheet('Sessione', [field('Titolo', title), r.x ? field('Data', date) : null,
       btn('Salva', () => {
-        s.type = ty.value; s.period = pe.value;
-        if (!r.x) return close();
-        const iso = C.validISO(date.value), moved = iso && iso !== r.x.date;
-        r.x.title = title.value.trim().slice(0, 80);
+        const iso = r.x ? C.validISO(date.value) : null, moved = iso && iso !== r.x.date;
+        s.title = title.value.trim().slice(0, 80);
         if (iso) r.x.date = iso;
         save(); ov.remove();
         if (moved) showDate(iso); else render();
       }, 'pri block'),
-      h('div', { class: 'btns' }, !r.x && r.si > 0 ? btn('Sposta prima', () => { const list = r.p.weeks[r.w][r.d].sessions; list.splice(r.si - 1, 0, list.splice(r.si, 1)[0]); close(); }, 'sm') : null,
-        btn('Copia su una data…', () => { ov.remove(); copyToDateSheet(r); }, 'sm'),
+      h('div', { class: 'btns' }, btn('Copia su una data…', () => { ov.remove(); copyToDateSheet(r); }, 'sm'),
         btn('Elimina sessione', async () => {
           if (!await confirmDlg('Eliminare questa sessione? Le registrazioni nel diario restano.', 'Elimina')) return;
           if (r.x) S.extras = S.extras.filter(e => e !== r.x); else r.p.weeks[r.w][r.d].sessions.splice(r.si, 1);
-          close();
+          save(); ov.remove(); render();
         }, 'sm danger'))]);
   }
   const exUsage = id => C.usage(S.plans, id) + S.extras.reduce((a, x) => a + x.blocks.filter(y => y.exId === id).length, 0);
@@ -1118,12 +1072,9 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
     const s = sessOf(r), b = s.blocks[bi], ex = S.exercises[b.exId], n = exUsage(b.exId);
     const min = numInp(b.minutes);
     const close = () => { save(); ov.remove(); render(); };
-    const move = k => { s.blocks.splice(bi + k, 0, s.blocks.splice(bi, 1)[0]); close(); };
-    const up = btn('↑ Su', () => move(-1), 'sm'), down = btn('↓ Giù', () => move(1), 'sm');
-    up.disabled = bi === 0; down.disabled = bi === s.blocks.length - 1;
     const ov = openSheet(ex ? ex.name : 'Esercizio', [ex ? h('p', { class: 'sub' }, exLine(ex)) : null,
       field('Minuti previsti', min), btn('Salva minuti', () => { b.minutes = Math.max(0, Math.round(val(min) || 0)); close(); }, 'pri block'),
-      h('div', { class: 'btns' }, up, down, btn('Sostituisci…', () => pickExercise(id => { b.exId = id; close(); }), 'sm'), btn('Rimuovi', () => { s.blocks.splice(bi, 1); close(); }, 'sm danger')),
+      h('div', { class: 'btns' }, btn('Sostituisci…', () => pickExercise(id => { b.exId = id; close(); }), 'sm'), btn('Rimuovi', () => { s.blocks.splice(bi, 1); close(); }, 'sm danger')),
       ex ? h('div', { class: 'btns' }, btn(`Modifica esercizio (${n} ${n === 1 ? 'uso' : 'usi'})`, () => { ov.remove(); exerciseSheet(ex.id); }, 'sm'),
         n > 1 ? btn('Modifica solo qui', () => { const c = JSON.parse(JSON.stringify(ex)); c.id = C.uid(); S.exercises[c.id] = c; b.exId = c.id; save(); ov.remove(); exerciseSheet(c.id); }, 'sm') : null) : null]);
   }
@@ -1226,17 +1177,17 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
   }
   function logSheet(l) {
     const isNew = !l; l = l || { id: C.uid(), date: C.todayISO(), type: 'wall', title: 'Sessione libera', minutes: 60, rpe: null, feel: null, notes: '', loads: [], climbs: [] };
-    const date = h('input', { type: 'date', value: l.date }), title = h('input', { value: l.title }), min = numInp(l.minutes), ty = opts(LOG_TYPES, l.type || 'other');
+    const date = h('input', { type: 'date', value: l.date }), title = h('input', { value: l.title }), min = numInp(l.minutes);
     const rpe = numInp(l.rpe), feel = opts(FEEL, l.feel ? String(l.feel) : '');
     const notes = h('textarea', {}); notes.value = l.notes || '';
     const climbs = climbEditor(l.climbs || [], () => val(min));
     const ov = openSheet(isNew ? 'Registra sessione' : 'Modifica registrazione', [h('div', { class: 'cols' }, field('Data', date), field('Minuti', min)),
-      h('div', { class: 'cols' }, field('Titolo', title), field('Tipo', ty)),
+      field('Titolo', title),
       h('div', { class: 'cols' }, field('RPE (1-10)', rpe), field('Come ti sentivi', feel)),
       h('h2', {}, 'Arrampicata'), climbs.node, field('Note', notes),
       (l.loads || []).length ? h('div', { class: 'sub' }, l.loads.map(x => `${x.name}: ${x.kg}`).join(' · ')) : null,
       btn('Salva', () => {
-        Object.assign(l, { date: C.validISO(date.value) || l.date, title: title.value.trim() || 'Sessione', type: ty.value, minutes: Math.max(0, Math.round(val(min) || 0)), rpe: val(rpe),
+        Object.assign(l, { date: C.validISO(date.value) || l.date, title: title.value.trim() || 'Sessione', minutes: Math.max(0, Math.round(val(min) || 0)), rpe: val(rpe),
           feel: feel.value ? +feel.value : null, notes: notes.value.trim(), climbs: climbs.read() });
         if (isNew) S.logs.push(l);
         save(); ov.remove(); render();
@@ -1264,7 +1215,7 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
       from = C.mondayOf(S.logs.reduce((m, l) => (l.date < m ? l.date : m), t));
       if (from < cap) from = cap;
     }
-    const sched = C.scheduled(plan(), S.extras), wk = C.weeklyStats(S.logs, sched, from, to), sum = C.summary(S.logs, sched, from, to, t);
+    const sched = S.plans.flatMap(p => C.scheduled(p, [])).concat(C.scheduled(null, S.extras)), wk = C.weeklyStats(S.logs, sched, from, to), sum = C.summary(S.logs, sched, from, to, t);
     const labels = wk.map(w => fmtDate(w.week)), long = wk.map(w => `${fmtDate(w.week)} – ${fmtDate(C.addDays(w.week, 6))}`);
     // Un solo filtro, sopra tutto quello che governa
     const out = [anHead('analisi'), seg([[4, '4 sett.'], [8, '8 sett.'], [12, '12 sett.'], [0, 'Tutto']], anWeeks, k => { anWeeks = k; render(); }),
@@ -1273,7 +1224,7 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
         tile('Sessioni', sum.sessions, sum.due ? `${sum.due} in programma finora` : ''),
         tile('Tempo', sum.minutes < 120 ? sum.minutes + ' min' : dec((sum.minutes / 60).toFixed(1)) + ' h', sum.sessions ? `${Math.round(sum.minutes / sum.sessions)} min a sessione` : ''),
         tile('RPE medio', sum.rpe == null ? '—' : dec(sum.rpe.toFixed(1)), sum.rpeN ? `su ${sum.rpeN} ${sum.rpeN === 1 ? 'sessione' : 'sessioni'}` : 'nessun RPE registrato'),
-        tile('Aderenza al piano', sum.due ? Math.round(sum.dueDone / sum.due * 100) + '%' : '—', sum.due ? `${sum.dueDone} di ${sum.due} sessioni fatte` : 'niente in programma'))];
+        tile('Aderenza', sum.due ? Math.round(sum.dueDone / sum.due * 100) + '%' : '—', sum.due ? `${sum.dueDone} di ${sum.due} sessioni fatte` : 'niente in programma'))];
     if (!sum.sessions && !wk.some(w => w.plannedMinutes))
       return out.concat(h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin:0' }, 'Nessun dato in questo periodo. I grafici si riempiono quando completi una sessione con il player o la registri nel Diario.')));
 
@@ -1285,10 +1236,6 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
       Charts.line({ labels, longLabels: long, values: wk.map(w => w.rpe), name: 'RPE medio', domain: { min: 0, max: 10, step: 5 }, height: 120, aria: 'RPE medio per settimana' })));
     if (wk.some(w => w.feel != null)) out.push(chartCard('Sensazione', 'Media di "come ti sentivi" (1 distrutto – 5 ottimo).',
       Charts.line({ labels, longLabels: long, values: wk.map(w => w.feel), name: 'Sensazione media', domain: { min: 1, max: 5, step: 2 }, height: 120, aria: 'Sensazione media per settimana' })));
-
-    const types = C.minutesByType(S.logs, from, to);
-    if (types.length) out.push(chartCard('Tempo per tipo di sessione', null,
-      Charts.hbars(types.map(x => ({ label: x.type === 'other' ? 'Altro' : C.DAY_TYPES[x.type], value: x.minutes, text: `${x.minutes} min · ${sum.minutes ? Math.round(x.minutes / sum.minutes * 100) : 0}%` })))));
 
     // Superfici: tempo, blocchi chiusi e grado massimo; poi un pannello per superficie, tutti sulla stessa scala di gradi
     const surf = C.surfaceStats(S.logs, from, to);
@@ -1361,15 +1308,19 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
     const sfNew = h('input', { class: 'inp', style: 'margin:0', placeholder: 'Nuova superficie' });
     return [h('h1', {}, 'Altro'),
       h('div', { class: 'card tap row', onclick: () => { location.hash = 'libreria'; } }, h('div', { class: 'grow' }, h('div', { class: 'n', style: 'font-weight:600' }, 'Libreria esercizi'), h('div', { class: 'sub' }, Object.keys(S.exercises).length + ' esercizi')), '›'),
+      h('h2', {}, 'Programmi'), h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin-top:0' }, 'Un programma è un insieme di sessioni: lo importi, scegli da quando parte e lo ritrovi nel calendario.'),
+        S.plans.map(p => h('div', { class: 'blk', style: 'cursor:pointer', onclick: () => planSheet(p) }, h('div', { class: 'grow' }, h('div', { class: 'n' }, p.title),
+          h('div', { class: 'p' }, `${fmtDate(p.startDate)} – ${fmtDate(C.dateOf(p, p.weeks.length - 1, 6))} · ${p.weeks.length} settimane`)), h('div', { class: 'm' }, '›'))),
+        h('div', { class: 'btns' }, fileBtn('Importa programma (.blokplan)'))),
       h('h2', {}, 'Superfici di arrampicata'), h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin-top:0' }, 'Si assegnano agli esercizi e alle registrazioni, per confrontare l\'avanzamento nei grafici. Tocca per rinominare.'),
         h('div', { class: 'btns', style: 'margin-top:0' }, S.surfaces.map(x => btn(x.name, () => surfaceSheet(x), 'sm'))),
         h('div', { class: 'row', style: 'margin-top:10px' }, h('div', { class: 'grow' }, sfNew), btn('Aggiungi', () => { const n = sfNew.value.trim().slice(0, 40); if (!n) return toast('Scrivi un nome.'); addSurface(n); save(); render(); }, 'sm')),
         h('p', { class: 'sub', style: 'margin-bottom:0' }, `Scala dei gradi: ${C.GRADE_SCALES[S.settings.gradeScale] || 'Font'}. La scelta di altre scale arriverà qui.`)),
-      h('h2', {}, 'Player'), h('div', { class: 'card' }, h('div', { class: 'cols' }, field('Preparazione prima di un hang (s)', prep), h('label', { class: 'f' }, 'Segnali acustici', h('div', { style: 'margin-top:12px' }, sound, ' attivi'))),
+      h('h2', {}, 'Timer'), h('div', { class: 'card' }, h('div', { class: 'cols' }, field('Preparazione prima di un hang (s)', prep), h('label', { class: 'f' }, 'Segnali acustici', h('div', { style: 'margin-top:12px' }, sound, ' attivi'))),
         btn('Salva', () => { S.settings.prep = Math.min(60, Math.max(0, Math.round(val(prep) || 0))); save(); toast('Salvato.'); }, 'sm')),
       h('h2', {}, 'Dati'), h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin-top:0' }, 'I dati restano solo su questo dispositivo. Fai un backup ogni tanto.'),
         h('div', { class: 'btns' }, btn('Backup completo', () => exportSheet('Backup', `allenamento-backup-${C.todayISO()}.json`, JSON.stringify(S)), 'sm pri'), fileBtn('Ripristina / importa file'),
-          btn('Azzera tutto', async () => { if (await confirmDlg('Cancellare piani, esercizi, diario e test? L\'operazione non si può annullare: fai prima un backup.', 'Azzera')) { S = fresh(); curWeek = null; calSel = calMonth = null; save(); render(); } }, 'sm danger')))];
+          btn('Azzera tutto', async () => { if (await confirmDlg('Cancellare programmi, sessioni, esercizi, diario e test? L\'operazione non si può annullare: fai prima un backup.', 'Azzera')) { S = fresh(); calSel = calMonth = null; save(); render(); } }, 'sm danger')))];
   }
 
   /* ---------- Player ---------- */
@@ -1385,36 +1336,64 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
     } catch (e) { /* audio non disponibile: il player continua senza suoni */ }
   }
   async function wake() { try { if (navigator.wakeLock) wl = await navigator.wakeLock.request('screen'); } catch (e) { wl = null; } }
-  document.addEventListener('visibilitychange', () => { if (P && document.visibilityState === 'visible') { wake(); tick(); } });
+  document.addEventListener('visibilitychange', () => { if (R && document.visibilityState === 'visible') { wake(); tick(); } });
   const mmss = s => { s = Math.max(0, Math.round(s)); return s >= 60 ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` : String(s); };
   const isAuto = st => st.kind === 'rest' || (st.kind === 'work' && !st.selfPaced);
 
-  function startSession(r, idx) {
-    const s = sessOf(r), steps = C.buildSteps(s.blocks, S.exercises, S.settings.prep);
-    if (!steps.length) return toast('Questa sessione non ha esercizi.');
+  // R: sessione in corso (elenco). P: timer dell'esercizio in corso. Lo stato `done` sta anche in S.live, così si può riprendere.
+  let R = null;
+  function startSession(r) {
+    const s = sessOf(r), resumed = S.live && S.live.sid === s.id;
     audioInit(); wake();
-    const resumed = S.live && S.live.sid === s.id;
-    // acc: millisecondi passati in ogni blocco (pause escluse), per sapere quanto tempo è andato su ogni superficie
-    P = { steps, r, s, startedAt: resumed ? S.live.startedAt : Date.now(), acc: resumed && S.live.acc ? { ...S.live.acc } : {}, paused: false, idx: null };
-    S.live = { sid: s.id, idx: 0, startedAt: P.startedAt, acc: P.acc };
+    R = { r, s, startedAt: resumed ? S.live.startedAt : Date.now(), done: resumed ? S.live.done || {} : {} };
+    S.live = { sid: s.id, startedAt: R.startedAt, done: R.done }; save();
+    drawRunner();
+    log('sessione', resumed ? 'ripresa' : 'avviata', { titolo: autoTitle(s), esercizi: s.blocks.length });
+  }
+  function closeRunner() { $('runner').hidden = true; R = null; try { if (wl) wl.release(); } catch (e) { /* già rilasciato */ } wl = null; }
+  function drawRunner() {
+    const { s, done } = R, nextB = s.blocks.find(b => !done[b.id] && S.exercises[b.exId]);
+    const row = (b, i) => {
+      const ex = S.exercises[b.exId], d = done[b.id], hint = ex ? loadHint(ex) : '';
+      return h('div', { class: 'run-r' + (d ? ' done' : '') }, h('div', { class: 'st' }, d ? '✓' : i + 1),
+        h('div', { class: 'grow' }, h('div', { class: 'n', style: 'font-weight:600' }, ex ? ex.name : 'Esercizio rimosso'), ex ? h('div', { class: 'sub' }, exLine(ex)) : null,
+          hint && !d ? h('div', { style: 'color:var(--ac);font-size:13px;font-weight:600' }, hint) : null, d && d.minutes ? h('div', { class: 'sub' }, `fatto · ${d.minutes} min`) : null),
+        ex ? btn(d ? 'Rifai' : 'Avvia', () => startBlock(b), 'sm' + (b === nextB ? ' pri' : '')) : null);
+    };
+    const quit = () => {
+      const ov = openSheet('Uscire dalla sessione?', h('div', { class: 'btns' }, btn('Continua', () => ov.remove()),
+        btn('Esci e riprendi dopo', () => { ov.remove(); closeRunner(); render(); }), btn('Abbandona', () => { ov.remove(); S.live = null; save(); closeRunner(); render(); }, 'danger')), true);
+    };
+    $('runner').hidden = false;
+    $('runner').replaceChildren(h('div', { class: 'in' },
+      h('div', { class: 'row' }, h('div', { class: 'grow' }, h('div', { class: 'sub' }, 'Sessione in corso'), h('h1', {}, s.title || 'Sessione')), btn('Esci', quit, 'sm')),
+      h('div', { class: 'card' }, s.blocks.map(row), s.blocks.length ? null : h('p', { class: 'sub', style: 'margin:0' }, 'Nessun esercizio: aggiungine uno per iniziare.')),
+      h('div', { class: 'btns' }, btn('+ Esercizio', () => pickExercise(id => { addBlock(s, id); save(); drawRunner(); }), ''),
+        btn('Termina sessione', finishSession, nextB ? '' : 'pri'))));
+  }
+
+  function startBlock(b) {
+    const steps = C.buildSteps([b], S.exercises, S.settings.prep);
+    if (!steps.length) return toast('Esercizio non disponibile.');
+    audioInit();
+    P = { b, steps, idx: null, ms: 0, paused: false };
     $('player').hidden = false;
     P.timer = setInterval(tick, 200);
-    enter(Math.min(idx || 0, steps.length - 1));
-    log('player', 'sessione avviata', { sessione: refTitle(r), passi: steps.length });
+    enter(0);
   }
-  function track() { // attribuisce al blocco corrente il tempo dall'ultimo cambio di passo
+  function track() { // tempo effettivo sull'esercizio, pause escluse
     if (P.idx == null) return;
-    const now = Date.now(), b = P.steps[P.idx].block;
-    P.acc[b] = (P.acc[b] || 0) + Math.max(0, now - P.stepAt - P.stepPaused - (P.paused ? now - P.pauseAt : 0));
+    const now = Date.now();
+    P.ms += Math.max(0, now - P.stepAt - P.stepPaused - (P.paused ? now - P.pauseAt : 0));
   }
   function enter(i) {
     track();
-    P.idx = i; P.endAt = Date.now() + P.steps[i].seconds * 1000; P.lastBeep = null; P.freeDone = false;
+    P.idx = i; P.endAt = Date.now() + P.steps[i].seconds * 1000; P.lastBeep = null;
     P.stepAt = Date.now(); P.stepPaused = 0;
     if (P.paused) { P.remain = P.steps[i].seconds * 1000; P.pauseAt = Date.now(); }
-    S.live.idx = i; S.live.acc = P.acc; save(); draw();
+    draw();
   }
-  function next() { if (P.idx + 1 >= P.steps.length) finish(); else enter(P.idx + 1); }
+  function next() { if (P.idx + 1 >= P.steps.length) endBlock(); else enter(P.idx + 1); }
   function remaining() { return ((P.paused ? P.remain : P.endAt - Date.now())) / 1000; }
   function tick() {
     if (!P || P.paused) return;
@@ -1422,69 +1401,78 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
     if (isAuto(st)) {
       if (rem <= 0) { beep(st.kind === 'rest' ? 1320 : 660, 0.5); return next(); }
       if (rem <= 3 && rem !== P.lastBeep) { P.lastBeep = rem; beep(880, 0.12); }
-    } else if (st.kind === 'free' && st.seconds > 0 && rem <= 0 && !P.freeDone) { P.freeDone = true; beep(660, 0.5); }
+    } else if (st.kind === 'free' && st.seconds > 0) {
+      // esercizio a durata: allo scadere il timer si ferma e si passa alla registrazione, non all'esercizio successivo
+      if (rem <= 0) { beep(1320, 0.6); return endBlock(); }
+      if (rem <= 3 && rem !== P.lastBeep) { P.lastBeep = rem; beep(880, 0.12); }
+    }
     drawClock();
   }
   function drawClock() {
     const st = P.steps[P.idx], rem = remaining();
-    let txt;
-    if (isAuto(st)) txt = mmss(Math.ceil(rem));
-    else if (st.kind === 'work') txt = mmss(st.seconds - rem); // a ripetizioni: tempo trascorso
-    else txt = rem >= 0 ? mmss(Math.ceil(rem)) : '+' + mmss(-rem);
-    $('p-clock').textContent = txt;
+    $('p-clock').textContent = st.kind === 'work' && st.selfPaced ? mmss(st.seconds - rem) : mmss(Math.ceil(rem)); // a ripetizioni: tempo trascorso
   }
   function draw() {
     const st = P.steps[P.idx], nx = P.steps[P.idx + 1], ex = S.exercises[st.exId];
     const ph = st.prep ? 'prep' : st.kind;
     $('player').dataset.ph = ph;
     $('p-bar').style.width = (P.idx / P.steps.length * 100) + '%';
-    $('p-ph').textContent = { prep: 'PREPARATI', work: st.selfPaced ? 'ESEGUI' : 'LAVORO', rest: 'RECUPERO', free: 'A TEMPO LIBERO' }[ph];
-    $('p-name').textContent = st.kind === 'rest' && st.afterBlock && nx ? 'Prossimo: ' + nx.name : st.name;
+    $('p-ph').textContent = { prep: 'PREPARATI', work: st.selfPaced ? 'ESEGUI' : 'LAVORO', rest: 'RECUPERO', free: 'IN CORSO' }[ph];
+    $('p-name').textContent = st.name;
     $('p-round').textContent = st.kind === 'free' ? (ex && ex.surface ? surfName(ex.surface) : '') : `Round ${st.round} di ${st.rounds}`;
-    $('p-cue').textContent = st.kind === 'rest' && st.afterBlock ? (nx ? nx.cue : '') : st.cue;
-    const src = st.kind === 'rest' && st.afterBlock && nx ? { ex: S.exercises[nx.exId], cue: nx.cue } : { ex, cue: st.cue };
-    const kg = src.ex && st.kind !== 'free' ? C.loadKg(src.ex.load, src.cue, maxes()) : null;
-    $('p-kg').textContent = kg == null ? '' : (src.ex.load.mode === 'hang' ? C.fmtKg(kg) : dec(kg) + ' kg');
-    $('p-next').textContent = nx ? 'Poi: ' + (nx.kind === 'rest' ? `recupero ${mmss(nx.seconds)}` : nx.name + (nx.cue && nx.kind !== 'free' ? ' · ' + nx.cue : '')) : 'Ultimo passo';
+    $('p-cue').textContent = st.cue;
+    const kg = ex && st.kind !== 'free' ? C.loadKg(ex.load, st.cue, maxes()) : null;
+    $('p-kg').textContent = kg == null ? '' : (ex.load.mode === 'hang' ? C.fmtKg(kg) : dec(kg) + ' kg');
+    $('p-next').textContent = nx ? 'Poi: ' + (nx.kind === 'rest' ? `recupero ${mmss(nx.seconds)}` : (nx.cue || `round ${nx.round}`)) : 'Ultimo passo dell\'esercizio';
     $('p-done').textContent = isAuto(st) ? 'Salta' : 'Fatto';
     $('p-done').className = 'btn ' + (isAuto(st) ? '' : 'pri');
-    $('p-plus').disabled = st.kind !== 'rest';
+    $('p-plus').disabled = st.kind === 'work';
     $('p-pause').textContent = P.paused ? 'Riprendi' : 'Pausa';
     drawClock();
   }
-  function closePlayer() { clearInterval(P.timer); try { if (wl) wl.release(); } catch (e) { /* già rilasciato */ } wl = null; $('player').hidden = true; }
-  function finish() {
+  /** Fine dell'esercizio: il timer si ferma e si apre la sua registrazione. */
+  function endBlock() {
     track();
-    const { r, s, acc } = P, minutes = Math.max(1, Math.round((Date.now() - P.startedAt) / 60000));
-    closePlayer(); P = null; beep(1320, 0.8);
-    const m = maxes(), loadRows = [], testRows = [], climbRows = [], seen = new Set();
-    s.blocks.forEach((b, bi) => {
-      const ex = S.exercises[b.exId];
-      if (!ex) return;
-      // blocchi di arrampicata: superficie (modificabile), grado massimo chiuso, blocchi chiusi, minuti misurati dal player
-      if (ex.slot === 'wall' || ex.surface) climbRows.push({ name: ex.name, surface: ex.surface || '', minutes: Math.round((acc[bi] || 0) / 60000) });
-      if (!ex.load) return;
-      if (ex.load.test) {
-        const keys = ex.load.ref === 'pinch' ? ['pinchL', 'pinchR'] : [ex.load.ref];
-        for (const k of keys) if (!seen.has(k)) { seen.add(k); const def = S.testDefs.find(t => t.key === k); if (def) testRows.push({ def, inp: numInp(null, { placeholder: m[k] == null ? '' : 'precedente: ' + dec(m[k]) }) }); }
-      } else loadRows.push({ name: ex.name, inp: h('input', { value: loadHint(ex).replace('kg: mancano i massimali', '') }) });
-    });
-    const min = numInp(minutes), rpe = numInp(null), notes = h('textarea', {}), feel = opts(FEEL, ''), climbs = climbEditor(climbRows, () => val(min));
+    const { b, ms } = P;
+    clearInterval(P.timer); P = null; $('player').hidden = true;
+    recordSheet(b, ms);
+  }
+  function recordSheet(b, ms) {
+    const ex = S.exercises[b.exId], m = maxes(), isClimb = ex.slot === 'wall' || !!ex.surface;
+    const min = numInp(Math.round(ms / 60000)), note = h('input', { placeholder: 'Facoltativa' });
+    const load = ex.load && !ex.load.test ? h('input', { value: loadHint(ex).replace('kg: mancano i massimali', '') }) : null;
+    const tests = ex.load && ex.load.test ? (ex.load.ref === 'pinch' ? ['pinchL', 'pinchR'] : [ex.load.ref]).map(k => S.testDefs.find(t => t.key === k)).filter(Boolean)
+      .map(def => ({ def, inp: numInp(null, { placeholder: m[def.key] == null ? '' : 'precedente: ' + dec(m[def.key]) }) })) : [];
+    const sf = isClimb ? opts(surfOpts(), ex.surface || '') : null, gr = isClimb ? opts(gradeOpts(), '') : null, sends = isClimb ? numInp(null) : null;
+    const put = rec => { R.done[b.id] = rec; S.live.done = R.done; save(); ov.remove(); drawRunner(); };
+    const ov = openSheet(ex.name, [h('p', { class: 'sub' }, 'Esercizio completato: registra com\'è andato.'),
+      field('Minuti', min),
+      tests.length ? [tests.map(x => field(`Risultato: ${x.def.name} (${x.def.unit})`, x.inp)), h('p', { class: 'sub' }, 'Il risultato aggiorna il massimale nella sezione Test.')] : null,
+      load ? field('Carico usato', load) : null,
+      isClimb ? [h('div', { class: 'cols' }, field('Superficie', sf), field('Grado max chiuso', gr)), field('Blocchi chiusi', sends)] : null,
+      field('Nota', note),
+      btn('Salva', () => put({ name: ex.name, minutes: Math.max(0, Math.round(val(min) || 0)), note: note.value.trim().slice(0, 200), load: load ? load.value.trim() : '',
+        tests: tests.map(x => ({ key: x.def.key, value: val(x.inp) })).filter(x => x.value != null),
+        climb: isClimb && sf.value ? { name: ex.name, surface: sf.value, top: gr.value || null, sends: val(sends) == null ? null : Math.max(0, Math.round(val(sends))), minutes: Math.max(0, Math.round(val(min) || 0)) } : null }), 'pri block'),
+      btn('Fatto, senza registrare', () => put({ name: ex.name, minutes: Math.round(ms / 60000) }), 'block'),
+      btn('Non fatto: torna all\'elenco', () => { ov.remove(); drawRunner(); }, 'block')]);
+  }
+  function finishSession() {
+    const { r, s, done } = R, recs = s.blocks.map(b => done[b.id]).filter(Boolean);
+    const min = numInp(Math.max(1, Math.round((Date.now() - R.startedAt) / 60000))), rpe = numInp(null), feel = opts(FEEL, ''), notes = h('textarea', {});
     let ov;
-    const end = () => { S.live = null; save(); ov.remove(); go('diario'); };
-    ov = openSheet('Sessione completata', [h('div', { class: 'cols3' }, field('Minuti', min), field('RPE (1-10)', rpe), field('Sensazione', feel)),
-      testRows.length ? [h('h2', {}, 'Risultati dei test'), h('p', { class: 'sub' }, 'Diventano i nuovi massimali per il calcolo dei kg.'), testRows.map(x => field(`${x.def.name} (${x.def.unit})`, x.inp))] : null,
-      loadRows.length ? [h('h2', {}, 'Carichi usati'), loadRows.map(x => field(x.name, x.inp))] : null,
-      h('h2', {}, 'Arrampicata'), h('p', { class: 'sub' }, 'Per ogni superficie: il blocco più duro chiuso e quanti ne hai chiusi. Le righe senza superficie non vengono salvate.'), climbs.node,
-      field('Note', notes),
+    const end = () => { S.live = null; save(); ov.remove(); closeRunner(); go('diario'); };
+    ov = openSheet('Termina sessione', [h('p', { class: 'sub' }, `${recs.length} di ${s.blocks.length} esercizi fatti.`),
+      h('div', { class: 'cols3' }, field('Minuti totali', min), field('RPE (1-10)', rpe), field('Sensazione', feel)), field('Note', notes),
       btn('Salva nel diario', () => {
         const date = C.todayISO();
-        for (const x of testRows) { const n = val(x.inp); if (n != null) S.tests.push({ id: C.uid(), key: x.def.key, date, value: n }); }
-        S.logs.push({ id: C.uid(), date, sid: s.id, type: s.type, period: s.period, title: refTitle(r), minutes: Math.max(0, Math.round(val(min) || 0)), rpe: val(rpe), feel: feel.value ? +feel.value : null,
-          notes: notes.value.trim(), loads: loadRows.map(x => ({ name: x.name, kg: x.inp.value.trim() })).filter(x => x.kg), climbs: climbs.read() });
-        log('player', 'sessione salvata', { minuti: minutes });
+        for (const x of recs) for (const t of x.tests || []) S.tests.push({ id: C.uid(), key: t.key, date, value: t.value });
+        S.logs.push({ id: C.uid(), date, sid: s.id, type: s.type || 'wall', title: autoTitle(s), minutes: Math.max(0, Math.round(val(min) || 0)), rpe: val(rpe), feel: feel.value ? +feel.value : null, notes: notes.value.trim(),
+          loads: recs.filter(x => x.load).map(x => ({ name: x.name, kg: x.load })), climbs: recs.map(x => x.climb).filter(Boolean),
+          blocks: recs.map(x => ({ name: x.name, minutes: x.minutes || 0, note: x.note || '' })) });
+        log('sessione', 'salvata nel diario', { esercizi: recs.length });
         end();
-      }, 'pri block'), btn('Non salvare', end, 'block')]);
+      }, 'pri block'), btn('Chiudi senza salvare', end, 'block')]);
   }
   function wirePlayer() {
     $('p-done').onclick = () => next();
@@ -1495,32 +1483,25 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
       else { P.remain = P.endAt - Date.now(); P.pauseAt = Date.now(); P.paused = true; }
       draw();
     };
-    $('p-quit').onclick = () => {
-      const was = P.paused; if (!was) $('p-pause').onclick();
-      const ov = openSheet('Uscire dalla sessione?', h('div', { class: 'btns' },
-        btn('Continua', () => { ov.remove(); if (!was) $('p-pause').onclick(); }), btn('Termina e registra', () => { ov.remove(); finish(); }, 'pri'),
-        btn('Esci (riprendi dopo)', () => { ov.remove(); track(); S.live.acc = P.acc; save(); closePlayer(); P = null; render(); }),
-        btn('Abbandona', () => { ov.remove(); closePlayer(); P = null; S.live = null; save(); render(); }, 'danger')), true);
-      ov.style.zIndex = 50;
-    };
+    $('p-quit').onclick = () => endBlock();
   }
 
   /* ---------- Router ---------- */
-  const VIEWS = { oggi: viewToday, calendario: viewCalendar, piano: viewPlan, giorno: a => viewDay(+a[0], +a[1]), diario: viewDiary, analisi: viewAnalytics, progressi: viewProgress, altro: viewMore, libreria: viewLibrary };
+  const VIEWS = { home: viewHome, calendario: viewCalendar, diario: viewDiary, analisi: viewAnalytics, progressi: viewProgress, altro: viewMore, libreria: viewLibrary };
   function render() {
-    const [name, ...args] = (location.hash.slice(1) || 'oggi').split('-');
-    const fn = VIEWS[name] || viewToday;
+    const [name, ...args] = (location.hash.slice(1) || 'home').split('-');
+    const fn = VIEWS[name] || viewHome;
     let nodes;
     try { nodes = fn(args); }
-    catch (e) { console.error('[ui] errore nella vista ' + name, e); nodes = [h('h1', {}, 'Qualcosa è andato storto'), h('p', { class: 'sub' }, String(e.message || e)), btn('Torna a Oggi', () => go('oggi'))]; }
+    catch (e) { console.error('[ui] errore nella vista ' + name, e); nodes = [h('h1', {}, 'Qualcosa è andato storto'), h('p', { class: 'sub' }, String(e.message || e)), btn('Torna alla Home', () => go('home'))]; }
     $('view').replaceChildren(...[nodes].flat(Infinity).filter(n => n != null && n !== false));
-    const tab = { giorno: 'piano', libreria: 'altro', progressi: 'analisi' }[name] || (VIEWS[name] ? name : 'oggi');
+    const tab = { libreria: 'altro', progressi: 'analisi' }[name] || (VIEWS[name] ? name : 'home');
     for (const el of document.querySelectorAll('#tabs a')) el.classList.toggle('on', el.getAttribute('href') === '#' + tab);
   }
-  let lastView = (location.hash.slice(1) || 'oggi').split('-')[0];
+  let lastView = (location.hash.slice(1) || 'home').split('-')[0];
   window.addEventListener('hashchange', () => {
     for (const o of document.querySelectorAll('.overlay')) o.remove();
-    const view = (location.hash.slice(1) || 'oggi').split('-')[0];
+    const view = (location.hash.slice(1) || 'home').split('-')[0];
     if (view !== lastView || view !== 'calendario') window.scrollTo(0, 0); // nel calendario cambiare giorno non deve riportare in cima
     lastView = view;
     render();
