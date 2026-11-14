@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="Allenamento">
 <title>Allenamento</title>
 <link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon.png">
-<style>:root{--bg:#0e1012;--card:#181b1f;--line:#2a2f35;--tx:#eceef0;--mu:#8e969f;--ac:#ff7a45;--rest:#4cc2ff;--ok:#56d364;--warn:#f2cc60;--bad:#ff6b6b;
+<style>:root{--v1:#3987e5;--v1h:#6da7ec;--vref:#8e969f;--vgrid:#262b31;--vaxis:#3d444c;--bg:#0e1012;--card:#181b1f;--line:#2a2f35;--tx:#eceef0;--mu:#8e969f;--ac:#ff7a45;--rest:#4cc2ff;--ok:#56d364;--warn:#f2cc60;--bad:#ff6b6b;
   --st:env(safe-area-inset-top,0px);--sb:env(safe-area-inset-bottom,0px)}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--tx);font:16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;overscroll-behavior:none}
@@ -32,7 +32,7 @@ label.f{display:block;margin:10px 0;font-size:13px;color:var(--mu)}
 label.f input,label.f select,label.f textarea,.inp{display:block;width:100%;margin-top:4px;background:#101316;border:1px solid var(--line);border-radius:10px;padding:10px;font-size:16px;color:var(--tx)}
 textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-columns:1fr 1fr;gap:10px}.cols3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
 #tabs{position:fixed;left:0;right:0;bottom:0;display:flex;background:rgba(14,16,18,.94);backdrop-filter:blur(12px);border-top:1px solid var(--line);padding-bottom:var(--sb);z-index:5}
-#tabs a{flex:1;text-align:center;padding:10px 0 8px;color:var(--mu);text-decoration:none;font-size:11px}
+#tabs a{flex:1;min-width:0;text-align:center;padding:10px 0 8px;color:var(--mu);text-decoration:none;font-size:10.5px;letter-spacing:-.01em}
 #tabs a svg{display:block;margin:0 auto 2px;width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 #tabs a.on{color:var(--ac)}
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:20;display:flex;align-items:flex-end;justify-content:center}
@@ -41,7 +41,51 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
 #toast{pointer-events:none;position:fixed;left:50%;top:calc(var(--st) + 12px);transform:translateX(-50%);background:#2b3138;padding:10px 16px;border-radius:99px;font-size:14px;z-index:60;max-width:90%;text-align:center}
 .week{display:flex;align-items:center;gap:8px;margin:14px 0 4px}.week .t{flex:1;text-align:center}
 .day .wd{width:46px;text-transform:uppercase;font-size:12px;color:var(--mu);font-weight:700}.day.today{border-color:var(--ac)}
-.spark{width:110px;height:34px}.spark polyline{fill:none;stroke:var(--ac);stroke-width:2}.spark circle{fill:var(--ac)}
+.spark{width:110px;height:34px;flex:none;overflow:visible}.spark polyline{fill:none;stroke:var(--v1);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}.spark circle{fill:var(--v1);stroke:var(--card);stroke-width:2}
+/* Controlli a segmenti */
+.seg{display:flex;background:#101316;border:1px solid var(--line);border-radius:11px;padding:3px;gap:3px;margin:10px 0}
+.seg button{flex:1;border:0;background:none;border-radius:8px;padding:8px 4px;font-size:14px;font-weight:600;color:var(--mu);min-height:36px;cursor:pointer}
+.seg button.on{background:#2b3138;color:var(--tx)}
+/* Calendario */
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:6px}
+.cal .wh{text-align:center;font-size:11px;color:var(--mu);font-weight:700;padding:2px 0}
+.cal-d{border:1px solid transparent;background:var(--card);border-radius:10px;min-height:50px;padding:6px 0 5px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;cursor:pointer;font-size:15px;font-variant-numeric:tabular-nums}
+.cal-d.out{background:none;color:var(--mu)}.cal-d.today{border-color:var(--ac)}.cal-d.sel{background:#2f363e;border-color:#6b7480}
+.dots{display:flex;gap:3px;height:6px}.dots i,.cal-key i{width:6px;height:6px;border-radius:50%;background:#6b7480;display:inline-block}
+.dots i.ok,.cal-key i.ok{background:var(--ok)}.dots i.ex,.cal-key i.ex{background:var(--ac)}
+.cal-key{display:flex;gap:14px;margin-top:8px;font-size:12px}.cal-key i{margin-right:5px;vertical-align:1px}
+.climb{border-top:1px solid var(--line);padding-top:8px;margin-top:8px}.climb:first-child{border-top:0;margin-top:0;padding-top:0}.climb .n{font-weight:600}
+/* Analisi: riquadri e grafici */
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;min-width:0}
+.tile .l,.tile .s{font-size:12px;color:var(--mu)}.tile .v{font-size:26px;font-weight:650;letter-spacing:-.02em;margin:2px 0}
+.ct{font-weight:700;font-size:16px}.card>.ct+.sub{margin-bottom:10px}.card>.ct:only-child,.card>.ct+div:not(.sub){margin-top:10px}
+.sm-t{font-size:13px;font-weight:600;margin:14px 0 2px}
+.viz{position:relative}.viz svg{display:block;width:100%;height:auto;overflow:visible}
+.viz text{font-size:10.5px;fill:var(--mu);font-variant-numeric:tabular-nums}
+.viz .grid{stroke:var(--vgrid);stroke-width:1}.viz .axis{stroke:var(--vaxis);stroke-width:1}
+.viz .bar{fill:var(--v1)}.viz .bar.on{fill:var(--v1h)}
+.viz .tick{stroke:var(--vref);stroke-width:2;stroke-linecap:round}
+.viz .ln{fill:none;stroke:var(--v1);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.viz .dot{fill:var(--v1);stroke:var(--card);stroke-width:2}
+.viz .cross{stroke:var(--vref);stroke-width:1}
+.viz .end{fill:var(--tx);font-size:11.5px;font-weight:600}
+.viz .hit{fill:transparent;outline:none;cursor:pointer;touch-action:pan-y}.viz .hit:focus-visible{stroke:var(--vref);stroke-width:1}
+.viz-tip{position:absolute;bottom:calc(100% - 10px);transform:translateX(-50%);background:#2b3138;border:1px solid #3d444c;border-radius:8px;padding:6px 9px;font-size:12px;line-height:1.35;white-space:nowrap;pointer-events:none;z-index:2;color:var(--mu)}
+.viz-tip b{color:var(--tx);font-size:13px}
+.viz-key{display:inline-block;width:10px;height:3px;border-radius:2px;background:var(--v1);vertical-align:middle;margin-right:6px}.viz-key.ref{background:var(--vref)}
+.viz-legend{display:flex;gap:16px;font-size:12px;color:var(--mu);margin:0 0 6px}
+.viz-legend .sw{display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--v1);margin-right:6px;vertical-align:-1px}
+.viz-legend .lk{display:inline-block;width:14px;height:2px;border-radius:2px;background:var(--vref);margin-right:6px;vertical-align:middle}
+.viz-table{margin-top:4px;font-size:12px;color:var(--mu)}.viz-table summary{cursor:pointer;padding:6px 0;width:max-content}
+.viz-table table,.tbl{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.viz-table th,.viz-table td,.tbl th,.tbl td{text-align:right;padding:5px 6px;border-top:1px solid var(--line);font-weight:400}
+.viz-table th:first-child,.viz-table td:first-child,.tbl th:first-child,.tbl td:first-child{text-align:left;padding-left:0}
+.tbl{font-size:13px;margin-top:10px}.tbl th{color:var(--mu);font-size:12px;border-top:0}
+.viz-hb-r{display:grid;grid-template-columns:104px 1fr auto;gap:10px;align-items:center;padding:6px 0;font-size:13px}
+.viz-hb-l{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.viz-hb-t i{display:block;height:12px;background:var(--v1);border-radius:0 4px 4px 0}
+.viz-hb-v{color:var(--mu);font-variant-numeric:tabular-nums;white-space:nowrap;min-width:64px;text-align:right}
 .big{font-size:22px;font-weight:700}
 /* Player */
 #player{position:fixed;inset:0;z-index:40;background:var(--bg);display:flex;flex-direction:column;padding:calc(var(--st) + 14px) 18px calc(var(--sb) + 18px);--ph:var(--mu)}
@@ -61,9 +105,10 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
 <main id="view"></main>
 <nav id="tabs">
   <a href="#oggi"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Oggi</a>
-  <a href="#piano"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Piano</a>
+  <a href="#calendario"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Calendario</a>
+  <a href="#piano"><svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/></svg>Piano</a>
   <a href="#diario"><svg viewBox="0 0 24 24"><path d="M5 4h12a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2zM9 9h6M9 13h6"/></svg>Diario</a>
-  <a href="#progressi"><svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M8 15l4-5 3 3 4-6"/></svg>Progressi</a>
+  <a href="#analisi"><svg viewBox="0 0 24 24"><path d="M3 20h18M7 20v-7M12 20V5M17 20v-10"/></svg>Analisi</a>
   <a href="#altro"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>Altro</a>
 </nav>
 <section id="player" hidden>
@@ -109,6 +154,26 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
     { key: 'wrist', name: 'Flessione polso 6RM', unit: 'kg' },
   ];
 
+  // Scala dei gradi boulder. I dati salvano l'etichetta Font; `fmtGrade` è l'unico punto in cui si sceglie la scala mostrata.
+  const GRADES = ['4', '4+', '5', '5+', '6A', '6A+', '6B', '6B+', '6C', '6C+', '7A', '7A+', '7B', '7B+', '7C', '7C+', '8A', '8A+', '8B', '8B+', '8C', '8C+', '9A'];
+  const GRADE_SCALES = { font: 'Font' };
+  const gradeIdx = g => (g == null ? -1 : GRADES.indexOf(g));
+  const fmtGrade = (g, scale) => (g == null ? '' : scale && scale !== 'font' ? g : g); // altre scale: da aggiungere qui
+  // Superfici di arrampicata predefinite; l'utente può aggiungerne altre.
+  const DEFAULT_SURFACES = [
+    { key: 'moonboard', name: 'MoonBoard' }, { key: 'kilter', name: 'Kilter Board' }, { key: 'tension', name: 'Tension Board' },
+    { key: 'gym', name: 'Indoor (palestra)' }, { key: 'outdoor', name: 'Outdoor (roccia)' },
+  ];
+  /** Superficie deducibile dal nome dell'esercizio (solo i casi ovvi), altrimenti stringa vuota. */
+  function inferSurface(name) {
+    const n = name || '';
+    if (/moon\s?board/i.test(n)) return 'moonboard';
+    if (/kilter/i.test(n)) return 'kilter';
+    if (/tension/i.test(n)) return 'tension';
+    if (/outdoor|roccia|falesia/i.test(n)) return 'outdoor';
+    return '';
+  }
+
   const uid = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
     const r = Math.random() * 16 | 0;
     return (c === 'x' ? r : (r & 3) | 8).toString(16);
@@ -123,6 +188,8 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
   const diffDays = (a, b) => Math.round((fromISO(a) - fromISO(b)) / 864e5);
   const appleToISO = sec => toISO(new Date(APPLE_EPOCH_MS + sec * 1000));
   const isoToApple = iso => Math.round((fromISO(iso).getTime() - APPLE_EPOCH_MS) / 1000);
+  /** Data ISO valida e normalizzata, oppure null. */
+  const validISO = s => (/^\d{4}-\d{2}-\d{2}$/.test(s || '') && toISO(fromISO(s)) === s ? s : null); // rifiuta anche date inesistenti (30 febbraio)
   const mondayOf = iso => { const d = fromISO(iso); return addDays(iso, -((d.getDay() + 6) % 7)); };
 
   /* ---- Carichi ---- */
@@ -230,6 +297,7 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
       equipment: Array.isArray(b.equipment) ? b.equipment.map(e => str(e, '')).filter(Boolean) : [],
       interval: normInterval(b.interval),
       load: inferLoad(name, prescription),
+      surface: inferSurface(name),
     };
   }
   /** Converte un .blokplan in { plan, exercises }. Lancia Error se il file non è valido.
@@ -249,9 +317,9 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
       const days = w.slice(0, 7).map(d => {
         const sessions = [];
         if (d && DAY_TYPES[d.type] && d.type !== 'rest')
-          sessions.push({ type: d.type, period: PERIODS[d.period] ? d.period : 'base', blocks: blocksOf(d.plannedBlocks) });
+          sessions.push({ id: uid(), type: d.type, period: PERIODS[d.period] ? d.period : 'base', blocks: blocksOf(d.plannedBlocks) });
         if (d && d.secondType && DAY_TYPES[d.secondType])
-          sessions.push({ type: d.secondType, period: PERIODS[d.secondPeriod] ? d.secondPeriod : 'base', blocks: blocksOf(d.secondPlannedBlocks) });
+          sessions.push({ id: uid(), type: d.secondType, period: PERIODS[d.secondPeriod] ? d.secondPeriod : 'base', blocks: blocksOf(d.secondPlannedBlocks) });
         return { sessions };
       });
       while (days.length < 7) days.push({ sessions: [] });
@@ -297,7 +365,9 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
   }
   const dateOf = (plan, w, d) => addDays(plan.startDate, w * 7 + d);
   const sessionMinutes = s => s.blocks.reduce((t, b) => t + (b.minutes || 0), 0);
-  const cloneDay = day => ({ sessions: day.sessions.map(s => ({ ...s, blocks: s.blocks.map(b => ({ ...b, id: uid() })) })) });
+  // Le copie hanno id nuovi: una sessione copiata non eredita lo stato "fatta" dell'originale.
+  const cloneSession = s => ({ ...s, id: uid(), blocks: s.blocks.map(b => ({ ...b, id: uid() })) });
+  const cloneDay = day => ({ sessions: day.sessions.map(cloneSession) });
   const emptyWeek = () => Array.from({ length: 7 }, () => ({ sessions: [] }));
   function usage(plans, exId) {
     let n = 0;
@@ -307,35 +377,364 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
   /** Validazione minima di un backup completo. */
   function validState(s) {
     return !!s && typeof s === 'object' && Array.isArray(s.plans) && s.exercises && typeof s.exercises === 'object' &&
-      Array.isArray(s.logs) && Array.isArray(s.tests) && s.plans.every(p => p && Array.isArray(p.weeks) && typeof p.startDate === 'string');
+      Array.isArray(s.logs) && Array.isArray(s.tests) && s.plans.every(p => p && typeof p.startDate === 'string' && Array.isArray(p.weeks) &&
+        p.weeks.every(w => Array.isArray(w) && w.every(d => d && Array.isArray(d.sessions) && d.sessions.every(x => x && Array.isArray(x.blocks)))));
+  }
+
+  /* ---- Analisi: aggregazioni pure sul diario ---- */
+  /** Estremi "puliti" per un asse: { min, max, step } con passi 1 / 2 / 2,5 / 5 × 10^n. */
+  function niceRange(lo, hi, n) {
+    n = n || 3;
+    if (!(hi > lo)) { hi = lo + 1; lo = lo >= 0 && lo < 1 ? 0 : lo - 1; }
+    const raw = (hi - lo) / n, mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    const step = [1, 2, 2.5, 5, 10].find(m => m * mag >= raw - 1e-12) * mag;
+    return { min: Math.floor(lo / step + 1e-9) * step, max: Math.ceil(hi / step - 1e-9) * step, step };
+  }
+  /** Sessioni in programma: piano attivo + sessioni extra legate a una data (quelle senza esercizi non contano). */
+  function scheduled(plan, extras) {
+    const out = [];
+    if (plan) plan.weeks.forEach((wk, w) => wk.forEach((day, d) => day.sessions.forEach(s => {
+      if (s.blocks.length) out.push({ sid: s.id, date: dateOf(plan, w, d), minutes: sessionMinutes(s), type: s.type });
+    })));
+    for (const x of extras || []) if (x.blocks.length) out.push({ sid: x.id, date: x.date, minutes: sessionMinutes(x), type: x.type });
+    return out;
+  }
+  /** Statistiche per settimana (lun–dom) dalla settimana di `from` a quella di `to`. `load` = carico sRPE (minuti × RPE). */
+  function weeklyStats(logs, sched, from, to) {
+    const start = mondayOf(from), acc = [];
+    for (let m = start; m <= to; m = addDays(m, 7)) acc.push({ week: m, sessions: 0, minutes: 0, load: 0, rpeSum: 0, rpeN: 0, feelSum: 0, feelN: 0, plannedMinutes: 0, plannedSessions: 0 });
+    const at = iso => (iso >= start ? acc[Math.floor(diffDays(iso, start) / 7)] : undefined);
+    for (const l of logs || []) {
+      const w = at(l.date);
+      if (!w) continue;
+      w.sessions++; w.minutes += l.minutes || 0;
+      if (l.rpe != null) { w.rpeSum += l.rpe; w.rpeN++; w.load += (l.minutes || 0) * l.rpe; }
+      if (l.feel != null) { w.feelSum += l.feel; w.feelN++; }
+    }
+    for (const s of sched || []) { const w = at(s.date); if (w) { w.plannedMinutes += s.minutes; w.plannedSessions++; } }
+    return acc.map(w => ({ week: w.week, sessions: w.sessions, minutes: w.minutes, load: w.load, rpe: w.rpeN ? w.rpeSum / w.rpeN : null,
+      feel: w.feelN ? w.feelSum / w.feelN : null, plannedMinutes: w.plannedMinutes, plannedSessions: w.plannedSessions }));
+  }
+  /** Totali del periodo e aderenza: sessioni in programma fino a oggi che hanno una registrazione nel diario. */
+  function summary(logs, sched, from, to, today) {
+    const inR = (logs || []).filter(l => l.date >= from && l.date <= to);
+    const done = new Set((logs || []).map(l => l.sid).filter(Boolean));
+    const until = to < today ? to : today;
+    const due = (sched || []).filter(s => s.date >= from && s.date <= until);
+    const avg = k => { const a = inR.filter(l => l[k] != null); return a.length ? a.reduce((t, l) => t + l[k], 0) / a.length : null; };
+    return { sessions: inR.length, minutes: inR.reduce((t, l) => t + (l.minutes || 0), 0), rpe: avg('rpe'), rpeN: inR.filter(l => l.rpe != null).length, feel: avg('feel'),
+      due: due.length, dueDone: due.filter(s => done.has(s.sid)).length };
+  }
+  /** Minuti e sessioni per tipo di sessione, dal più grande. */
+  function minutesByType(logs, from, to) {
+    const m = new Map();
+    for (const l of logs || []) {
+      if (l.date < from || l.date > to) continue;
+      const k = DAY_TYPES[l.type] ? l.type : 'other', o = m.get(k) || { type: k, minutes: 0, sessions: 0 };
+      o.minutes += l.minutes || 0; o.sessions++; m.set(k, o);
+    }
+    return [...m.values()].sort((a, b) => b.minutes - a.minutes || a.type.localeCompare(b.type));
+  }
+  /** "SX 15 kg · DX 18 kg" → [{side:'SX',kg:15},{side:'DX',kg:18}]; "+4,5 kg" → [{side:null,kg:4.5}]. */
+  function parseLoads(text) {
+    const out = [];
+    for (const part of String(text == null ? '' : text).split(/[·;/]/)) {
+      const m = /[+-]?\d+(?:[.,]\d+)?/.exec(part);
+      if (!m) continue;
+      const side = /\b(SX|DX)\b/i.exec(part);
+      out.push({ side: side ? side[1].toUpperCase() : null, kg: num(m[0]) });
+    }
+    return out;
+  }
+  /** Carichi registrati nel diario: una serie per esercizio (e per lato), in ordine di data. */
+  function loadSeries(logs, from, to) {
+    const m = new Map();
+    for (const l of [...(logs || [])].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))) {
+      if (l.date < from || l.date > to) continue;
+      for (const x of l.loads || []) for (const p of parseLoads(x.kg)) {
+        const name = x.name + (p.side ? ' ' + p.side : '');
+        if (!m.has(name)) m.set(name, []);
+        m.get(name).push({ date: l.date, kg: p.kg });
+      }
+    }
+    return [...m.entries()].map(([name, points]) => ({ name, points })).sort((a, b) => a.name.localeCompare(b.name));
+  }
+  /** Per superficie: minuti, sessioni, blocchi chiusi e grado massimo chiuso nel periodo. */
+  function surfaceStats(logs, from, to) {
+    const m = new Map();
+    for (const l of logs || []) {
+      if (l.date < from || l.date > to) continue;
+      const seen = new Set();
+      for (const c of l.climbs || []) {
+        if (!c.surface) continue;
+        const o = m.get(c.surface) || { surface: c.surface, minutes: 0, sessions: 0, sends: 0, top: -1 };
+        o.minutes += c.minutes || 0; o.sends += c.sends || 0; o.top = Math.max(o.top, gradeIdx(c.top));
+        if (!seen.has(c.surface)) { seen.add(c.surface); o.sessions++; }
+        m.set(c.surface, o);
+      }
+    }
+    return [...m.values()].map(o => ({ ...o, top: o.top >= 0 ? GRADES[o.top] : null })).sort((a, b) => b.minutes - a.minutes || a.surface.localeCompare(b.surface));
+  }
+  /** Grado massimo chiuso per settimana: { weeks, series: { superficie: [indice nella scala | null] } }. */
+  function weeklyTopGrades(logs, from, to) {
+    const start = mondayOf(from), weeks = [], series = {};
+    for (let w = start; w <= to; w = addDays(w, 7)) weeks.push(w);
+    for (const l of logs || []) {
+      if (l.date < start) continue;
+      const i = Math.floor(diffDays(l.date, start) / 7);
+      if (i >= weeks.length) continue;
+      for (const c of l.climbs || []) {
+        const g = gradeIdx(c.top);
+        if (!c.surface || g < 0) continue;
+        const s = series[c.surface] || (series[c.surface] = weeks.map(() => null));
+        s[i] = s[i] == null ? g : Math.max(s[i], g);
+      }
+    }
+    return { weeks, series };
   }
 
   return {
-    DAY_TYPES, PERIODS, SLOTS, DEFAULT_TESTS, uid, toISO, fromISO, todayISO, addDays, diffDays, appleToISO, isoToApple, mondayOf,
+    DAY_TYPES, PERIODS, SLOTS, DEFAULT_TESTS, GRADES, GRADE_SCALES, gradeIdx, fmtGrade, DEFAULT_SURFACES, inferSurface, validISO, uid, toISO, fromISO, todayISO, addDays, diffDays, appleToISO, isoToApple, mondayOf,
     inferLoad, loadKey, loadKg, latestMaxes, fmtKg, cycle, cueAt, intervalMinutes, buildSteps, normInterval,
-    importBlokplan, exportBlokplan, locate, dateOf, sessionMinutes, cloneDay, emptyWeek, usage, validState,
+    importBlokplan, exportBlokplan, locate, dateOf, sessionMinutes, cloneSession, cloneDay, emptyWeek, usage, validState,
+    niceRange, scheduled, weeklyStats, summary, minutesByType, parseLoads, loadSeries, surfaceStats, weeklyTopGrades,
   };
 });
 </script>
-<script>/* Interfaccia: viste, editor, player. Tutta la logica testabile sta in core.js. */
+<script>/* Grafici SVG senza dipendenze (funzionano offline).
+   Regole: una sola tinta per i dati, grigio per il termine di confronto, mai due scale sullo stesso grafico,
+   testo sempre nei colori del testo, e ogni grafico ha tooltip (tocco, mouse, tastiera) + vista tabella. */
+(function (root) {
+  'use strict';
+  const NS = 'http://www.w3.org/2000/svg', W = 330;
+  const svgEl = (tag, attrs, ...kids) => {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs || {}) if (attrs[k] != null) e.setAttribute(k, attrs[k]);
+    for (const c of kids) if (c != null) e.append(c);
+    return e;
+  };
+  // Le etichette arrivano dai dati dell'utente: sempre textContent, mai innerHTML.
+  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  const fmtNum = (v, digits) => v.toLocaleString('it-IT', { maximumFractionDigits: digits || 0 });
+  const tickDigits = step => (Number.isInteger(step) ? 0 : Number.isInteger(step * 10) ? 1 : 2);
+
+  function frame(height, aria) {
+    const wrap = el('div', 'viz'), svg = svgEl('svg', { viewBox: `0 0 ${W} ${height}`, role: 'img', 'aria-label': aria }), tip = el('div', 'viz-tip');
+    tip.hidden = true;
+    wrap.append(svg, tip);
+    return {
+      wrap, svg,
+      show(x, title, rows) { // il valore è l'elemento forte, il nome della serie lo segue
+        tip.replaceChildren(el('div', 'viz-tip-t', title), ...rows.map(r => {
+          const row = el('div', 'viz-tip-r');
+          row.append(el('i', 'viz-key' + (r.key ? ' ' + r.key : '')), el('b', '', r.value), document.createTextNode(' ' + r.label));
+          return row;
+        }));
+        tip.hidden = false;
+        tip.style.left = Math.min(Math.max(x / W * 100, 24), 76) + '%';
+      },
+      hide() { tip.hidden = true; },
+    };
+  }
+  function tableView(head, rows) {
+    const d = el('details', 'viz-table'), t = el('table'), hr = el('tr');
+    d.append(el('summary', '', 'Tabella'));
+    head.forEach(x => hr.append(el('th', '', x)));
+    t.append(hr);
+    rows.forEach(r => { const tr = el('tr'); r.forEach(c => tr.append(el('td', '', c))); t.append(tr); });
+    d.append(t);
+    return d;
+  }
+  /** Griglia orizzontale + etichette dell'asse Y; restituisce la funzione y(valore). */
+  function yAxis(svg, g, H, dom, tickFmt) {
+    const ph = H - g.t - g.b, y = v => g.t + ph * (1 - (v - dom.min) / (dom.max - dom.min)), d = tickDigits(dom.step);
+    for (let v = dom.min; v <= dom.max + dom.step / 1000; v += dom.step) {
+      svg.append(svgEl('line', { class: v === dom.min ? 'axis' : 'grid', x1: g.l, x2: W - g.r, y1: y(v), y2: y(v) }));
+      const t = svgEl('text', { x: g.l - 6, y: y(v) + 3.5, 'text-anchor': 'end' });
+      t.textContent = tickFmt ? tickFmt(v) : fmtNum(v, d);
+      svg.append(t);
+    }
+    return y;
+  }
+  function xLabels(svg, labels, xOf, H, spacing) {
+    const n = labels.length, every = Math.max(1, Math.ceil(42 / spacing));
+    labels.forEach((lab, i) => {
+      if ((n - 1 - i) % every) return; // l'ultima etichetta (il periodo corrente) c'è sempre
+      const t = svgEl('text', { x: xOf(i), y: H - 5, 'text-anchor': 'middle' });
+      t.textContent = lab;
+      svg.append(t);
+    });
+  }
+
+  /** Colonne (una serie) con eventuale riferimento per colonna (trattino grigio).
+      o: { labels, longLabels, values, targets?, unit, name, targetName?, aria } */
+  function columns(o) {
+    const H = 172, g = { l: 34, r: 6, t: 14, b: 20 }, n = o.values.length, f = frame(H, o.aria);
+    const hasT = !!(o.targets && o.targets.some(v => v > 0));
+    const dom = Core.niceRange(0, Math.max(0, ...o.values, ...(hasT ? o.targets : [])));
+    const y = yAxis(f.svg, g, H, dom), band = (W - g.l - g.r) / n, bw = Math.max(2, Math.min(24, band - 2, band * 0.62));
+    const cx = i => g.l + band * (i + 0.5), y0 = y(0), bars = [];
+    let active = -1;
+    const unit = o.unit ? ' ' + o.unit : '';
+    o.values.forEach((v, i) => {
+      const x = cx(i) - bw / 2, yt = y(v), r = Math.min(4, bw / 2, y0 - yt);
+      // estremità arrotondata verso il dato, squadrata sulla linea di base
+      const bar = v > 0 ? svgEl('path', { class: 'bar', d: `M${x},${y0}V${yt + r}Q${x},${yt} ${x + r},${yt}H${x + bw - r}Q${x + bw},${yt} ${x + bw},${yt + r}V${y0}Z` }) : null;
+      bars.push(bar);
+      if (bar) f.svg.append(bar);
+      if (hasT && o.targets[i] > 0) f.svg.append(svgEl('line', { class: 'tick', x1: x - 3, x2: x + bw + 3, y1: y(o.targets[i]), y2: y(o.targets[i]) }));
+    });
+    xLabels(f.svg, o.labels, cx, H, band);
+    o.values.forEach((v, i) => {
+      const title = (o.longLabels || o.labels)[i];
+      const rows = [{ value: fmtNum(v) + unit, label: o.name.toLowerCase() }];
+      if (hasT) rows.push({ key: 'ref', value: fmtNum(o.targets[i]) + unit, label: o.targetName.toLowerCase() });
+      const hit = svgEl('rect', { class: 'hit', x: g.l + band * i, y: g.t, width: band, height: H - g.t - g.b, tabindex: 0,
+        'aria-label': `${title}: ${rows.map(r => r.value + ' ' + r.label).join(', ')}` });
+      const on = () => { if (bars[active]) bars[active].classList.remove('on'); active = i; if (bars[i]) bars[i].classList.add('on'); f.show(cx(i), title, rows); };
+      const off = () => { if (bars[i]) bars[i].classList.remove('on'); f.hide(); };
+      hit.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') on(); });
+      hit.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') off(); });
+      hit.addEventListener('click', on);
+      hit.addEventListener('focus', on);
+      hit.addEventListener('blur', off);
+      f.svg.append(hit);
+    });
+    const box = el('div');
+    if (hasT) { // due serie → legenda sempre presente (rettangolo per le colonne, linea per il riferimento)
+      const lg = el('div', 'viz-legend'), a = el('span'), b = el('span');
+      a.append(el('i', 'sw'), document.createTextNode(o.name));
+      b.append(el('i', 'lk'), document.createTextNode(o.targetName));
+      lg.append(a, b);
+      box.append(lg);
+    }
+    box.append(f.wrap, tableView(hasT ? [o.colLabel || 'Settimana', o.name, o.targetName] : [o.colLabel || 'Settimana', o.name],
+      o.values.map((v, i) => [(o.longLabels || o.labels)[i], fmtNum(v) + unit].concat(hasT ? [fmtNum(o.targets[i]) + unit] : []))));
+    return box;
+  }
+
+  /** Linea (una serie) con valori mancanti ammessi (null).
+      o: { labels, longLabels, values, name, unit?, digits?, domain?: {min,max,step}, fmt?, height?, colLabel?, aria } */
+  function line(o) {
+    const idxs = o.values.map((v, i) => (v == null ? -1 : i)).filter(i => i >= 0), nums = idxs.map(i => o.values[i]), last = idxs[idxs.length - 1];
+    const dom = o.domain || Core.niceRange(Math.min(...nums), Math.max(...nums));
+    const fmt = o.fmt || (v => fmtNum(v, o.digits == null ? 1 : o.digits) + (o.unit ? ' ' + o.unit : ''));
+    // il margine destro si adatta all'etichetta dell'ultimo valore, così non viene mai tagliata
+    const H = o.height || 132, g = { l: 34, r: Math.max(30, fmt(o.values[last]).length * 6.6 + 14), t: 12, b: 20 }, n = o.values.length, f = frame(H, o.aria);
+    const y = yAxis(f.svg, g, H, dom, o.fmt), pw = W - g.l - g.r - 8;
+    const x = i => (n === 1 ? g.l + 8 + pw / 2 : g.l + 8 + pw * i / (n - 1)); // 8px di respiro dall'asse Y
+    xLabels(f.svg, o.labels, x, H, n > 1 ? pw / (n - 1) : pw);
+    let d = '', pen = false;
+    o.values.forEach((v, i) => {
+      if (v == null) { pen = false; return; }
+      d += (pen ? 'L' : 'M') + x(i).toFixed(1) + ',' + y(v).toFixed(1);
+      pen = true;
+    });
+    f.svg.append(svgEl('path', { class: 'ln', d }));
+    const cross = svgEl('line', { class: 'cross', y1: g.t, y2: H - g.b, visibility: 'hidden' });
+    f.svg.append(cross);
+    // punti: tutti se sono pochi (servono a vedere i valori isolati), altrimenti solo l'ultimo
+    for (const i of idxs.length <= 26 ? idxs : [last]) f.svg.append(svgEl('circle', { class: 'dot', cx: x(i), cy: y(o.values[i]), r: 4 }));
+    const end = svgEl('text', { class: 'end', x: x(last) + 8, y: y(o.values[last]) + 4 }); // etichetta diretta solo sull'ultimo valore
+    end.textContent = fmt(o.values[last]);
+    f.svg.append(end);
+    let cur = -1;
+    const pick = k => {
+      cur = k;
+      const i = idxs[k];
+      cross.setAttribute('x1', x(i)); cross.setAttribute('x2', x(i)); cross.setAttribute('visibility', 'visible');
+      f.show(x(i), (o.longLabels || o.labels)[i], [{ value: fmt(o.values[i]), label: o.name.toLowerCase() }]);
+    };
+    const off = () => { cross.setAttribute('visibility', 'hidden'); f.hide(); };
+    const near = e => { // il puntatore deve solo essere vicino a una data, non centrare un punto
+      const b = f.svg.getBoundingClientRect(), px = (e.clientX - b.left) / b.width * W;
+      let best = 0;
+      idxs.forEach((i, k) => { if (Math.abs(x(i) - px) < Math.abs(x(idxs[best]) - px)) best = k; });
+      pick(best);
+    };
+    const hit = svgEl('rect', { class: 'hit', x: g.l - 4, y: g.t, width: pw + 24, height: H - g.t - g.b, tabindex: 0,
+      'aria-label': `${o.aria}. Frecce sinistra e destra per scorrere i valori.` });
+    hit.addEventListener('pointermove', near);
+    hit.addEventListener('pointerdown', near);
+    hit.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') off(); });
+    hit.addEventListener('focus', () => pick(cur < 0 ? idxs.length - 1 : cur));
+    hit.addEventListener('blur', off);
+    hit.addEventListener('keydown', e => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      e.preventDefault();
+      pick(Math.min(idxs.length - 1, Math.max(0, cur + (e.key === 'ArrowRight' ? 1 : -1))));
+    });
+    f.svg.append(hit);
+    const box = el('div');
+    box.append(f.wrap, tableView([o.colLabel || 'Settimana', o.name], idxs.map(i => [(o.longLabels || o.labels)[i], fmt(o.values[i])])));
+    return box;
+  }
+
+  /** Barre orizzontali ordinate, una tinta, valore scritto accanto: è già la sua tabella.
+      rows: [{ label, value, text }] */
+  function hbars(rows) {
+    const max = Math.max(1, ...rows.map(r => r.value)), box = el('div', 'viz-hb');
+    for (const r of rows) {
+      const row = el('div', 'viz-hb-r'), track = el('span', 'viz-hb-t'), bar = el('i');
+      bar.style.width = (r.value > 0 ? Math.max(1, r.value / max * 100) : 0) + '%';
+      track.append(bar);
+      row.append(el('span', 'viz-hb-l', r.label), track, el('span', 'viz-hb-v', r.text));
+      box.append(row);
+    }
+    return box;
+  }
+
+  /** Andamento in miniatura per le righe di riepilogo (nessun asse: il valore è scritto a fianco). */
+  function spark(vals) {
+    if (vals.length < 2) return null;
+    const lo = Math.min(...vals), hi = Math.max(...vals), sp = hi - lo || 1;
+    const pts = vals.map((v, i) => [5 + i * 100 / (vals.length - 1), 29 - (v - lo) / sp * 24]);
+    return svgEl('svg', { class: 'spark', viewBox: '0 0 110 34', 'aria-hidden': 'true' },
+      svgEl('polyline', { points: pts.map(p => p.map(n => n.toFixed(1)).join(',')).join(' ') }),
+      svgEl('circle', { cx: pts[pts.length - 1][0].toFixed(1), cy: pts[pts.length - 1][1].toFixed(1), r: 4 }));
+  }
+
+  root.Charts = { columns, line, hbars, spark, fmtNum };
+})(typeof self !== 'undefined' ? self : this);
+</script>
+<script>/* Interfaccia: viste, editor, player. Tutta la logica testabile sta in core.js, i grafici in charts.js. */
 (function () {
   'use strict';
   const C = Core, KEY = 'allenamento.v1';
   const WD = ['lun', 'mar', 'mer', 'gio', 'ven', 'sab', 'dom'];
+  const WD_FULL = ['lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato', 'domenica'];
   const MONTHS = ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic'];
+  const MONTHS_FULL = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'];
+  const TYPES = Object.entries(C.DAY_TYPES).filter(([k]) => k !== 'rest');
+  const LOG_TYPES = TYPES.concat([['other', 'Altro']]);
+  const FEEL = [['', '—'], ['1', '1 · Distrutto'], ['2', '2 · Stanco'], ['3', '3 · Così così'], ['4', '4 · Bene'], ['5', '5 · Ottimo']];
+  const wdIdx = iso => (C.fromISO(iso).getDay() + 6) % 7;
   const fmtDate = iso => { const d = C.fromISO(iso); return `${d.getDate()} ${MONTHS[d.getMonth()]}`; };
-  const wdOf = iso => WD[(C.fromISO(iso).getDay() + 6) % 7];
+  const wdOf = iso => WD[wdIdx(iso)];
+  const dec = v => String(v).replace('.', ',');
   const log = (area, msg, extra) => console.info(`[${area}] ${msg}`, extra === undefined ? '' : extra);
 
   /* ---------- Stato e persistenza ---------- */
   // Primo avvio: nessun piano precaricato, ogni utente importa o crea i propri.
-  const fresh = () => migrate({ v: 1, plans: [], activePlan: null, exercises: {}, logs: [], tests: [] });
+  const fresh = () => migrate({ v: 2, plans: [], activePlan: null, exercises: {}, logs: [], tests: [] });
   function migrate(s) { // completa i campi mancanti di backup vecchi o parziali
-    s.v = 1;
+    s.extras = Array.isArray(s.extras) ? s.extras : [];
+    s.surfaces = Array.isArray(s.surfaces) && s.surfaces.length ? s.surfaces : C.DEFAULT_SURFACES.map(x => ({ ...x }));
     s.testDefs = Array.isArray(s.testDefs) && s.testDefs.length ? s.testDefs : C.DEFAULT_TESTS.map(t => ({ ...t }));
-    s.settings = Object.assign({ prep: 10, sound: true }, s.settings);
+    s.settings = Object.assign({ prep: 10, sound: true, gradeScale: 'font' }, s.settings);
     if (!s.plans.some(p => p.id === s.activePlan)) s.activePlan = s.plans[0] ? s.plans[0].id : null;
+    for (const p of s.plans) for (const w of p.weeks) for (const d of w) for (const x of d.sessions) if (!x.id) x.id = C.uid();
+    for (const e of Object.values(s.exercises)) if (e.surface === undefined) e.surface = C.inferSurface(e.name);
+    // La v1 puntava alle sessioni per posizione (piano, settimana, giorno, indice): si passa all'id della sessione.
+    const at = l => { const p = s.plans.find(x => x.id === l.planId); return p && p.weeks[l.w] && p.weeks[l.w][l.d] ? p.weeks[l.w][l.d].sessions[l.si] : null; };
+    for (const l of s.logs) {
+      const x = !l.sid && l.planId ? at(l) : null;
+      if (x) l.sid = x.id;
+      if (!l.type) l.type = x ? x.type : 'other';
+    }
+    if (s.live && !s.live.sid) { const x = s.live.planId ? at(s.live) : null; s.live = x ? { sid: x.id, idx: s.live.idx || 0, startedAt: s.live.startedAt || Date.now() } : null; }
     s.live = s.live || null;
+    s.v = 2;
     return s;
   }
   function load() {
@@ -357,6 +756,17 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
   let S = load();
   const plan = () => S.plans.find(p => p.id === S.activePlan) || null;
   const maxes = () => C.latestMaxes(S.tests);
+  const surfName = k => (S.surfaces.find(x => x.key === k) || { name: k }).name;
+  const surfOpts = () => [['', '—']].concat(S.surfaces.map(x => [x.key, x.name]));
+  const fmtG = g => C.fmtGrade(g, S.settings.gradeScale);
+  const gradeOpts = () => [['', '—']].concat(C.GRADES.map(g => [g, fmtG(g)]));
+  function addSurface(name) {
+    const hit = S.surfaces.find(x => x.name.toLowerCase() === name.toLowerCase());
+    if (hit) return hit.key;
+    const x = { key: 's-' + C.uid().slice(0, 8), name };
+    S.surfaces.push(x);
+    return x.key;
+  }
 
   /* ---------- DOM ---------- */
   function h(tag, attrs, ...kids) {
@@ -376,9 +786,13 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
   const $ = id => document.getElementById(id);
   const btn = (label, onclick, cls) => h('button', { type: 'button', class: 'btn ' + (cls || ''), onclick }, label);
   const field = (label, input) => h('label', { class: 'f' }, label, input);
-  const opts = (map, value, extra) => h('select', { value, ...(extra || {}) }, Object.entries(map).map(([k, v]) => h('option', { value: k }, v)));
-  const numInp = (value, extra) => h('input', { type: 'text', inputmode: 'decimal', autocomplete: 'off', value: value == null ? '' : String(value).replace('.', ','), ...(extra || {}) }); // testo + virgola: i campi number perdono la virgola su alcune tastiere
+  // `map`: oggetto o lista di coppie [valore, etichetta]. La lista serve quando l'ordine conta: le chiavi numeriche di un oggetto vengono riordinate.
+  const opts = (map, value, extra) => h('select', { value, ...(extra || {}) }, (Array.isArray(map) ? map : Object.entries(map)).map(([k, v]) => h('option', { value: k }, v)));
+  // testo + inputmode decimale: i campi number perdono la virgola su alcune tastiere
+  const numInp = (value, extra) => h('input', { type: 'text', inputmode: 'decimal', autocomplete: 'off', value: value == null ? '' : dec(value), ...(extra || {}) });
   const val = el => { const n = parseFloat(String(el.value).replace(',', '.')); return Number.isFinite(n) ? n : null; };
+  const seg = (items, cur, onpick) => h('div', { class: 'seg' }, items.map(([k, label]) =>
+    h('button', { type: 'button', class: k === cur ? 'on' : '', 'aria-pressed': k === cur ? 'true' : 'false', onclick: () => onpick(k) }, label)));
 
   let toastTimer;
   function toast(msg) {
@@ -411,6 +825,31 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
       btn('Scarica file', () => download(name, text), 'pri'),
       btn('Copia', async () => { try { await navigator.clipboard.writeText(text); toast('Copiato.'); } catch (e) { ta.select(); toast('Seleziona e copia manualmente.'); } }))]);
   }
+  const go = hash => { if (location.hash.slice(1) === hash) render(); else location.hash = hash; };
+
+  /* ---------- Riferimenti alle sessioni ----------
+     Una sessione sta in un piano ({p, w, d, si}) oppure è "extra", legata a una data del calendario ({x}).
+     Diario e player la riconoscono dal suo id, quindi spostare o copiare settimane non sposta lo stato "fatta". */
+  const sessOf = r => (r.x ? r.x : r.p.weeks[r.w][r.d].sessions[r.si]);
+  const isDone = r => { const id = sessOf(r).id; return S.logs.some(l => l.sid === id); };
+  const sessTitle = s => `${C.DAY_TYPES[s.type]} · ${C.PERIODS[s.period]}`;
+  const refTitle = r => (r.x ? r.x.title || sessTitle(r.x) : `${sessTitle(sessOf(r))} · ${r.p.title} S${r.w + 1}`);
+  function findRef(sid) {
+    const x = S.extras.find(e => e.id === sid);
+    if (x) return { x };
+    for (const p of S.plans) for (let w = 0; w < p.weeks.length; w++) for (let d = 0; d < p.weeks[w].length; d++) {
+      const si = p.weeks[w][d].sessions.findIndex(s => s.id === sid);
+      if (si >= 0) return { p, w, d, si };
+    }
+    return null;
+  }
+  /** Sessioni di una data: quelle del piano attivo più le extra. */
+  function refsOn(iso) {
+    const out = [], p = plan(), pos = p ? C.locate(p, iso) : null;
+    if (pos) p.weeks[pos.w][pos.d].sessions.forEach((_, si) => out.push({ p, w: pos.w, d: pos.d, si }));
+    for (const x of S.extras) if (x.date === iso) out.push({ x });
+    return out;
+  }
 
   /* ---------- Elementi condivisi ---------- */
   function loadHint(ex) {
@@ -421,59 +860,66 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
       const kg = C.loadKg(ex.load, c, m);
       if (kg == null) return 'kg: mancano i massimali';
       const side = ex.load.ref === 'pinch' ? (/^\s*DX/i.test(c) ? 'DX ' : 'SX ') : '';
-      const s = side + (ex.load.mode === 'hang' ? C.fmtKg(kg) : String(kg).replace('.', ',') + ' kg');
+      const s = side + (ex.load.mode === 'hang' ? C.fmtKg(kg) : dec(kg) + ' kg');
       if (!out.includes(s)) out.push(s);
     }
     return out.join(' · ');
   }
-  const isDone = (p, w, d, si) => S.logs.some(l => l.planId === p.id && l.w === w && l.d === d && l.si === si);
-  const sessTitle = s => `${C.DAY_TYPES[s.type]} · ${C.PERIODS[s.period]}`;
+  const exLine = e => [e.prescription, e.surface ? surfName(e.surface) : ''].filter(Boolean).join(' · ');
   function blockRow(b, onclick) {
     const ex = S.exercises[b.exId];
     if (!ex) return h('div', { class: 'blk' }, h('span', { class: 'p' }, 'Esercizio rimosso'));
     const hint = loadHint(ex);
     return h('div', { class: 'blk', onclick, style: onclick ? 'cursor:pointer' : null },
-      h('div', { class: 'grow' }, h('div', { class: 'n' }, ex.name), h('div', { class: 'p' }, ex.prescription), hint ? h('div', { class: 'kg' }, hint) : null),
+      h('div', { class: 'grow' }, h('div', { class: 'n' }, ex.name), h('div', { class: 'p' }, exLine(ex)), hint ? h('div', { class: 'kg' }, hint) : null),
       h('div', { class: 'm' }, b.minutes + ' min'));
   }
-  function sessionCard(p, w, d, si, edit) {
-    const s = p.weeks[w][d].sessions[si], done = isDone(p, w, d, si);
+  function sessionCard(r, edit) {
+    const s = sessOf(r), done = isDone(r), named = r.x && r.x.title;
     return h('div', { class: 'card' },
-      h('div', { class: 'row' }, h('div', { class: 'grow big', style: 'font-size:17px' }, sessTitle(s)),
-        done ? h('span', { class: 'tag ok' }, 'Fatta') : null, h('span', { class: 'tag' }, C.sessionMinutes(s) + ' min')),
-      s.blocks.map((b, bi) => blockRow(b, edit ? () => blockSheet(p, w, d, si, bi) : null)),
-      s.blocks.length ? null : h('p', { class: 'sub' }, 'Nessun esercizio.'),
+      h('div', { class: 'row' }, h('div', { class: 'grow big', style: 'font-size:17px' }, named ? r.x.title : sessTitle(s)),
+        r.x ? h('span', { class: 'tag ac' }, 'Extra') : null, done ? h('span', { class: 'tag ok' }, 'Fatta') : null, h('span', { class: 'tag' }, C.sessionMinutes(s) + ' min')),
+      named ? h('div', { class: 'sub' }, sessTitle(s)) : null,
+      s.blocks.map((b, bi) => blockRow(b, edit ? () => blockSheet(r, bi) : null)),
+      s.blocks.length ? null : h('p', { class: 'sub' }, edit ? 'Nessun esercizio: aggiungine uno.' : 'Nessun esercizio.'),
       h('div', { class: 'btns' },
-        btn(done ? 'Ripeti' : 'Avvia', () => startSession(p, w, d, si, 0), 'pri'),
+        btn(done ? 'Ripeti' : 'Avvia', () => startSession(r, 0), 'pri'),
         edit ? [btn('+ Esercizio', () => pickExercise(id => { s.blocks.push({ id: C.uid(), exId: id, minutes: C.intervalMinutes(S.exercises[id].interval) || 10 }); save(); render(); }), 'sm'),
-          btn('Sessione…', () => sessionSheet(p, w, d, si), 'sm')] : null));
+          btn('Sessione…', () => sessionSheet(r), 'sm')] : null));
   }
+  const climbText = c => surfName(c.surface) + (c.top ? ' ' + fmtG(c.top) : '') + (c.sends != null ? ` · ${c.sends} ${c.sends === 1 ? 'blocco' : 'blocchi'}` : '');
+  const logCard = l => h('div', { class: 'card tap', onclick: () => logSheet(l) },
+    h('div', { class: 'row' }, h('div', { class: 'grow n', style: 'font-weight:600' }, l.title), h('span', { class: 'tag' }, (l.minutes || 0) + ' min')),
+    h('div', { class: 'sub' }, `${wdOf(l.date)} ${fmtDate(l.date)}${l.rpe ? ' · RPE ' + dec(l.rpe) : ''}${l.feel ? ' · sensazione ' + l.feel + '/5' : ''}`),
+    (l.climbs || []).length ? h('div', { class: 'sub', style: 'color:var(--tx)' }, l.climbs.map(climbText).join('  |  ')) : null,
+    (l.loads || []).length ? h('div', { class: 'p', style: 'color:var(--ac);font-size:13px' }, l.loads.map(x => `${x.name}: ${x.kg}`).join(' · ')) : null,
+    l.notes ? h('div', { class: 'sub', style: 'margin-top:4px;color:var(--tx)' }, l.notes) : null);
 
-  /* ---------- Viste ---------- */
+  /* ---------- Oggi ---------- */
   let curWeek = null;
   function viewToday() {
     const p = plan(), t = C.todayISO(), out = [h('div', { class: 'sub' }, `${wdOf(t)} ${fmtDate(t)}`), h('h1', {}, 'Oggi')];
     if (S.live) {
-      const lp = S.plans.find(x => x.id === S.live.planId);
-      if (lp && lp.weeks[S.live.w] && lp.weeks[S.live.w][S.live.d].sessions[S.live.si])
-        out.push(h('div', { class: 'card', style: 'border-color:var(--warn)' }, h('div', { class: 'n' }, 'Sessione interrotta'),
-          h('div', { class: 'btns' }, btn('Riprendi', () => startSession(lp, S.live.w, S.live.d, S.live.si, S.live.idx), 'pri'), btn('Scarta', () => { S.live = null; save(); render(); }))));
+      const lr = findRef(S.live.sid);
+      if (lr) out.push(h('div', { class: 'card', style: 'border-color:var(--warn)' }, h('div', { class: 'n' }, 'Sessione interrotta'), h('div', { class: 'sub' }, refTitle(lr)),
+        h('div', { class: 'btns' }, btn('Riprendi', () => startSession(lr, S.live.idx), 'pri'), btn('Scarta', () => { S.live = null; save(); render(); }))));
       else S.live = null;
     }
-    if (!p) return out.concat(h('div', { class: 'card' }, h('div', { class: 'big' }, 'Benvenuto'), h('p', { class: 'sub' }, 'Non c\'è ancora nessun piano. Importa un file .blokplan esportato da Blok Sessions oppure creane uno da zero.'),
+    const pos = p ? C.locate(p, t) : null, refs = refsOn(t);
+    if (!p) out.push(h('div', { class: 'card' }, h('div', { class: 'big' }, 'Benvenuto'),
+      h('p', { class: 'sub' }, 'Non c\'è ancora nessun piano. Importa un file .blokplan esportato da Blok Sessions, creane uno da zero, oppure aggiungi una sessione solo per oggi.'),
       h('div', { class: 'btns' }, fileBtn('Importa .blokplan'), btn('Crea un piano', () => { location.hash = 'piano'; planSheet(); }, 'sm pri'))));
-    const pos = C.locate(p, t);
-    out.push(h('div', { class: 'sub' }, p.title + (pos ? ` · settimana ${pos.w + 1} di ${p.weeks.length}` : '')));
-    if (!pos) {
-      const before = C.diffDays(t, p.startDate) < 0;
-      out.push(h('div', { class: 'card' }, h('p', {}, before ? `Il piano inizia ${wdOf(p.startDate)} ${fmtDate(p.startDate)} (tra ${-C.diffDays(t, p.startDate)} giorni).` : 'Il piano è concluso.'),
-        btn(before ? 'Apri il primo giorno' : 'Apri il piano', () => { location.hash = before ? 'giorno-0-0' : 'piano'; }, 'pri')));
-    } else {
-      const day = p.weeks[pos.w][pos.d];
-      if (!day.sessions.length) out.push(h('div', { class: 'card' }, h('div', { class: 'big' }, 'Recupero'), h('p', { class: 'sub' }, 'Nessuna sessione in programma.')));
-      day.sessions.forEach((_, si) => out.push(sessionCard(p, pos.w, pos.d, si, false)));
-      out.push(btn('Modifica il giorno', () => { location.hash = `giorno-${pos.w}-${pos.d}`; }, 'sm'));
+    else {
+      out.push(h('div', { class: 'sub' }, p.title + (pos ? ` · settimana ${pos.w + 1} di ${p.weeks.length}` : '')));
+      if (!pos) {
+        const before = C.diffDays(t, p.startDate) < 0;
+        out.push(h('div', { class: 'card' }, h('p', {}, before ? `Il piano inizia ${wdOf(p.startDate)} ${fmtDate(p.startDate)} (tra ${-C.diffDays(t, p.startDate)} giorni).` : 'Il piano è concluso.'),
+          btn(before ? 'Apri il primo giorno' : 'Apri il piano', () => { location.hash = before ? 'giorno-0-0' : 'piano'; }, 'sm')));
+      } else if (!refs.length) out.push(h('div', { class: 'card' }, h('div', { class: 'big' }, 'Recupero'), h('p', { class: 'sub' }, 'Nessuna sessione in programma.')));
     }
+    refs.forEach(r => out.push(sessionCard(r, !!r.x))); // le sessioni extra si modificano qui, quelle del piano dal piano
+    out.push(h('div', { class: 'btns' }, btn('+ Nuova sessione', () => newSessionSheet(t), 'sm' + (refs.length ? '' : ' pri')),
+      pos ? btn('Modifica il giorno', () => { location.hash = `giorno-${pos.w}-${pos.d}`; }, 'sm') : null));
     const mon = C.mondayOf(t), wk = S.logs.filter(l => l.date >= mon && l.date <= C.addDays(mon, 6));
     out.push(h('h2', {}, 'Questa settimana'), h('div', { class: 'card row' },
       h('div', { class: 'grow' }, h('div', { class: 'big' }, wk.length), h('div', { class: 'sub' }, 'sessioni')),
@@ -481,6 +927,70 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
     return out;
   }
 
+  /* ---------- Sessioni extra e calendario ---------- */
+  function showDate(iso) { // dopo aver creato o spostato una sessione: resta su Oggi se è oggi, altrimenti apre il giorno nel calendario
+    const onToday = (location.hash.slice(1) || 'oggi') === 'oggi';
+    go(onToday && iso === C.todayISO() ? 'oggi' : 'calendario-' + iso);
+  }
+  function newSessionSheet(dateDefault) {
+    const p = plan(), pos = p ? C.locate(p, dateDefault) : null;
+    const guess = pos ? (p.weeks[pos.w].flatMap(d => d.sessions)[0] || {}).period || 'base' : 'base';
+    const date = h('input', { type: 'date', value: dateDefault }), ty = opts(TYPES, 'wall'), pe = opts(C.PERIODS, guess), title = h('input', { placeholder: 'Es. Board con amici' });
+    const ov = openSheet('Nuova sessione', [h('div', { class: 'cols' }, field('Data', date), field('Tipo', ty)),
+      h('div', { class: 'cols' }, field('Periodo', pe), field('Titolo (facoltativo)', title)),
+      h('p', { class: 'sub' }, 'Resta legata alla data scelta e non modifica il piano. Dopo averla creata aggiungi gli esercizi.'),
+      btn('Crea sessione', () => {
+        const iso = C.validISO(date.value);
+        if (!iso) return toast('Scegli una data valida.');
+        S.extras.push({ id: C.uid(), date: iso, type: ty.value, period: pe.value, title: title.value.trim().slice(0, 80), blocks: [] });
+        save(); ov.remove(); showDate(iso);
+      }, 'pri block')]);
+  }
+  function copyToDateSheet(r) {
+    const s = sessOf(r), date = h('input', { type: 'date', value: C.todayISO() });
+    const ov = openSheet('Copia su una data', [h('p', { class: 'sub' }, `"${r.x && r.x.title ? r.x.title : sessTitle(s)}" viene copiata come sessione extra, con gli stessi esercizi.`), field('Data', date),
+      btn('Copia', () => {
+        const iso = C.validISO(date.value);
+        if (!iso) return toast('Scegli una data valida.');
+        S.extras.push({ ...C.cloneSession(s), date: iso, title: r.x ? r.x.title || '' : '' });
+        save(); ov.remove(); toast(`Copiata su ${wdOf(iso)} ${fmtDate(iso)}.`); render();
+      }, 'pri block')]);
+  }
+  let calMonth = null, calSel = null;
+  function viewCalendar(args) {
+    const t = C.todayISO(), fromHash = C.validISO(args.join('-'));
+    if (fromHash && fromHash !== calSel) { calSel = fromHash; calMonth = fromHash.slice(0, 7) + '-01'; }
+    if (!calSel) calSel = t;
+    if (!calMonth) calMonth = calSel.slice(0, 7) + '-01';
+    const first = C.fromISO(calMonth), lastDay = C.toISO(new Date(first.getFullYear(), first.getMonth() + 1, 0, 12));
+    const shift = n => { calMonth = C.toISO(new Date(first.getFullYear(), first.getMonth() + n, 1, 12)); render(); };
+    const cells = [];
+    for (let iso = C.mondayOf(calMonth); !(cells.length % 7 === 0 && iso > lastDay); iso = C.addDays(iso, 1)) cells.push(iso);
+    const cell = iso => {
+      const refs = refsOn(iso), ids = new Set(refs.map(r => sessOf(r).id));
+      const dots = refs.slice(0, 3).map(r => h('i', { class: isDone(r) ? 'ok' : r.x ? 'ex' : '' }));
+      // registrazioni di quel giorno non legate a una sessione in programma lì (diario manuale, sessione fatta in un altro giorno)
+      if (dots.length < 3 && S.logs.some(l => l.date === iso && !ids.has(l.sid))) dots.push(h('i', { class: 'ok' }));
+      const d = C.fromISO(iso);
+      return h('button', { type: 'button', class: 'cal-d' + (iso.slice(0, 7) === calMonth.slice(0, 7) ? '' : ' out') + (iso === t ? ' today' : '') + (iso === calSel ? ' sel' : ''),
+        'aria-label': `${WD_FULL[wdIdx(iso)]} ${d.getDate()} ${MONTHS_FULL[d.getMonth()]}, ${refs.length} sessioni`, 'aria-pressed': iso === calSel ? 'true' : 'false',
+        onclick: () => go('calendario-' + iso) }, d.getDate(), h('span', { class: 'dots' }, dots));
+    };
+    const refs = refsOn(calSel), planRef = refs.find(r => !r.x), logs = S.logs.filter(l => l.date === calSel);
+    return [h('h1', {}, 'Calendario'),
+      h('div', { class: 'week' }, btn('‹', () => shift(-1), 'sm'), h('div', { class: 't big', style: 'font-size:17px;text-transform:capitalize' }, `${MONTHS_FULL[first.getMonth()]} ${first.getFullYear()}`),
+        btn('Oggi', () => { calMonth = t.slice(0, 7) + '-01'; go('calendario-' + t); }, 'sm'), btn('›', () => shift(1), 'sm')),
+      h('div', { class: 'cal' }, ['L', 'M', 'M', 'G', 'V', 'S', 'D'].map(x => h('div', { class: 'wh' }, x)), cells.map(cell)),
+      h('div', { class: 'cal-key sub' }, h('span', {}, h('i', {}), 'in programma'), h('span', {}, h('i', { class: 'ex' }), 'extra'), h('span', {}, h('i', { class: 'ok' }), 'fatta')),
+      h('div', { class: 'row', style: 'margin-top:18px' }, h('h2', { class: 'grow', style: 'margin:0;text-transform:capitalize' }, `${WD_FULL[wdIdx(calSel)]} ${fmtDate(calSel)}`),
+        btn('+ Nuova sessione', () => newSessionSheet(calSel), 'sm pri')),
+      refs.map(r => sessionCard(r, !!r.x)),
+      refs.length ? null : h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin:0' }, 'Nessuna sessione in programma.')),
+      planRef ? h('div', { class: 'btns' }, btn('Modifica nel piano', () => { location.hash = `giorno-${planRef.w}-${planRef.d}`; }, 'sm')) : null,
+      logs.length ? [h('h2', {}, 'Registrate in questa data'), logs.map(logCard)] : null];
+  }
+
+  /* ---------- Piano ---------- */
   function viewPlan() {
     const p = plan(), out = [h('h1', {}, 'Piano')];
     out.push(h('div', { class: 'row' },
@@ -492,18 +1002,17 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
     const w = curWeek, week = p.weeks[w], t = C.todayISO();
     const periods = [...new Set(week.flatMap(d => d.sessions.map(s => C.PERIODS[s.period])))].join(', ');
     const tot = week.reduce((a, d) => a + d.sessions.reduce((x, s) => x + C.sessionMinutes(s), 0), 0);
-    out.push(h('div', { class: 'week' }, btn('‹', () => { curWeek--; render(); }, 'sm' + (w === 0 ? ' ' : '')),
+    const prev = btn('‹', () => { curWeek--; render(); }, 'sm'), next = btn('›', () => { curWeek++; render(); }, 'sm');
+    prev.disabled = w === 0; next.disabled = w === p.weeks.length - 1;
+    out.push(h('div', { class: 'week' }, prev,
       h('div', { class: 't' }, h('div', { class: 'big', style: 'font-size:17px' }, `Settimana ${w + 1} / ${p.weeks.length}`),
-        h('div', { class: 'sub' }, `${fmtDate(C.dateOf(p, w, 0))} – ${fmtDate(C.dateOf(p, w, 6))} · ${tot} min${periods ? ' · ' + periods : ''}`)),
-      btn('›', () => { curWeek++; render(); }, 'sm')));
-    out[out.length - 1].firstChild.disabled = w === 0;
-    out[out.length - 1].lastChild.disabled = w === p.weeks.length - 1;
+        h('div', { class: 'sub' }, `${fmtDate(C.dateOf(p, w, 0))} – ${fmtDate(C.dateOf(p, w, 6))} · ${tot} min${periods ? ' · ' + periods : ''}`)), next));
     week.forEach((day, d) => {
       const iso = C.dateOf(p, w, d);
       out.push(h('div', { class: 'card tap day row' + (iso === t ? ' today' : ''), onclick: () => { location.hash = `giorno-${w}-${d}`; } },
         h('div', { class: 'wd' }, WD[d], h('div', { style: 'font-weight:400;text-transform:none' }, fmtDate(iso))),
         h('div', { class: 'grow' }, day.sessions.length ? day.sessions.map((s, si) => h('div', { style: 'margin:2px 0' },
-          h('div', { class: 'n', style: 'font-weight:600' }, C.DAY_TYPES[s.type], ' ', h('span', { class: 'sub' }, C.sessionMinutes(s) + ' min'), isDone(p, w, d, si) ? h('span', { class: 'tag ok', style: 'margin-left:6px' }, '✓') : null),
+          h('div', { class: 'n', style: 'font-weight:600' }, C.DAY_TYPES[s.type], ' ', h('span', { class: 'sub' }, C.sessionMinutes(s) + ' min'), isDone({ p, w, d, si }) ? h('span', { class: 'tag ok', style: 'margin-left:6px' }, '✓') : null),
           h('div', { class: 'sub', style: 'white-space:nowrap;overflow:hidden;text-overflow:ellipsis' }, s.blocks.map(b => (S.exercises[b.exId] || {}).name).filter(Boolean).join(' · ')))) : h('div', { class: 'sub' }, 'Recupero'))));
     });
     return out;
@@ -517,7 +1026,7 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
       const title = h('input', { value: p.title }), start = h('input', { type: 'date', value: p.startDate });
       const target = h('select', {}, p.weeks.map((_, i) => i === curWeek ? null : h('option', { value: i }, 'Settimana ' + (i + 1))));
       body.push(field('Nome', title), field('Inizio (viene portato al lunedì)', start),
-        btn('Salva nome e data', () => { p.title = title.value.trim() || p.title; if (start.value) p.startDate = C.mondayOf(start.value); done(); }, 'pri block'),
+        btn('Salva nome e data', () => { p.title = title.value.trim() || p.title; if (C.validISO(start.value)) p.startDate = C.mondayOf(start.value); done(); }, 'pri block'),
         h('h2', {}, `Settimane (${p.weeks.length})`),
         h('div', { class: 'btns' }, btn('+ Aggiungi in fondo', () => { p.weeks.push(C.emptyWeek()); done(); }, 'sm'),
           btn('Duplica la settimana ' + (curWeek + 1), () => { p.weeks.splice(curWeek + 1, 0, p.weeks[curWeek].map(C.cloneDay)); done(); }, 'sm'),
@@ -531,7 +1040,7 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
         }, 'sm'),
           btn('Elimina piano', async () => { if (await confirmDlg(`Eliminare "${p.title}"? Il diario resta.`, 'Elimina')) { S.plans = S.plans.filter(x => x !== p); S.activePlan = S.plans[0] ? S.plans[0].id : null; curWeek = null; done(); } }, 'sm danger')));
     }
-    const nTitle = h('input', { placeholder: 'Blocco di forza' }), nWeeks = numInp(4, { min: 1, max: 52 });
+    const nTitle = h('input', { placeholder: 'Blocco di forza' }), nWeeks = numInp(4);
     body.push(h('h2', {}, 'Nuovo piano'), h('div', { class: 'cols' }, field('Nome', nTitle), field('Settimane', nWeeks)),
       h('div', { class: 'btns' }, btn('Crea', () => {
         const n = Math.min(52, Math.max(1, Math.round(val(nWeeks) || 4)));
@@ -554,7 +1063,7 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
     const obj = JSON.parse(text);
     if (C.validState(obj)) { // backup completo
       if (!await confirmDlg('Questo è un backup completo: sostituire TUTTI i dati attuali?', 'Sostituisci')) return;
-      S = migrate(obj); curWeek = null; save(); render(); toast('Backup ripristinato.'); log('import', 'backup ripristinato');
+      S = migrate(obj); curWeek = null; calSel = calMonth = null; save(); render(); toast('Backup ripristinato.'); log('import', 'backup ripristinato');
       return;
     }
     const r = C.importBlokplan(obj, S.exercises); // lancia se non valido: lo stato non viene toccato
@@ -570,9 +1079,9 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
     const day = p.weeks[w][d], iso = C.dateOf(p, w, d);
     return [h('div', { class: 'row' }, btn('‹ Piano', () => { location.hash = 'piano'; }, 'sm'), h('div', { class: 'sub right' }, `Settimana ${w + 1}`)),
       h('h1', { style: 'margin-top:10px;text-transform:capitalize' }, `${wdOf(iso)} ${fmtDate(iso)}`), h('div', { class: 'sub' }, 'Tocca un esercizio per modificarlo.'),
-      day.sessions.map((_, si) => sessionCard(p, w, d, si, true)),
+      day.sessions.map((_, si) => sessionCard({ p, w, d, si }, true)),
       day.sessions.length ? null : h('div', { class: 'card' }, h('div', { class: 'big' }, 'Recupero')),
-      h('div', { class: 'btns' }, btn('+ Sessione', () => { day.sessions.push({ type: 'wall', period: (day.sessions[0] || {}).period || 'base', blocks: [] }); save(); render(); }, 'sm'),
+      h('div', { class: 'btns' }, btn('+ Sessione', () => { day.sessions.push({ id: C.uid(), type: 'wall', period: (day.sessions[0] || {}).period || 'base', blocks: [] }); save(); render(); }, 'sm'),
         btn('Copia su un altro giorno…', () => copyDaySheet(p, w, d), 'sm'))];
   }
   function copyDaySheet(p, w, d) {
@@ -581,67 +1090,93 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
     const ov = openSheet('Copia giorno', [h('div', { class: 'cols' }, field('Settimana', wk), field('Giorno', dd)),
       btn('Sovrascrivi il giorno scelto', () => { p.weeks[+wk.value][+dd.value] = C.cloneDay(p.weeks[w][d]); save(); ov.remove(); toast('Giorno copiato.'); render(); }, 'pri block')]);
   }
-  function sessionSheet(p, w, d, si) {
-    const day = p.weeks[w][d], s = day.sessions[si];
-    const ty = opts(Object.fromEntries(Object.entries(C.DAY_TYPES).filter(([k]) => k !== 'rest')), s.type), pe = opts(C.PERIODS, s.period);
+  function sessionSheet(r) {
+    const s = sessOf(r), ty = opts(TYPES, s.type), pe = opts(C.PERIODS, s.period);
+    const title = r.x ? h('input', { value: r.x.title || '' }) : null, date = r.x ? h('input', { type: 'date', value: r.x.date }) : null;
+    const close = () => { save(); ov.remove(); render(); };
     const ov = openSheet('Sessione', [h('div', { class: 'cols' }, field('Tipo', ty), field('Periodo', pe)),
-      btn('Salva', () => { s.type = ty.value; s.period = pe.value; save(); ov.remove(); render(); }, 'pri block'),
-      h('div', { class: 'btns' }, si > 0 ? btn('Sposta prima', () => { day.sessions.splice(si - 1, 0, day.sessions.splice(si, 1)[0]); save(); ov.remove(); render(); }, 'sm') : null,
-        btn('Elimina sessione', async () => { if (await confirmDlg('Eliminare questa sessione dal giorno?', 'Elimina')) { day.sessions.splice(si, 1); save(); ov.remove(); render(); } }, 'sm danger'))]);
+      r.x ? h('div', { class: 'cols' }, field('Data', date), field('Titolo', title)) : null,
+      btn('Salva', () => {
+        s.type = ty.value; s.period = pe.value;
+        if (!r.x) return close();
+        const iso = C.validISO(date.value), moved = iso && iso !== r.x.date;
+        r.x.title = title.value.trim().slice(0, 80);
+        if (iso) r.x.date = iso;
+        save(); ov.remove();
+        if (moved) showDate(iso); else render();
+      }, 'pri block'),
+      h('div', { class: 'btns' }, !r.x && r.si > 0 ? btn('Sposta prima', () => { const list = r.p.weeks[r.w][r.d].sessions; list.splice(r.si - 1, 0, list.splice(r.si, 1)[0]); close(); }, 'sm') : null,
+        btn('Copia su una data…', () => { ov.remove(); copyToDateSheet(r); }, 'sm'),
+        btn('Elimina sessione', async () => {
+          if (!await confirmDlg('Eliminare questa sessione? Le registrazioni nel diario restano.', 'Elimina')) return;
+          if (r.x) S.extras = S.extras.filter(e => e !== r.x); else r.p.weeks[r.w][r.d].sessions.splice(r.si, 1);
+          close();
+        }, 'sm danger'))]);
   }
-  function blockSheet(p, w, d, si, bi) {
-    const s = p.weeks[w][d].sessions[si], b = s.blocks[bi], ex = S.exercises[b.exId], n = C.usage(S.plans, b.exId);
-    const min = numInp(b.minutes, { min: 0 });
+  const exUsage = id => C.usage(S.plans, id) + S.extras.reduce((a, x) => a + x.blocks.filter(y => y.exId === id).length, 0);
+  function blockSheet(r, bi) {
+    const s = sessOf(r), b = s.blocks[bi], ex = S.exercises[b.exId], n = exUsage(b.exId);
+    const min = numInp(b.minutes);
     const close = () => { save(); ov.remove(); render(); };
     const move = k => { s.blocks.splice(bi + k, 0, s.blocks.splice(bi, 1)[0]); close(); };
-    const ov = openSheet(ex ? ex.name : 'Esercizio', [ex ? h('p', { class: 'sub' }, ex.prescription) : null,
+    const up = btn('↑ Su', () => move(-1), 'sm'), down = btn('↓ Giù', () => move(1), 'sm');
+    up.disabled = bi === 0; down.disabled = bi === s.blocks.length - 1;
+    const ov = openSheet(ex ? ex.name : 'Esercizio', [ex ? h('p', { class: 'sub' }, exLine(ex)) : null,
       field('Minuti previsti', min), btn('Salva minuti', () => { b.minutes = Math.max(0, Math.round(val(min) || 0)); close(); }, 'pri block'),
-      h('div', { class: 'btns' }, btn('↑ Su', () => move(-1), 'sm' + (bi === 0 ? ' ' : '')), btn('↓ Giù', () => move(1), 'sm'),
-        btn('Sostituisci…', () => pickExercise(id => { b.exId = id; close(); }), 'sm'), btn('Rimuovi', () => { s.blocks.splice(bi, 1); close(); }, 'sm danger')),
+      h('div', { class: 'btns' }, up, down, btn('Sostituisci…', () => pickExercise(id => { b.exId = id; close(); }), 'sm'), btn('Rimuovi', () => { s.blocks.splice(bi, 1); close(); }, 'sm danger')),
       ex ? h('div', { class: 'btns' }, btn(`Modifica esercizio (${n} ${n === 1 ? 'uso' : 'usi'})`, () => { ov.remove(); exerciseSheet(ex.id); }, 'sm'),
         n > 1 ? btn('Modifica solo qui', () => { const c = JSON.parse(JSON.stringify(ex)); c.id = C.uid(); S.exercises[c.id] = c; b.exId = c.id; save(); ov.remove(); exerciseSheet(c.id); }, 'sm') : null) : null]);
-    const mv = ov.querySelectorAll('.btns')[0].children;
-    mv[0].disabled = bi === 0; mv[1].disabled = bi === s.blocks.length - 1;
   }
 
+  /* ---------- Esercizi ---------- */
   function pickExercise(cb) {
     const list = h('div', {}), q = h('input', { class: 'inp', placeholder: 'Cerca…', oninput: () => fill() });
     let ov;
     const fill = () => {
       const t = q.value.trim().toLowerCase();
-      const items = Object.values(S.exercises).filter(e => !t || (e.name + ' ' + e.prescription).toLowerCase().includes(t))
+      const items = Object.values(S.exercises).filter(e => !t || (e.name + ' ' + exLine(e)).toLowerCase().includes(t))
         .sort((a, b) => a.name.localeCompare(b.name) || a.prescription.localeCompare(b.prescription)).slice(0, 80);
       list.replaceChildren(...items.map(e => h('div', { class: 'blk', style: 'cursor:pointer', onclick: () => { ov.remove(); cb(e.id); } },
-        h('div', { class: 'grow' }, h('div', { class: 'n' }, e.name), h('div', { class: 'p' }, e.prescription)), h('span', { class: 'tag' }, C.SLOTS[e.slot]))));
-      if (!items.length) list.append(h('p', { class: 'sub' }, 'Nessun risultato.'));
+        h('div', { class: 'grow' }, h('div', { class: 'n' }, e.name), h('div', { class: 'p' }, exLine(e))), h('span', { class: 'tag' }, C.SLOTS[e.slot]))));
+      if (!items.length) list.append(h('p', { class: 'sub' }, 'Nessun esercizio: creane uno con "+ Nuovo".'));
     };
     ov = openSheet('Scegli esercizio', [h('div', { class: 'row' }, h('div', { class: 'grow' }, q), btn('+ Nuovo', () => { ov.remove(); exerciseSheet(null, cb); }, 'sm pri')), list]);
     fill();
   }
 
   function exerciseSheet(id, onCreate) {
-    const isNew = !id, e = isNew ? { id: C.uid(), name: '', prescription: '', slot: 'strength', location: 'off_wall', domain: 'other', intensity: 'moderate', risk: 'low', equipment: [], interval: null, load: null } : S.exercises[id];
+    const isNew = !id, e = isNew ? { id: C.uid(), name: '', prescription: '', slot: 'wall', location: 'wall', domain: 'other', intensity: 'moderate', risk: 'low', equipment: [], interval: null, load: null, surface: '' } : S.exercises[id];
     const iv = e.interval || {}, ld = e.load || {};
-    const name = h('input', { value: e.name, placeholder: 'Open hand 20 mm 7"' }), pres = h('input', { value: e.prescription, placeholder: '4 × 7" · 85% max' });
+    const name = h('input', { value: e.name, placeholder: 'Limit MoonBoard' }), pres = h('input', { value: e.prescription, placeholder: '≥ 3 tentativi per problema' });
     const slot = opts(C.SLOTS, e.slot);
-    const mode = opts({ none: 'Solo durata (nessun timer)', timed: 'A tempo (countdown)', reps: 'A ripetizioni (tocco "Fatto")' }, !e.interval ? 'none' : iv.selfPaced ? 'reps' : 'timed', { onchange: () => sync() });
-    const rounds = numInp(iv.rounds || 3, { min: 1 }), work = numInp(iv.workSeconds || 7, { min: 0 }), rest = numInp(iv.restSeconds == null ? 180 : iv.restSeconds, { min: 0 });
+    const sfSel = opts(surfOpts().concat([['+new', '＋ Aggiungi nuova…']]), e.surface || '', { onchange: () => sync() }), sfNew = h('input', { placeholder: 'Es. Spray wall' });
+    const sfNewField = field('Nome della nuova superficie', sfNew);
+    const mode = opts([['none', 'Solo durata (nessun timer)'], ['timed', 'A tempo (countdown)'], ['reps', 'A ripetizioni (tocco "Fatto")']], !e.interval ? 'none' : iv.selfPaced ? 'reps' : 'timed', { onchange: () => sync() });
+    const rounds = numInp(iv.rounds || 3), work = numInp(iv.workSeconds || 7), rest = numInp(iv.restSeconds == null ? 180 : iv.restSeconds);
     const reps = numInp(iv.reps), perSet = numInp(iv.roundsPerSet), setRest = numInp(iv.setRestSeconds);
     const cues = h('textarea', { placeholder: 'Un cue per riga, ripetuti a rotazione\nSX · 75% max\nDX · 75% max' }); cues.value = (iv.cues || []).join('\n');
-    const refs = { '': 'Nessuno', oh: 'Open hand', hc: 'Half-crimp', sl: 'Sloper', pinch: 'Pinch (SX/DX dal cue)', wrist: 'Polso 6RM' };
-    for (const t of S.testDefs) if (!C.DEFAULT_TESTS.some(x => x.key === t.key)) refs[t.key] = t.name;
-    const ref = opts(refs, ld.ref || ''), pct = numInp(ld.pct, { min: 0 });
+    const refs = [['', 'Nessuno'], ['oh', 'Open hand'], ['hc', 'Half-crimp'], ['sl', 'Sloper'], ['pinch', 'Pinch (SX/DX dal cue)'], ['wrist', 'Polso 6RM']]
+      .concat(S.testDefs.filter(t => !C.DEFAULT_TESTS.some(x => x.key === t.key)).map(t => [t.key, t.name]));
+    const ref = opts(refs, ld.ref || ''), pct = numInp(ld.pct);
     const lmode = opts({ hang: 'Zavorra su peso corporeo', lift: 'Carico sollevato' }, ld.mode || 'hang'), isTest = h('input', { type: 'checkbox', checked: ld.test });
     const timer = h('div', {}, h('div', { class: 'cols3' }, field('Round', rounds), field('Lavoro (s)', work), field('Recupero (s)', rest)),
       h('div', { class: 'cols3' }, field('Rip. (facolt.)', reps), field('Round per serie', perSet), field('Rec. serie (s)', setRest)), field('Cue', cues));
-    const sync = () => { timer.hidden = mode.value === 'none'; };
+    const sync = () => { timer.hidden = mode.value === 'none'; sfNewField.hidden = sfSel.value !== '+new'; };
     let ov;
-    const body = [field('Nome', name), field('Prescrizione', pres), h('div', { class: 'cols' }, field('Sezione', slot), field('Timer', mode)), timer,
+    const body = [field('Nome', name), field('Prescrizione', pres),
+      h('div', { class: 'cols' }, field('Sezione', slot), field('Superficie di arrampicata', sfSel)), sfNewField, field('Timer', mode), timer,
       h('h2', {}, 'Carico in kg'), h('div', { class: 'cols' }, field('Massimale di riferimento', ref), field('% del massimale', pct)),
       h('div', { class: 'cols' }, field('Tipo di carico', lmode), h('label', { class: 'f' }, 'Blocco di test', h('div', { style: 'margin-top:12px' }, isTest, ' registra il risultato a fine sessione'))),
       btn(isNew ? 'Crea esercizio' : 'Salva', () => {
         if (!name.value.trim()) return toast('Serve un nome.');
-        e.name = name.value.trim().slice(0, 200); e.prescription = pres.value.trim().slice(0, 200); e.slot = slot.value;
+        let sf = sfSel.value;
+        if (sf === '+new') {
+          const nm = sfNew.value.trim().slice(0, 40);
+          if (!nm) return toast('Scrivi il nome della nuova superficie.');
+          sf = addSurface(nm);
+        }
+        e.name = name.value.trim().slice(0, 200); e.prescription = pres.value.trim().slice(0, 200); e.slot = slot.value; e.surface = sf;
+        e.location = e.slot === 'wall' || e.slot === 'warmup' ? 'wall' : 'off_wall';
         e.interval = mode.value === 'none' ? null : C.normInterval({ rounds: Math.max(1, val(rounds) || 1), workSeconds: val(work) || 0, restSeconds: val(rest) || 0, selfPaced: mode.value === 'reps',
           reps: val(reps) || 0, roundsPerSet: val(perSet) || 0, setRestSeconds: val(setRest) || 0, cues: cues.value.split('\n').map(s => s.trim()).filter(Boolean) });
         e.load = ref.value ? { ref: ref.value, mode: lmode.value, pct: val(pct), test: isTest.checked } : null;
@@ -649,9 +1184,9 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
         if (isNew && onCreate) onCreate(e.id);
       }, 'pri block')];
     if (!isNew) {
-      const n = C.usage(S.plans, e.id);
+      const n = exUsage(e.id);
       body.push(h('div', { class: 'btns' }, btn(n ? `In uso in ${n} blocchi` : 'Elimina dalla libreria', async () => {
-        if (n) return toast('Rimuovilo prima dai giorni che lo usano.');
+        if (n) return toast('Rimuovilo prima dalle sessioni che lo usano.');
         if (await confirmDlg(`Eliminare "${e.name}" dalla libreria?`, 'Elimina')) { delete S.exercises[e.id]; save(); ov.remove(); render(); }
       }, 'sm danger')));
     }
@@ -660,29 +1195,49 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
   }
 
   function viewLibrary() {
-    const list = h('div', {}), q = h('input', { class: 'inp', placeholder: 'Cerca…', oninput: () => fill() });
+    const list = h('div', {}), q = h('input', { class: 'inp', placeholder: 'Cerca per nome o superficie…', oninput: () => fill() });
     const fill = () => {
       const t = q.value.trim().toLowerCase();
-      list.replaceChildren(...Object.values(S.exercises).filter(e => !t || (e.name + ' ' + e.prescription).toLowerCase().includes(t))
-        .sort((a, b) => a.name.localeCompare(b.name) || a.prescription.localeCompare(b.prescription))
-        .map(e => h('div', { class: 'blk', style: 'cursor:pointer', onclick: () => exerciseSheet(e.id) },
-          h('div', { class: 'grow' }, h('div', { class: 'n' }, e.name), h('div', { class: 'p' }, e.prescription)), h('div', { class: 'm' }, C.usage(S.plans, e.id) + ' usi'))));
+      const items = Object.values(S.exercises).filter(e => !t || (e.name + ' ' + exLine(e)).toLowerCase().includes(t))
+        .sort((a, b) => a.name.localeCompare(b.name) || a.prescription.localeCompare(b.prescription));
+      list.replaceChildren(...items.map(e => h('div', { class: 'blk', style: 'cursor:pointer', onclick: () => exerciseSheet(e.id) },
+        h('div', { class: 'grow' }, h('div', { class: 'n' }, e.name), h('div', { class: 'p' }, exLine(e))), h('div', { class: 'm' }, exUsage(e.id) + ' usi'))));
+      if (!items.length) list.append(h('p', { class: 'sub' }, 'Nessun esercizio.'));
     };
     fill();
     return [h('div', { class: 'row' }, btn('‹ Altro', () => { location.hash = 'altro'; }, 'sm'), btn('+ Nuovo', () => exerciseSheet(null), 'sm pri right')),
       h('h1', { style: 'margin-top:10px' }, 'Esercizi'), h('div', { class: 'sub' }, Object.keys(S.exercises).length + ' in libreria'), h('div', { style: 'margin-top:10px' }, q), h('div', { class: 'card' }, list)];
   }
 
+  /* ---------- Diario ---------- */
+  /** Righe "superficie · grado massimo chiuso · blocchi chiusi · minuti": un primo logbook per superficie. */
+  function climbEditor(rows, defaultMinutes) {
+    const box = h('div', {}), items = [];
+    const add = c => {
+      const sf = opts(surfOpts(), c.surface || ''), gr = opts(gradeOpts(), c.top || ''), sends = numInp(c.sends), min = numInp(c.minutes);
+      items.push({ c, sf, gr, sends, min });
+      box.append(h('div', { class: 'climb' }, c.name ? h('div', { class: 'n' }, c.name) : null,
+        h('div', { class: 'cols' }, field('Superficie', sf), field('Grado max chiuso', gr)), h('div', { class: 'cols' }, field('Blocchi chiusi', sends), field('Minuti', min))));
+    };
+    rows.forEach(add);
+    return { node: h('div', {}, box, btn('+ Superficie', () => add({ minutes: items.length ? null : defaultMinutes() }), 'sm')),
+      read: () => items.filter(i => i.sf.value).map(i => ({ name: i.c.name || '', surface: i.sf.value, top: i.gr.value || null,
+        sends: val(i.sends) == null ? null : Math.max(0, Math.round(val(i.sends))), minutes: Math.max(0, Math.round(val(i.min) || 0)) })) };
+  }
   function logSheet(l) {
-    const isNew = !l; l = l || { id: C.uid(), date: C.todayISO(), title: 'Sessione libera', minutes: 60, rpe: null, feel: null, notes: '', loads: [] };
-    const date = h('input', { type: 'date', value: l.date }), title = h('input', { value: l.title }), min = numInp(l.minutes, { min: 0 });
-    const rpe = numInp(l.rpe, { min: 1, max: 10 }), feel = opts({ '': '—', 1: '1 · Distrutto', 2: '2 · Stanco', 3: '3 · Così così', 4: '4 · Bene', 5: '5 · Ottimo' }, l.feel || '');
+    const isNew = !l; l = l || { id: C.uid(), date: C.todayISO(), type: 'wall', title: 'Sessione libera', minutes: 60, rpe: null, feel: null, notes: '', loads: [], climbs: [] };
+    const date = h('input', { type: 'date', value: l.date }), title = h('input', { value: l.title }), min = numInp(l.minutes), ty = opts(LOG_TYPES, l.type || 'other');
+    const rpe = numInp(l.rpe), feel = opts(FEEL, l.feel ? String(l.feel) : '');
     const notes = h('textarea', {}); notes.value = l.notes || '';
-    const ov = openSheet(isNew ? 'Registra sessione' : 'Modifica registrazione', [h('div', { class: 'cols' }, field('Data', date), field('Minuti', min)), field('Titolo', title),
-      h('div', { class: 'cols' }, field('RPE (1-10)', rpe), field('Come ti sentivi', feel)), field('Note', notes),
+    const climbs = climbEditor(l.climbs || [], () => val(min));
+    const ov = openSheet(isNew ? 'Registra sessione' : 'Modifica registrazione', [h('div', { class: 'cols' }, field('Data', date), field('Minuti', min)),
+      h('div', { class: 'cols' }, field('Titolo', title), field('Tipo', ty)),
+      h('div', { class: 'cols' }, field('RPE (1-10)', rpe), field('Come ti sentivi', feel)),
+      h('h2', {}, 'Arrampicata'), climbs.node, field('Note', notes),
       (l.loads || []).length ? h('div', { class: 'sub' }, l.loads.map(x => `${x.name}: ${x.kg}`).join(' · ')) : null,
       btn('Salva', () => {
-        Object.assign(l, { date: date.value || l.date, title: title.value.trim() || 'Sessione', minutes: Math.max(0, Math.round(val(min) || 0)), rpe: val(rpe), feel: feel.value ? +feel.value : null, notes: notes.value.trim() });
+        Object.assign(l, { date: C.validISO(date.value) || l.date, title: title.value.trim() || 'Sessione', type: ty.value, minutes: Math.max(0, Math.round(val(min) || 0)), rpe: val(rpe),
+          feel: feel.value ? +feel.value : null, notes: notes.value.trim(), climbs: climbs.read() });
         if (isNew) S.logs.push(l);
         save(); ov.remove(); render();
       }, 'pri block'),
@@ -692,57 +1247,129 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
     const logs = [...S.logs].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
     return [h('div', { class: 'row' }, h('h1', { class: 'grow' }, 'Diario'), btn('+ Registra', () => logSheet(null), 'sm pri')),
       h('div', { class: 'sub' }, `${logs.length} sessioni · ${logs.reduce((a, l) => a + (l.minutes || 0), 0)} minuti`),
-      logs.length ? null : h('div', { class: 'card' }, h('p', { class: 'sub' }, 'Le sessioni completate con il player finiscono qui, con RPE, note e carichi.')),
-      logs.map(l => h('div', { class: 'card tap', onclick: () => logSheet(l) },
-        h('div', { class: 'row' }, h('div', { class: 'grow n', style: 'font-weight:600' }, l.title), h('span', { class: 'tag' }, (l.minutes || 0) + ' min')),
-        h('div', { class: 'sub' }, `${wdOf(l.date)} ${fmtDate(l.date)}${l.rpe ? ' · RPE ' + l.rpe : ''}${l.feel ? ' · sensazione ' + l.feel + '/5' : ''}`),
-        (l.loads || []).length ? h('div', { class: 'p', style: 'color:var(--ac);font-size:13px' }, l.loads.map(x => `${x.name}: ${x.kg}`).join(' · ')) : null,
-        l.notes ? h('div', { class: 'sub', style: 'margin-top:4px;color:var(--tx)' }, l.notes) : null))];
+      logs.length ? null : h('div', { class: 'card' }, h('p', { class: 'sub' }, 'Le sessioni completate con il player finiscono qui, con RPE, note, carichi e gradi per superficie.')),
+      logs.map(logCard)];
   }
 
-  function spark(vals) {
-    if (vals.length < 2) return null;
-    const lo = Math.min(...vals), hi = Math.max(...vals), sp = hi - lo || 1;
-    const pts = vals.map((v, i) => [4 + i * 102 / (vals.length - 1), 30 - (v - lo) / sp * 26]);
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('class', 'spark'); svg.setAttribute('viewBox', '0 0 110 34');
-    svg.innerHTML = `<polyline points="${pts.map(p => p.map(n => n.toFixed(1)).join(',')).join(' ')}"/><circle cx="${pts[pts.length - 1][0].toFixed(1)}" cy="${pts[pts.length - 1][1].toFixed(1)}" r="3"/>`;
-    return svg;
+  /* ---------- Analisi ---------- */
+  const anHead = cur => [h('h1', {}, 'Analisi'), seg([['analisi', 'Grafici'], ['progressi', 'Test e massimali']], cur, k => { location.hash = k; })];
+  const chartCard = (title, sub, ...nodes) => h('div', { class: 'card' }, h('div', { class: 'ct' }, title), sub ? h('div', { class: 'sub' }, sub) : null, nodes);
+  const tile = (label, value, sub) => h('div', { class: 'tile' }, h('div', { class: 'l' }, label), h('div', { class: 'v' }, value), h('div', { class: 's' }, sub || ' '));
+  let anWeeks = 8;
+  function viewAnalytics() {
+    const t = C.todayISO(), mon = C.mondayOf(t), to = C.addDays(mon, 6);
+    let from = C.addDays(mon, -7 * ((anWeeks || 1) - 1));
+    if (!anWeeks) { // "Tutto": dalla prima registrazione, al massimo due anni
+      const cap = C.addDays(mon, -7 * 103);
+      from = C.mondayOf(S.logs.reduce((m, l) => (l.date < m ? l.date : m), t));
+      if (from < cap) from = cap;
+    }
+    const sched = C.scheduled(plan(), S.extras), wk = C.weeklyStats(S.logs, sched, from, to), sum = C.summary(S.logs, sched, from, to, t);
+    const labels = wk.map(w => fmtDate(w.week)), long = wk.map(w => `${fmtDate(w.week)} – ${fmtDate(C.addDays(w.week, 6))}`);
+    // Un solo filtro, sopra tutto quello che governa
+    const out = [anHead('analisi'), seg([[4, '4 sett.'], [8, '8 sett.'], [12, '12 sett.'], [0, 'Tutto']], anWeeks, k => { anWeeks = k; render(); }),
+      h('div', { class: 'sub' }, `${fmtDate(from)} – ${fmtDate(to)} · settimana in corso inclusa`),
+      h('div', { class: 'tiles' },
+        tile('Sessioni', sum.sessions, sum.due ? `${sum.due} in programma finora` : ''),
+        tile('Tempo', sum.minutes < 120 ? sum.minutes + ' min' : dec((sum.minutes / 60).toFixed(1)) + ' h', sum.sessions ? `${Math.round(sum.minutes / sum.sessions)} min a sessione` : ''),
+        tile('RPE medio', sum.rpe == null ? '—' : dec(sum.rpe.toFixed(1)), sum.rpeN ? `su ${sum.rpeN} ${sum.rpeN === 1 ? 'sessione' : 'sessioni'}` : 'nessun RPE registrato'),
+        tile('Aderenza al piano', sum.due ? Math.round(sum.dueDone / sum.due * 100) + '%' : '—', sum.due ? `${sum.dueDone} di ${sum.due} sessioni fatte` : 'niente in programma'))];
+    if (!sum.sessions && !wk.some(w => w.plannedMinutes))
+      return out.concat(h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin:0' }, 'Nessun dato in questo periodo. I grafici si riempiono quando completi una sessione con il player o la registri nel Diario.')));
+
+    if (wk.some(w => w.minutes || w.plannedMinutes)) out.push(chartCard('Volume settimanale', 'Minuti registrati nel diario, confrontati con quelli in programma.',
+      Charts.columns({ labels, longLabels: long, values: wk.map(w => w.minutes), targets: wk.map(w => w.plannedMinutes), unit: 'min', name: 'Fatti', targetName: 'In programma', aria: 'Minuti di allenamento per settimana' })));
+    if (wk.some(w => w.load)) out.push(chartCard('Carico settimanale', 'Somma di minuti × RPE delle sessioni con RPE (unità arbitrarie).',
+      Charts.columns({ labels, longLabels: long, values: wk.map(w => Math.round(w.load)), name: 'Carico', aria: 'Carico di allenamento sRPE per settimana' })));
+    if (wk.some(w => w.rpe != null)) out.push(chartCard('Sforzo percepito', 'RPE medio delle sessioni della settimana (scala 1–10).',
+      Charts.line({ labels, longLabels: long, values: wk.map(w => w.rpe), name: 'RPE medio', domain: { min: 0, max: 10, step: 5 }, height: 120, aria: 'RPE medio per settimana' })));
+    if (wk.some(w => w.feel != null)) out.push(chartCard('Sensazione', 'Media di "come ti sentivi" (1 distrutto – 5 ottimo).',
+      Charts.line({ labels, longLabels: long, values: wk.map(w => w.feel), name: 'Sensazione media', domain: { min: 1, max: 5, step: 2 }, height: 120, aria: 'Sensazione media per settimana' })));
+
+    const types = C.minutesByType(S.logs, from, to);
+    if (types.length) out.push(chartCard('Tempo per tipo di sessione', null,
+      Charts.hbars(types.map(x => ({ label: x.type === 'other' ? 'Altro' : C.DAY_TYPES[x.type], value: x.minutes, text: `${x.minutes} min · ${sum.minutes ? Math.round(x.minutes / sum.minutes * 100) : 0}%` })))));
+
+    // Superfici: tempo, blocchi chiusi e grado massimo; poi un pannello per superficie, tutti sulla stessa scala di gradi
+    const surf = C.surfaceStats(S.logs, from, to);
+    if (surf.length) {
+      const table = h('table', { class: 'tbl' }, h('tr', {}, ['Superficie', 'Sessioni', 'Blocchi chiusi', 'Grado max'].map(x => h('th', {}, x))),
+        surf.map(x => h('tr', {}, h('td', {}, surfName(x.surface)), h('td', {}, x.sessions), h('td', {}, x.sends), h('td', {}, x.top ? fmtG(x.top) : '—'))));
+      out.push(chartCard('Superfici di arrampicata', 'Minuti passati su ogni superficie nel periodo.',
+        Charts.hbars(surf.map(x => ({ label: surfName(x.surface), value: x.minutes, text: x.minutes + ' min' }))), table));
+      const tg = C.weeklyTopGrades(S.logs, from, to);
+      const keys = S.surfaces.map(x => x.key).filter(k => tg.series[k]).concat(Object.keys(tg.series).filter(k => !S.surfaces.some(x => x.key === k)));
+      if (keys.length) {
+        const all = keys.flatMap(k => tg.series[k].filter(v => v != null));
+        const lo = Math.max(0, Math.min(...all) - 1), hi = Math.min(C.GRADES.length - 1, Math.max(...all) + 1), step = Math.max(1, Math.ceil((hi - lo) / 4));
+        const domain = { min: lo, max: lo + step * Math.ceil((hi - lo) / step), step }, fmt = v => (C.GRADES[Math.round(v)] ? fmtG(C.GRADES[Math.round(v)]) : '');
+        out.push(chartCard('Grado massimo chiuso per superficie', 'Il blocco più duro chiuso ogni settimana. I pannelli usano la stessa scala, così si confrontano a colpo d\'occhio.',
+          keys.map(k => [h('div', { class: 'sm-t' }, surfName(k)),
+            Charts.line({ labels, longLabels: long, values: tg.series[k], name: 'Grado max', domain, fmt, height: 112, aria: `Grado massimo chiuso per settimana su ${surfName(k)}` })])));
+      }
+    }
+
+    const loads = C.loadSeries(S.logs, from, to);
+    if (loads.length) out.push(chartCard('Carichi usati', 'Dai carichi registrati a fine sessione. Tocca una riga per il grafico completo.',
+      loads.map(s => {
+        const v = s.points.map(p => p.kg), last = v[v.length - 1];
+        return h('div', { class: 'blk', style: 'cursor:pointer;align-items:center', onclick: () => openSheet(s.name, Charts.line({ labels: s.points.map(p => fmtDate(p.date)), values: v, name: 'Carico', unit: 'kg', colLabel: 'Data', aria: `Carico usato per ${s.name}` })) },
+          h('div', { class: 'grow' }, h('div', { class: 'n' }, s.name), h('div', { class: 'p' }, `${v.length} ${v.length === 1 ? 'registrazione' : 'registrazioni'}`)),
+          Charts.spark(v), h('div', { class: 'm', style: 'color:var(--tx);font-weight:600;min-width:58px;text-align:right' }, dec(last) + ' kg'));
+      })));
+    return out;
   }
+
   function testSheet(def) {
     const date = h('input', { type: 'date', value: C.todayISO() }), v = numInp(null);
     const hist = S.tests.filter(t => t.key === def.key).sort((a, b) => (a.date < b.date ? 1 : -1));
     let ov;
     const again = () => { save(); ov.remove(); render(); };
     ov = openSheet(def.name, [h('div', { class: 'cols' }, field('Data', date), field(`Valore (${def.unit})`, v)),
-      btn('Aggiungi risultato', () => { const n = val(v); if (n == null) return toast('Inserisci un numero.'); S.tests.push({ id: C.uid(), key: def.key, date: date.value || C.todayISO(), value: n }); again(); }, 'pri block'),
-      h('h2', {}, 'Storico'), hist.length ? hist.map(t => h('div', { class: 'blk' }, h('div', { class: 'grow' }, `${fmtDate(t.date)} ${t.date.slice(0, 4)}`), h('div', { class: 'n' }, String(t.value).replace('.', ',') + ' ' + def.unit),
+      btn('Aggiungi risultato', () => { const n = val(v); if (n == null) return toast('Inserisci un numero.'); S.tests.push({ id: C.uid(), key: def.key, date: C.validISO(date.value) || C.todayISO(), value: n }); again(); }, 'pri block'),
+      h('h2', {}, 'Storico'), hist.length ? hist.map(t => h('div', { class: 'blk' }, h('div', { class: 'grow' }, `${fmtDate(t.date)} ${t.date.slice(0, 4)}`), h('div', { class: 'n' }, dec(t.value) + ' ' + def.unit),
         btn('✕', () => { S.tests = S.tests.filter(x => x !== t); again(); }, 'sm'))) : h('p', { class: 'sub' }, 'Ancora nessun risultato.'),
       C.DEFAULT_TESTS.some(x => x.key === def.key) ? null : btn('Elimina questo test', async () => { if (await confirmDlg(`Eliminare "${def.name}" e il suo storico?`, 'Elimina')) { S.testDefs = S.testDefs.filter(x => x !== def); S.tests = S.tests.filter(t => t.key !== def.key); again(); } }, 'danger block')]);
   }
   function viewProgress() {
     const name = h('input', { placeholder: 'Hang a una mano 22 mm' }), unit = h('input', { placeholder: 's', value: 'kg' });
-    return [h('h1', {}, 'Progressi'), h('div', { class: 'sub' }, 'L\'ultimo valore di ogni test è il massimale usato per calcolare i kg nel piano e nel player.'),
+    return [anHead('progressi'), h('div', { class: 'sub' }, 'L\'ultimo valore di ogni test è il massimale usato per calcolare i kg nel piano e nel player.'),
       S.testDefs.map(def => {
         const hist = S.tests.filter(t => t.key === def.key).sort((a, b) => (a.date < b.date ? -1 : 1)), last = hist[hist.length - 1];
         return h('div', { class: 'card tap row', onclick: () => testSheet(def) },
-          h('div', { class: 'grow' }, h('div', { class: 'sub' }, def.name), h('div', { class: 'big' }, last ? String(last.value).replace('.', ',') + ' ' + def.unit : '—'),
+          h('div', { class: 'grow' }, h('div', { class: 'sub' }, def.name), h('div', { class: 'big' }, last ? dec(last.value) + ' ' + def.unit : '—'),
             h('div', { class: 'sub' }, last ? `${fmtDate(last.date)} · ${hist.length} ${hist.length === 1 ? 'risultato' : 'risultati'}` : 'Tocca per aggiungere')),
-          spark(hist.map(t => t.value)));
+          Charts.spark(hist.map(t => t.value)));
       }),
       h('h2', {}, 'Nuovo test'), h('div', { class: 'card' }, h('div', { class: 'cols' }, field('Nome', name), field('Unità', unit)),
         btn('Aggiungi test', () => { if (!name.value.trim()) return toast('Serve un nome.'); S.testDefs.push({ key: 'c-' + C.uid().slice(0, 8), name: name.value.trim(), unit: unit.value.trim() || 'kg' }); save(); render(); }, 'sm'))];
   }
 
+  /* ---------- Altro ---------- */
+  function surfaceSheet(x) {
+    const name = h('input', { value: x.name });
+    const used = Object.values(S.exercises).some(e => e.surface === x.key) || S.logs.some(l => (l.climbs || []).some(c => c.surface === x.key));
+    const ov = openSheet('Superficie', [field('Nome', name),
+      btn('Salva', () => { const n = name.value.trim().slice(0, 40); if (!n) return toast('Serve un nome.'); x.name = n; save(); ov.remove(); render(); }, 'pri block'),
+      btn(used ? 'In uso: non eliminabile' : 'Elimina', async () => {
+        if (used) return toast('È usata da esercizi o registrazioni: puoi rinominarla.');
+        if (await confirmDlg(`Eliminare la superficie "${x.name}"?`, 'Elimina')) { S.surfaces = S.surfaces.filter(s => s !== x); save(); ov.remove(); render(); }
+      }, 'danger block')]);
+  }
   function viewMore() {
-    const prep = numInp(S.settings.prep, { min: 0, max: 60 }), sound = h('input', { type: 'checkbox', checked: S.settings.sound, onchange: () => { S.settings.sound = sound.checked; save(); } });
+    const prep = numInp(S.settings.prep), sound = h('input', { type: 'checkbox', checked: S.settings.sound, onchange: () => { S.settings.sound = sound.checked; save(); } });
+    const sfNew = h('input', { class: 'inp', style: 'margin:0', placeholder: 'Nuova superficie' });
     return [h('h1', {}, 'Altro'),
       h('div', { class: 'card tap row', onclick: () => { location.hash = 'libreria'; } }, h('div', { class: 'grow' }, h('div', { class: 'n', style: 'font-weight:600' }, 'Libreria esercizi'), h('div', { class: 'sub' }, Object.keys(S.exercises).length + ' esercizi')), '›'),
+      h('h2', {}, 'Superfici di arrampicata'), h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin-top:0' }, 'Si assegnano agli esercizi e alle registrazioni, per confrontare l\'avanzamento nei grafici. Tocca per rinominare.'),
+        h('div', { class: 'btns', style: 'margin-top:0' }, S.surfaces.map(x => btn(x.name, () => surfaceSheet(x), 'sm'))),
+        h('div', { class: 'row', style: 'margin-top:10px' }, h('div', { class: 'grow' }, sfNew), btn('Aggiungi', () => { const n = sfNew.value.trim().slice(0, 40); if (!n) return toast('Scrivi un nome.'); addSurface(n); save(); render(); }, 'sm')),
+        h('p', { class: 'sub', style: 'margin-bottom:0' }, `Scala dei gradi: ${C.GRADE_SCALES[S.settings.gradeScale] || 'Font'}. La scelta di altre scale arriverà qui.`)),
       h('h2', {}, 'Player'), h('div', { class: 'card' }, h('div', { class: 'cols' }, field('Preparazione prima di un hang (s)', prep), h('label', { class: 'f' }, 'Segnali acustici', h('div', { style: 'margin-top:12px' }, sound, ' attivi'))),
         btn('Salva', () => { S.settings.prep = Math.min(60, Math.max(0, Math.round(val(prep) || 0))); save(); toast('Salvato.'); }, 'sm')),
       h('h2', {}, 'Dati'), h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin-top:0' }, 'I dati restano solo su questo dispositivo. Fai un backup ogni tanto.'),
         h('div', { class: 'btns' }, btn('Backup completo', () => exportSheet('Backup', `allenamento-backup-${C.todayISO()}.json`, JSON.stringify(S)), 'sm pri'), fileBtn('Ripristina / importa file'),
-          btn('Azzera tutto', async () => { if (await confirmDlg('Cancellare piani, esercizi, diario e test? L\'operazione non si può annullare: fai prima un backup.', 'Azzera')) { S = fresh(); curWeek = null; save(); render(); } }, 'sm danger')))];
+          btn('Azzera tutto', async () => { if (await confirmDlg('Cancellare piani, esercizi, diario e test? L\'operazione non si può annullare: fai prima un backup.', 'Azzera')) { S = fresh(); curWeek = null; calSel = calMonth = null; save(); render(); } }, 'sm danger')))];
   }
 
   /* ---------- Player ---------- */
@@ -762,22 +1389,30 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
   const mmss = s => { s = Math.max(0, Math.round(s)); return s >= 60 ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` : String(s); };
   const isAuto = st => st.kind === 'rest' || (st.kind === 'work' && !st.selfPaced);
 
-  function startSession(p, w, d, si, idx) {
-    const s = p.weeks[w][d].sessions[si], steps = C.buildSteps(s.blocks, S.exercises, S.settings.prep);
+  function startSession(r, idx) {
+    const s = sessOf(r), steps = C.buildSteps(s.blocks, S.exercises, S.settings.prep);
     if (!steps.length) return toast('Questa sessione non ha esercizi.');
     audioInit(); wake();
-    const resumed = S.live && S.live.planId === p.id && S.live.w === w && S.live.d === d && S.live.si === si;
-    P = { steps, p, w, d, si, s, startedAt: resumed ? S.live.startedAt : Date.now(), paused: false };
-    S.live = { planId: p.id, w, d, si, idx: 0, startedAt: P.startedAt };
+    const resumed = S.live && S.live.sid === s.id;
+    // acc: millisecondi passati in ogni blocco (pause escluse), per sapere quanto tempo è andato su ogni superficie
+    P = { steps, r, s, startedAt: resumed ? S.live.startedAt : Date.now(), acc: resumed && S.live.acc ? { ...S.live.acc } : {}, paused: false, idx: null };
+    S.live = { sid: s.id, idx: 0, startedAt: P.startedAt, acc: P.acc };
     $('player').hidden = false;
     P.timer = setInterval(tick, 200);
     enter(Math.min(idx || 0, steps.length - 1));
-    log('player', 'sessione avviata', { piano: p.title, settimana: w + 1, giorno: d + 1, passi: steps.length });
+    log('player', 'sessione avviata', { sessione: refTitle(r), passi: steps.length });
+  }
+  function track() { // attribuisce al blocco corrente il tempo dall'ultimo cambio di passo
+    if (P.idx == null) return;
+    const now = Date.now(), b = P.steps[P.idx].block;
+    P.acc[b] = (P.acc[b] || 0) + Math.max(0, now - P.stepAt - P.stepPaused - (P.paused ? now - P.pauseAt : 0));
   }
   function enter(i) {
+    track();
     P.idx = i; P.endAt = Date.now() + P.steps[i].seconds * 1000; P.lastBeep = null; P.freeDone = false;
-    if (P.paused) P.remain = P.steps[i].seconds * 1000;
-    S.live.idx = i; save(); draw();
+    P.stepAt = Date.now(); P.stepPaused = 0;
+    if (P.paused) { P.remain = P.steps[i].seconds * 1000; P.pauseAt = Date.now(); }
+    S.live.idx = i; S.live.acc = P.acc; save(); draw();
   }
   function next() { if (P.idx + 1 >= P.steps.length) finish(); else enter(P.idx + 1); }
   function remaining() { return ((P.paused ? P.remain : P.endAt - Date.now())) / 1000; }
@@ -805,11 +1440,11 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
     $('p-bar').style.width = (P.idx / P.steps.length * 100) + '%';
     $('p-ph').textContent = { prep: 'PREPARATI', work: st.selfPaced ? 'ESEGUI' : 'LAVORO', rest: 'RECUPERO', free: 'A TEMPO LIBERO' }[ph];
     $('p-name').textContent = st.kind === 'rest' && st.afterBlock && nx ? 'Prossimo: ' + nx.name : st.name;
-    $('p-round').textContent = st.kind === 'free' ? '' : `Round ${st.round} di ${st.rounds}` + (st.reps && st.kind === 'work' ? '' : '');
+    $('p-round').textContent = st.kind === 'free' ? (ex && ex.surface ? surfName(ex.surface) : '') : `Round ${st.round} di ${st.rounds}`;
     $('p-cue').textContent = st.kind === 'rest' && st.afterBlock ? (nx ? nx.cue : '') : st.cue;
     const src = st.kind === 'rest' && st.afterBlock && nx ? { ex: S.exercises[nx.exId], cue: nx.cue } : { ex, cue: st.cue };
     const kg = src.ex && st.kind !== 'free' ? C.loadKg(src.ex.load, src.cue, maxes()) : null;
-    $('p-kg').textContent = kg == null ? '' : (src.ex.load.mode === 'hang' ? C.fmtKg(kg) : String(kg).replace('.', ',') + ' kg');
+    $('p-kg').textContent = kg == null ? '' : (src.ex.load.mode === 'hang' ? C.fmtKg(kg) : dec(kg) + ' kg');
     $('p-next').textContent = nx ? 'Poi: ' + (nx.kind === 'rest' ? `recupero ${mmss(nx.seconds)}` : nx.name + (nx.cue && nx.kind !== 'free' ? ' · ' + nx.cue : '')) : 'Ultimo passo';
     $('p-done').textContent = isAuto(st) ? 'Salta' : 'Fatto';
     $('p-done').className = 'btn ' + (isAuto(st) ? '' : 'pri');
@@ -819,30 +1454,34 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
   }
   function closePlayer() { clearInterval(P.timer); try { if (wl) wl.release(); } catch (e) { /* già rilasciato */ } wl = null; $('player').hidden = true; }
   function finish() {
-    const { p, w, d, si, s } = P, minutes = Math.max(1, Math.round((Date.now() - P.startedAt) / 60000));
+    track();
+    const { r, s, acc } = P, minutes = Math.max(1, Math.round((Date.now() - P.startedAt) / 60000));
     closePlayer(); P = null; beep(1320, 0.8);
-    const m = maxes(), loadRows = [], testRows = [], seen = new Set();
-    for (const b of s.blocks) {
+    const m = maxes(), loadRows = [], testRows = [], climbRows = [], seen = new Set();
+    s.blocks.forEach((b, bi) => {
       const ex = S.exercises[b.exId];
-      if (!ex || !ex.load) continue;
+      if (!ex) return;
+      // blocchi di arrampicata: superficie (modificabile), grado massimo chiuso, blocchi chiusi, minuti misurati dal player
+      if (ex.slot === 'wall' || ex.surface) climbRows.push({ name: ex.name, surface: ex.surface || '', minutes: Math.round((acc[bi] || 0) / 60000) });
+      if (!ex.load) return;
       if (ex.load.test) {
         const keys = ex.load.ref === 'pinch' ? ['pinchL', 'pinchR'] : [ex.load.ref];
-        for (const k of keys) if (!seen.has(k)) { seen.add(k); const def = S.testDefs.find(t => t.key === k); if (def) testRows.push({ def, inp: numInp(null, { placeholder: m[k] == null ? '' : 'precedente: ' + m[k] }) }); }
+        for (const k of keys) if (!seen.has(k)) { seen.add(k); const def = S.testDefs.find(t => t.key === k); if (def) testRows.push({ def, inp: numInp(null, { placeholder: m[k] == null ? '' : 'precedente: ' + dec(m[k]) }) }); }
       } else loadRows.push({ name: ex.name, inp: h('input', { value: loadHint(ex).replace('kg: mancano i massimali', '') }) });
-    }
-    const min = numInp(minutes, { min: 0 }), rpe = numInp(null, { min: 1, max: 10 }), notes = h('textarea', {});
-    const feel = opts({ '': '—', 1: '1 · Distrutto', 2: '2 · Stanco', 3: '3 · Così così', 4: '4 · Bene', 5: '5 · Ottimo' }, '');
+    });
+    const min = numInp(minutes), rpe = numInp(null), notes = h('textarea', {}), feel = opts(FEEL, ''), climbs = climbEditor(climbRows, () => val(min));
     let ov;
-    const end = () => { S.live = null; save(); ov.remove(); location.hash = 'diario'; render(); };
+    const end = () => { S.live = null; save(); ov.remove(); go('diario'); };
     ov = openSheet('Sessione completata', [h('div', { class: 'cols3' }, field('Minuti', min), field('RPE (1-10)', rpe), field('Sensazione', feel)),
-      testRows.length ? [h('h2', {}, 'Risultati dei test'), h('p', { class: 'sub' }, 'Diventano i nuovi massimali per il calcolo dei kg.'), testRows.map(r => field(`${r.def.name} (${r.def.unit})`, r.inp))] : null,
-      loadRows.length ? [h('h2', {}, 'Carichi usati'), loadRows.map(r => field(r.name, r.inp))] : null,
+      testRows.length ? [h('h2', {}, 'Risultati dei test'), h('p', { class: 'sub' }, 'Diventano i nuovi massimali per il calcolo dei kg.'), testRows.map(x => field(`${x.def.name} (${x.def.unit})`, x.inp))] : null,
+      loadRows.length ? [h('h2', {}, 'Carichi usati'), loadRows.map(x => field(x.name, x.inp))] : null,
+      h('h2', {}, 'Arrampicata'), h('p', { class: 'sub' }, 'Per ogni superficie: il blocco più duro chiuso e quanti ne hai chiusi. Le righe senza superficie non vengono salvate.'), climbs.node,
       field('Note', notes),
       btn('Salva nel diario', () => {
         const date = C.todayISO();
-        for (const r of testRows) { const n = val(r.inp); if (n != null) S.tests.push({ id: C.uid(), key: r.def.key, date, value: n }); }
-        S.logs.push({ id: C.uid(), date, planId: p.id, w, d, si, title: `${sessTitle(s)} · ${p.title} S${w + 1}`, minutes: Math.max(0, Math.round(val(min) || 0)), rpe: val(rpe), feel: feel.value ? +feel.value : null,
-          notes: notes.value.trim(), loads: loadRows.map(r => ({ name: r.name, kg: r.inp.value.trim() })).filter(x => x.kg) });
+        for (const x of testRows) { const n = val(x.inp); if (n != null) S.tests.push({ id: C.uid(), key: x.def.key, date, value: n }); }
+        S.logs.push({ id: C.uid(), date, sid: s.id, type: s.type, period: s.period, title: refTitle(r), minutes: Math.max(0, Math.round(val(min) || 0)), rpe: val(rpe), feel: feel.value ? +feel.value : null,
+          notes: notes.value.trim(), loads: loadRows.map(x => ({ name: x.name, kg: x.inp.value.trim() })).filter(x => x.kg), climbs: climbs.read() });
         log('player', 'sessione salvata', { minuti: minutes });
         end();
       }, 'pri block'), btn('Non salvare', end, 'block')]);
@@ -852,31 +1491,40 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
     $('p-back').onclick = () => enter(Math.max(0, P.idx - 1));
     $('p-plus').onclick = () => { if (P.paused) P.remain += 30000; else P.endAt += 30000; P.lastBeep = null; drawClock(); };
     $('p-pause').onclick = () => {
-      if (P.paused) { P.endAt = Date.now() + P.remain; P.paused = false; audioInit(); } else { P.remain = P.endAt - Date.now(); P.paused = true; }
+      if (P.paused) { P.endAt = Date.now() + P.remain; P.stepPaused += Date.now() - P.pauseAt; P.paused = false; audioInit(); }
+      else { P.remain = P.endAt - Date.now(); P.pauseAt = Date.now(); P.paused = true; }
       draw();
     };
-    $('p-quit').onclick = async () => {
+    $('p-quit').onclick = () => {
       const was = P.paused; if (!was) $('p-pause').onclick();
       const ov = openSheet('Uscire dalla sessione?', h('div', { class: 'btns' },
         btn('Continua', () => { ov.remove(); if (!was) $('p-pause').onclick(); }), btn('Termina e registra', () => { ov.remove(); finish(); }, 'pri'),
-        btn('Esci (riprendi dopo)', () => { ov.remove(); closePlayer(); P = null; render(); }), btn('Abbandona', () => { ov.remove(); closePlayer(); P = null; S.live = null; save(); render(); }, 'danger')), true);
+        btn('Esci (riprendi dopo)', () => { ov.remove(); track(); S.live.acc = P.acc; save(); closePlayer(); P = null; render(); }),
+        btn('Abbandona', () => { ov.remove(); closePlayer(); P = null; S.live = null; save(); render(); }, 'danger')), true);
       ov.style.zIndex = 50;
     };
   }
 
   /* ---------- Router ---------- */
-  const VIEWS = { oggi: viewToday, piano: viewPlan, giorno: viewDay, diario: viewDiary, progressi: viewProgress, altro: viewMore, libreria: viewLibrary };
+  const VIEWS = { oggi: viewToday, calendario: viewCalendar, piano: viewPlan, giorno: a => viewDay(+a[0], +a[1]), diario: viewDiary, analisi: viewAnalytics, progressi: viewProgress, altro: viewMore, libreria: viewLibrary };
   function render() {
-    const [name, a, b] = (location.hash.slice(1) || 'oggi').split('-');
+    const [name, ...args] = (location.hash.slice(1) || 'oggi').split('-');
     const fn = VIEWS[name] || viewToday;
     let nodes;
-    try { nodes = fn(+a, +b); }
-    catch (e) { console.error('[ui] errore nella vista ' + name, e); nodes = [h('h1', {}, 'Qualcosa è andato storto'), h('p', { class: 'sub' }, String(e.message || e)), btn('Torna a Oggi', () => { location.hash = 'oggi'; render(); })]; }
+    try { nodes = fn(args); }
+    catch (e) { console.error('[ui] errore nella vista ' + name, e); nodes = [h('h1', {}, 'Qualcosa è andato storto'), h('p', { class: 'sub' }, String(e.message || e)), btn('Torna a Oggi', () => go('oggi'))]; }
     $('view').replaceChildren(...[nodes].flat(Infinity).filter(n => n != null && n !== false));
-    const tab = { giorno: 'piano', libreria: 'altro' }[name] || (VIEWS[name] ? name : 'oggi');
+    const tab = { giorno: 'piano', libreria: 'altro', progressi: 'analisi' }[name] || (VIEWS[name] ? name : 'oggi');
     for (const el of document.querySelectorAll('#tabs a')) el.classList.toggle('on', el.getAttribute('href') === '#' + tab);
   }
-  window.addEventListener('hashchange', () => { for (const o of document.querySelectorAll('.overlay')) o.remove(); window.scrollTo(0, 0); render(); });
+  let lastView = (location.hash.slice(1) || 'oggi').split('-')[0];
+  window.addEventListener('hashchange', () => {
+    for (const o of document.querySelectorAll('.overlay')) o.remove();
+    const view = (location.hash.slice(1) || 'oggi').split('-')[0];
+    if (view !== lastView || view !== 'calendario') window.scrollTo(0, 0); // nel calendario cambiare giorno non deve riportare in cima
+    lastView = view;
+    render();
+  });
   wirePlayer();
   render();
   window.__app = { get state() { return S; }, render }; // utile per debug dalla console

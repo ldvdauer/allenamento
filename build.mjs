@@ -5,6 +5,7 @@ const esc = s => s.replace(/<\/script/g, '<\\/script');
 const page = extra => r('index.html')
   .replace('/*CSS*/', () => r('style.css'))
   .replace('/*CORE*/', () => esc(r('core.js')))
+  .replace('/*CHARTS*/', () => esc(r('charts.js')))
   .replace('/*APP*/', () => esc(r('app.js')))
   .replace('<!--PWA-->', () => extra.head).replace('<!--SW-->', () => extra.tail);
 for (const d of ['./dist', './docs']) mkdirSync(new URL(d, import.meta.url), { recursive: true });

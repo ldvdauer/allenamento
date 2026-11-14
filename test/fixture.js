@@ -3,7 +3,7 @@ const ex = (name, slot, prescription, interval) => ({ id: 'custom-' + name, name
 const pb = (block, minutes) => ({ selectedDurationMinutes: minutes, block });
 const warm = ex('Riscaldamento', 'warmup', 'Progressivo');
 const hang = pct => ex('Open hand 20 mm 7"', 'strength', `3 × 7" · ${pct}% max`, { rounds: 3, workSeconds: 7, restSeconds: 180, cues: Array(3).fill(pct + '% max') });
-const limit = ex('Limit board', 'wall', 'Qualità');
+const limit = ex('Limit MoonBoard', 'wall', 'Qualità');
 const press = ex('Press', 'strength', '2 × 6-8', { rounds: 2, workSeconds: 45, restSeconds: 120, selfPaced: true, reps: 6, cues: ['SX', 'DX'] });
 const mob = ex('Mobilità', 'mobility', 'Anche');
 const week = (pct, period) => [

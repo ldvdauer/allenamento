@@ -1,14 +1,16 @@
 # Allenamento — clone personalizzabile di Blok Sessions
 
 PWA offline per piani di allenamento di arrampicata: piano settimanale, player guidato con timer,
-editor completo, diario con carichi in kg, test/progressi, import ed export `.blokplan`.
+editor completo, sessioni libere su qualsiasi data (calendario), diario con carichi in kg e logbook per superficie,
+analisi con grafici, test e massimali, import ed export `.blokplan`.
 Al primo avvio l'app è vuota: ogni utente importa o crea i propri piani. Nessun backend e nessun account: i dati stanno nel `localStorage` del dispositivo (backup da *Altro*).
 
 ## Struttura
 | File | Contenuto |
 |---|---|
 | `src/core.js` | Logica pura (date, carichi, passi del player, import/export). Unico file coperto da unit test. |
-| `src/app.js` | Interfaccia: viste, editor, player. |
+| `src/charts.js` | Grafici SVG senza dipendenze (colonne, linee, barre orizzontali) con tooltip e vista tabella. |
+| `src/app.js` | Interfaccia: viste, calendario, editor, player, analisi. |
 | `src/style.css`, `src/index.html` | Stile e scheletro della pagina. |
 | `public/` | Manifest, service worker e icona per la versione installabile. |
 | `build.mjs` | Produce `dist/index.html` (file unico) e `docs/` (installabile). |

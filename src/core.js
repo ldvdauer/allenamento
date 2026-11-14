@@ -21,6 +21,26 @@
     { key: 'wrist', name: 'Flessione polso 6RM', unit: 'kg' },
   ];
 
+  // Scala dei gradi boulder. I dati salvano l'etichetta Font; `fmtGrade` è l'unico punto in cui si sceglie la scala mostrata.
+  const GRADES = ['4', '4+', '5', '5+', '6A', '6A+', '6B', '6B+', '6C', '6C+', '7A', '7A+', '7B', '7B+', '7C', '7C+', '8A', '8A+', '8B', '8B+', '8C', '8C+', '9A'];
+  const GRADE_SCALES = { font: 'Font' };
+  const gradeIdx = g => (g == null ? -1 : GRADES.indexOf(g));
+  const fmtGrade = (g, scale) => (g == null ? '' : scale && scale !== 'font' ? g : g); // altre scale: da aggiungere qui
+  // Superfici di arrampicata predefinite; l'utente può aggiungerne altre.
+  const DEFAULT_SURFACES = [
+    { key: 'moonboard', name: 'MoonBoard' }, { key: 'kilter', name: 'Kilter Board' }, { key: 'tension', name: 'Tension Board' },
+    { key: 'gym', name: 'Indoor (palestra)' }, { key: 'outdoor', name: 'Outdoor (roccia)' },
+  ];
+  /** Superficie deducibile dal nome dell'esercizio (solo i casi ovvi), altrimenti stringa vuota. */
+  function inferSurface(name) {
+    const n = name || '';
+    if (/moon\s?board/i.test(n)) return 'moonboard';
+    if (/kilter/i.test(n)) return 'kilter';
+    if (/tension/i.test(n)) return 'tension';
+    if (/outdoor|roccia|falesia/i.test(n)) return 'outdoor';
+    return '';
+  }
+
   const uid = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
     const r = Math.random() * 16 | 0;
     return (c === 'x' ? r : (r & 3) | 8).toString(16);
@@ -35,6 +55,8 @@
   const diffDays = (a, b) => Math.round((fromISO(a) - fromISO(b)) / 864e5);
   const appleToISO = sec => toISO(new Date(APPLE_EPOCH_MS + sec * 1000));
   const isoToApple = iso => Math.round((fromISO(iso).getTime() - APPLE_EPOCH_MS) / 1000);
+  /** Data ISO valida e normalizzata, oppure null. */
+  const validISO = s => (/^\d{4}-\d{2}-\d{2}$/.test(s || '') && toISO(fromISO(s)) === s ? s : null); // rifiuta anche date inesistenti (30 febbraio)
   const mondayOf = iso => { const d = fromISO(iso); return addDays(iso, -((d.getDay() + 6) % 7)); };
 
   /* ---- Carichi ---- */
@@ -142,6 +164,7 @@
       equipment: Array.isArray(b.equipment) ? b.equipment.map(e => str(e, '')).filter(Boolean) : [],
       interval: normInterval(b.interval),
       load: inferLoad(name, prescription),
+      surface: inferSurface(name),
     };
   }
   /** Converte un .blokplan in { plan, exercises }. Lancia Error se il file non è valido.
@@ -161,9 +184,9 @@
       const days = w.slice(0, 7).map(d => {
         const sessions = [];
         if (d && DAY_TYPES[d.type] && d.type !== 'rest')
-          sessions.push({ type: d.type, period: PERIODS[d.period] ? d.period : 'base', blocks: blocksOf(d.plannedBlocks) });
+          sessions.push({ id: uid(), type: d.type, period: PERIODS[d.period] ? d.period : 'base', blocks: blocksOf(d.plannedBlocks) });
         if (d && d.secondType && DAY_TYPES[d.secondType])
-          sessions.push({ type: d.secondType, period: PERIODS[d.secondPeriod] ? d.secondPeriod : 'base', blocks: blocksOf(d.secondPlannedBlocks) });
+          sessions.push({ id: uid(), type: d.secondType, period: PERIODS[d.secondPeriod] ? d.secondPeriod : 'base', blocks: blocksOf(d.secondPlannedBlocks) });
         return { sessions };
       });
       while (days.length < 7) days.push({ sessions: [] });
@@ -209,7 +232,9 @@
   }
   const dateOf = (plan, w, d) => addDays(plan.startDate, w * 7 + d);
   const sessionMinutes = s => s.blocks.reduce((t, b) => t + (b.minutes || 0), 0);
-  const cloneDay = day => ({ sessions: day.sessions.map(s => ({ ...s, blocks: s.blocks.map(b => ({ ...b, id: uid() })) })) });
+  // Le copie hanno id nuovi: una sessione copiata non eredita lo stato "fatta" dell'originale.
+  const cloneSession = s => ({ ...s, id: uid(), blocks: s.blocks.map(b => ({ ...b, id: uid() })) });
+  const cloneDay = day => ({ sessions: day.sessions.map(cloneSession) });
   const emptyWeek = () => Array.from({ length: 7 }, () => ({ sessions: [] }));
   function usage(plans, exId) {
     let n = 0;
@@ -219,12 +244,126 @@
   /** Validazione minima di un backup completo. */
   function validState(s) {
     return !!s && typeof s === 'object' && Array.isArray(s.plans) && s.exercises && typeof s.exercises === 'object' &&
-      Array.isArray(s.logs) && Array.isArray(s.tests) && s.plans.every(p => p && Array.isArray(p.weeks) && typeof p.startDate === 'string');
+      Array.isArray(s.logs) && Array.isArray(s.tests) && s.plans.every(p => p && typeof p.startDate === 'string' && Array.isArray(p.weeks) &&
+        p.weeks.every(w => Array.isArray(w) && w.every(d => d && Array.isArray(d.sessions) && d.sessions.every(x => x && Array.isArray(x.blocks)))));
+  }
+
+  /* ---- Analisi: aggregazioni pure sul diario ---- */
+  /** Estremi "puliti" per un asse: { min, max, step } con passi 1 / 2 / 2,5 / 5 × 10^n. */
+  function niceRange(lo, hi, n) {
+    n = n || 3;
+    if (!(hi > lo)) { hi = lo + 1; lo = lo >= 0 && lo < 1 ? 0 : lo - 1; }
+    const raw = (hi - lo) / n, mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    const step = [1, 2, 2.5, 5, 10].find(m => m * mag >= raw - 1e-12) * mag;
+    return { min: Math.floor(lo / step + 1e-9) * step, max: Math.ceil(hi / step - 1e-9) * step, step };
+  }
+  /** Sessioni in programma: piano attivo + sessioni extra legate a una data (quelle senza esercizi non contano). */
+  function scheduled(plan, extras) {
+    const out = [];
+    if (plan) plan.weeks.forEach((wk, w) => wk.forEach((day, d) => day.sessions.forEach(s => {
+      if (s.blocks.length) out.push({ sid: s.id, date: dateOf(plan, w, d), minutes: sessionMinutes(s), type: s.type });
+    })));
+    for (const x of extras || []) if (x.blocks.length) out.push({ sid: x.id, date: x.date, minutes: sessionMinutes(x), type: x.type });
+    return out;
+  }
+  /** Statistiche per settimana (lun–dom) dalla settimana di `from` a quella di `to`. `load` = carico sRPE (minuti × RPE). */
+  function weeklyStats(logs, sched, from, to) {
+    const start = mondayOf(from), acc = [];
+    for (let m = start; m <= to; m = addDays(m, 7)) acc.push({ week: m, sessions: 0, minutes: 0, load: 0, rpeSum: 0, rpeN: 0, feelSum: 0, feelN: 0, plannedMinutes: 0, plannedSessions: 0 });
+    const at = iso => (iso >= start ? acc[Math.floor(diffDays(iso, start) / 7)] : undefined);
+    for (const l of logs || []) {
+      const w = at(l.date);
+      if (!w) continue;
+      w.sessions++; w.minutes += l.minutes || 0;
+      if (l.rpe != null) { w.rpeSum += l.rpe; w.rpeN++; w.load += (l.minutes || 0) * l.rpe; }
+      if (l.feel != null) { w.feelSum += l.feel; w.feelN++; }
+    }
+    for (const s of sched || []) { const w = at(s.date); if (w) { w.plannedMinutes += s.minutes; w.plannedSessions++; } }
+    return acc.map(w => ({ week: w.week, sessions: w.sessions, minutes: w.minutes, load: w.load, rpe: w.rpeN ? w.rpeSum / w.rpeN : null,
+      feel: w.feelN ? w.feelSum / w.feelN : null, plannedMinutes: w.plannedMinutes, plannedSessions: w.plannedSessions }));
+  }
+  /** Totali del periodo e aderenza: sessioni in programma fino a oggi che hanno una registrazione nel diario. */
+  function summary(logs, sched, from, to, today) {
+    const inR = (logs || []).filter(l => l.date >= from && l.date <= to);
+    const done = new Set((logs || []).map(l => l.sid).filter(Boolean));
+    const until = to < today ? to : today;
+    const due = (sched || []).filter(s => s.date >= from && s.date <= until);
+    const avg = k => { const a = inR.filter(l => l[k] != null); return a.length ? a.reduce((t, l) => t + l[k], 0) / a.length : null; };
+    return { sessions: inR.length, minutes: inR.reduce((t, l) => t + (l.minutes || 0), 0), rpe: avg('rpe'), rpeN: inR.filter(l => l.rpe != null).length, feel: avg('feel'),
+      due: due.length, dueDone: due.filter(s => done.has(s.sid)).length };
+  }
+  /** Minuti e sessioni per tipo di sessione, dal più grande. */
+  function minutesByType(logs, from, to) {
+    const m = new Map();
+    for (const l of logs || []) {
+      if (l.date < from || l.date > to) continue;
+      const k = DAY_TYPES[l.type] ? l.type : 'other', o = m.get(k) || { type: k, minutes: 0, sessions: 0 };
+      o.minutes += l.minutes || 0; o.sessions++; m.set(k, o);
+    }
+    return [...m.values()].sort((a, b) => b.minutes - a.minutes || a.type.localeCompare(b.type));
+  }
+  /** "SX 15 kg · DX 18 kg" → [{side:'SX',kg:15},{side:'DX',kg:18}]; "+4,5 kg" → [{side:null,kg:4.5}]. */
+  function parseLoads(text) {
+    const out = [];
+    for (const part of String(text == null ? '' : text).split(/[·;/]/)) {
+      const m = /[+-]?\d+(?:[.,]\d+)?/.exec(part);
+      if (!m) continue;
+      const side = /\b(SX|DX)\b/i.exec(part);
+      out.push({ side: side ? side[1].toUpperCase() : null, kg: num(m[0]) });
+    }
+    return out;
+  }
+  /** Carichi registrati nel diario: una serie per esercizio (e per lato), in ordine di data. */
+  function loadSeries(logs, from, to) {
+    const m = new Map();
+    for (const l of [...(logs || [])].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))) {
+      if (l.date < from || l.date > to) continue;
+      for (const x of l.loads || []) for (const p of parseLoads(x.kg)) {
+        const name = x.name + (p.side ? ' ' + p.side : '');
+        if (!m.has(name)) m.set(name, []);
+        m.get(name).push({ date: l.date, kg: p.kg });
+      }
+    }
+    return [...m.entries()].map(([name, points]) => ({ name, points })).sort((a, b) => a.name.localeCompare(b.name));
+  }
+  /** Per superficie: minuti, sessioni, blocchi chiusi e grado massimo chiuso nel periodo. */
+  function surfaceStats(logs, from, to) {
+    const m = new Map();
+    for (const l of logs || []) {
+      if (l.date < from || l.date > to) continue;
+      const seen = new Set();
+      for (const c of l.climbs || []) {
+        if (!c.surface) continue;
+        const o = m.get(c.surface) || { surface: c.surface, minutes: 0, sessions: 0, sends: 0, top: -1 };
+        o.minutes += c.minutes || 0; o.sends += c.sends || 0; o.top = Math.max(o.top, gradeIdx(c.top));
+        if (!seen.has(c.surface)) { seen.add(c.surface); o.sessions++; }
+        m.set(c.surface, o);
+      }
+    }
+    return [...m.values()].map(o => ({ ...o, top: o.top >= 0 ? GRADES[o.top] : null })).sort((a, b) => b.minutes - a.minutes || a.surface.localeCompare(b.surface));
+  }
+  /** Grado massimo chiuso per settimana: { weeks, series: { superficie: [indice nella scala | null] } }. */
+  function weeklyTopGrades(logs, from, to) {
+    const start = mondayOf(from), weeks = [], series = {};
+    for (let w = start; w <= to; w = addDays(w, 7)) weeks.push(w);
+    for (const l of logs || []) {
+      if (l.date < start) continue;
+      const i = Math.floor(diffDays(l.date, start) / 7);
+      if (i >= weeks.length) continue;
+      for (const c of l.climbs || []) {
+        const g = gradeIdx(c.top);
+        if (!c.surface || g < 0) continue;
+        const s = series[c.surface] || (series[c.surface] = weeks.map(() => null));
+        s[i] = s[i] == null ? g : Math.max(s[i], g);
+      }
+    }
+    return { weeks, series };
   }
 
   return {
-    DAY_TYPES, PERIODS, SLOTS, DEFAULT_TESTS, uid, toISO, fromISO, todayISO, addDays, diffDays, appleToISO, isoToApple, mondayOf,
+    DAY_TYPES, PERIODS, SLOTS, DEFAULT_TESTS, GRADES, GRADE_SCALES, gradeIdx, fmtGrade, DEFAULT_SURFACES, inferSurface, validISO, uid, toISO, fromISO, todayISO, addDays, diffDays, appleToISO, isoToApple, mondayOf,
     inferLoad, loadKey, loadKg, latestMaxes, fmtKg, cycle, cueAt, intervalMinutes, buildSteps, normInterval,
-    importBlokplan, exportBlokplan, locate, dateOf, sessionMinutes, cloneDay, emptyWeek, usage, validState,
+    importBlokplan, exportBlokplan, locate, dateOf, sessionMinutes, cloneSession, cloneDay, emptyWeek, usage, validState,
+    niceRange, scheduled, weeklyStats, summary, minutesByType, parseLoads, loadSeries, surfaceStats, weeklyTopGrades,
   };
 });
