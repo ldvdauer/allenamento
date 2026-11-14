@@ -98,3 +98,4 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
 /* Riordino per trascinamento */
 .grip{touch-action:none;cursor:grab;color:var(--mu);font-size:20px;line-height:1;padding:10px 10px 10px 2px;margin:-10px 0;user-select:none;-webkit-user-select:none;align-self:center}
 .blk.drag{background:#22262b;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.45);position:relative;z-index:1}
+.sec{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mu);padding:14px 0 4px;border-top:1px solid var(--line)}.sec:first-child{border-top:0;padding-top:4px}.sec+.blk{border-top:0}

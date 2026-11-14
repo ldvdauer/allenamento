@@ -37,7 +37,7 @@ await pg.goto(url);
 let home = await txt('#view');
 ok(home.includes('Home') && home.includes('Rest day') && home.includes('Crea sessione') && home.includes('Registra sessione'), 'Home al primo avvio: Rest day + crea/registra');
 ok(!/pian|programm.*settimana|Questa settimana/i.test(home.replace('in programma oggi', '')), 'Home: nessun riferimento al piano né riepiloghi');
-ok((await txt('#tabs')).replace(/\s+/g, ' ').trim() === 'Home Calendario Diario Analisi Altro', 'navigazione: 5 schede, nessuna sezione Piano');
+ok((await txt('#tabs')).replace(/\s+/g, ' ').trim() === 'Home Calendario Analisi Altro', 'navigazione: 4 schede, niente Piano né Diario');
 
 // Import: si sceglie la data di inizio e il programma finisce nel calendario
 await go('altro');
@@ -53,7 +53,9 @@ await shot('1-calendario');
 
 // Massimali → kg
 await go('progressi');
-for (const [name, v] of [['Peso corporeo', '70'], ['Sloper BM2000', '20'], ['Pinch block 7" SX', '20'], ['Pinch block 7" DX', '24'], ['Flessione polso', '22,5']]) {
+let tests = await txt('#view');
+ok(!/zavorra max|· max/.test(tests) && tests.includes('20 mm · 7" · zavorra') && tests.includes('Open hand') && (await pg.evaluate(() => __app.state.testDefs.map(d => d.key).join())) === 'bw,oh,hc,sl,pinchL,pinchR,wrist', 'Test: solo quelli usati dal programma, parametri accanto al nome, niente "zavorra max"');
+for (const [name, v] of [['Peso corporeo', '70'], ['Sloper', '20'], ['Pinch block SX', '20'], ['Pinch block DX', '24'], ['Flessione polso', '22,5']]) {
   await clickText(name, '#view');
   await pg.type('.sheet .cols label:nth-child(2) input', v);
   await clickText('Aggiungi risultato');
@@ -107,7 +109,10 @@ await clickText('Salva', '.sheet');
 
 // Aggiungere un esercizio durante la sessione
 const nBlocks = (await pg.$$('#runner .run-r')).length;
-await clickText('+ Esercizio', '#runner'); await pg.type('.sheet input', 'Limit Moon'); await sleep(80);
+await clickText('+ Esercizio', '#runner');
+ok((await txt('.sheet')).includes('DITA') && (await txt('.sheet')).includes('Limit bouldering'), 'scelta esercizio: libreria standard per sezioni');
+await clickText('Le mie versioni', '.sheet'); await pg.type('.sheet input', 'Limit Moon'); await sleep(80);
+ok((await txt('.sheet')).includes('Limit bouldering ·'), 'le versioni mostrano lo standard da cui derivano');
 await clickText('Limit MoonBoard', '.sheet', true);
 ok((await pg.$$('#runner .run-r')).length === nBlocks + 1, 'esercizio aggiunto durante la sessione');
 await pg.evaluate(() => { const r = [...document.querySelectorAll('#runner .run-r')]; r[r.length - 1].querySelector('button').click(); }); await sleep(60);
@@ -128,9 +133,10 @@ ok((await pg.$$('#runner .run-r.done')).length === 3, 'ripresa: i tre esercizi f
 await clickText('Termina sessione', '#runner');
 ok((await txt('.sheet')).includes('3 di ' + (nBlocks + 1) + ' esercizi fatti'), 'termina sessione: riepilogo');
 await pg.type('.sheet textarea', 'Prova automatica');
-await clickText('Salva nel diario');
+await clickText('Salva', '.sheet');
+ok(await pg.evaluate(() => location.hash === '#calendario-2026-11-25'), 'a fine sessione si torna al giorno nel calendario (non c\'è più il Diario)');
 let diary = await txt('#view');
-ok(diary.includes('Prova automatica') && diary.includes('MoonBoard 7A+ · 3 blocchi') && diary.includes('Sloper BM2000 7": +4,5 kg') && diary.includes('buone sensazioni'), 'diario: carico, superficie, grado e nota dei singoli esercizi');
+ok(diary.includes('Prova automatica') && diary.includes('MoonBoard 7A+ · 3 blocchi') && diary.includes('Sloper BM2000 7": +4,5 kg') && diary.includes('buone sensazioni'), 'registrazione nel calendario: carico, superficie, grado e nota dei singoli esercizi');
 await shot('7-diario');
 await go('home'); ok((await txt('#view')).includes('Fatta'), 'Home: sessione segnata come fatta');
 
@@ -142,6 +148,34 @@ ok(await pg.evaluate(() => location.hash === '#calendario-2026-12-25') && (await
 await clickText('+ Esercizio', '#view'); await clickText('+ Nuovo');
 await pg.type('.sheet input', 'Circuito spray'); await clickText('Crea esercizio');
 ok((await txt('#view')).includes('Circuito spray'), 'esercizio nuovo aggiunto alla sessione');
+// Libreria standard → versione predefinita riusata; test aggiunto alla sessione → risultato nella sezione Test
+await clickText('+ Esercizio', '#view'); await pg.type('.sheet input', 'trazioni zav'); await sleep(80); await clickText('Trazioni zavorrate', '.sheet', true);
+await clickText('+ Esercizio', '#view'); await pg.type('.sheet input', 'max hang'); await sleep(80); await clickText('Max hang', '.sheet', true);
+await clickText('+ Esercizio', '#view'); await pg.type('.sheet input', 'max hang'); await sleep(80); await clickText('Max hang', '.sheet', true);
+ok(await pg.evaluate(() => { const s = __app.state, x = s.extras[0], ids = x.blocks.slice(-2).map(b => b.exId); return ids[0] === ids[1] && s.exercises[ids[0]].std === 'max-hang' && s.exercises[ids[0]].base && x.blocks[x.blocks.length - 1].minutes === 10; }), 'libreria: lo standard si aggiunge con i suoi valori e la versione predefinita si riusa');
+await clickText('+ Test', '#view');
+ok((await txt('.sheet')).includes('Half-crimp') && (await txt('.sheet')).includes('SX e DX'), '+ Test: elenco dei test definiti');
+await clickText('Half-crimp', '.sheet', true);
+ok((await txt('#view')).includes('Test: Half-crimp'), 'test aggiunto alla sessione come esercizio');
+await clickText('Avvia', '#view'); await pg.evaluate(() => [...document.querySelectorAll('#runner .run-r')].find(r => r.innerText.includes('Test: Half-crimp')).querySelector('button').click()); await sleep(60);
+ok((await txt('#p-ph')) === 'PREPARATI' && (await txt('#p-cue')) === 'Carico crescente', 'il test ha il suo timer (7" dai parametri del test)');
+await pg.click('#p-quit');
+await pg.type('.sheet label:nth-of-type(2) input', '32,5'); await clickText('Salva', '.sheet');
+ok(await pg.evaluate(() => { const t = __app.state.tests.filter(x => x.key === 'hc'); return t.length === 1 && t[0].value === 32.5; }), 'risultato del test salvato subito nella sezione Test');
+await pg.evaluate(() => [...document.querySelectorAll('#runner .run-r')].find(r => r.innerText.includes('Test: Half-crimp')).querySelector('button').click()); await sleep(60);
+await pg.click('#p-quit'); await pg.type('.sheet label:nth-of-type(2) input', '35'); await clickText('Salva', '.sheet');
+ok(await pg.evaluate(() => { const t = __app.state.tests.filter(x => x.key === 'hc'); return t.length === 1 && t[0].value === 35; }), '"Rifai": il nuovo risultato sostituisce il precedente');
+await clickText('Esci', '#runner'); await clickText('Abbandona');
+await go('progressi'); ok((await txt('#view')).includes('35 kg'), 'sezione Test aggiornata');
+// Test personalizzato con parametri propri
+await clickText('Test personalizzato', '#view'); await pg.type('.sheet input', 'Hang a una mano');
+await pg.evaluate(() => { const i = document.querySelectorAll('.sheet input'); i[1].value = 's'; i[2].value = '22'; const s = document.querySelectorAll('.sheet select'); s[0].value = 'value'; s[1].value = '1'; });
+await clickText('Crea test', '.sheet');
+ok((await txt('#view')).includes('Hang a una mano') && (await txt('#view')).includes('22 mm · una mano'), 'test personalizzato: tacca, mani e unità sono parametri');
+await shot('11-test', true);
+await go('libreria'); await shot('12-libreria');
+ok((await txt('#view')).includes('Limit bouldering') && /Limit bouldering\s+\d+ versioni/.test(await txt('#view')), 'libreria: standard con il numero di versioni');
+await go('calendario-2026-12-25');
 await shot('8-calendario-giorno');
 
 // Registra sessione (manuale) da Home
@@ -151,7 +185,7 @@ await clickText('Salva', '.sheet');
 ok(await pg.evaluate(() => __app.state.logs.length === 2), 'registrazione manuale salvata');
 
 // Programmi: gestione da Altro, spostare la data di inizio sposta le sessioni nel calendario
-await go('altro'); await clickText('Karma 8A+', '#view');
+await go('altro'); await clickText('Karma 8A+', '#view', true);
 await setVal('.sheet input[type=date]', '2026-11-25'); await clickText('Salva', '.sheet');
 ok(await pg.evaluate(() => __app.state.plans[0].startDate === '2026-11-23'), 'programma: la nuova data viene portata al lunedì');
 await shot('9-altro');
@@ -160,7 +194,7 @@ await shot('10-analisi', true);
 
 // Persistenza e migrazione di un backup v2 con due sessioni nello stesso giorno
 await pg.reload();
-ok(await pg.evaluate(() => __app.state.logs.length === 2 && __app.state.extras.length === 1 && __app.state.v === 3), 'i dati sopravvivono al ricaricamento');
+ok(await pg.evaluate(() => __app.state.logs.length === 2 && __app.state.extras.length === 1 && __app.state.v === 4), 'i dati sopravvivono al ricaricamento');
 const mig = await pg.evaluate(async () => {
   const mk = (id, ex) => ({ id, type: 'wall', period: 'base', blocks: [{ id: id + 'b', exId: ex, minutes: 5 }] });
   const old = { v: 2, plans: [{ id: 'p', title: 'Vecchio', startDate: '2026-11-23', weeks: [[{ sessions: [mk('s1', 'e1'), mk('s2', 'e2')] }, ...Array.from({ length: 6 }, () => ({ sessions: [] }))]] }],

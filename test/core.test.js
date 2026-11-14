@@ -215,3 +215,34 @@ test('backup: la validazione rifiuta strutture incomplete', () => {
   assert.equal(C.validState({ ...ok, plans: [{ ...plan, weeks: [[{ sessions: [{ type: 'wall' }] }]] }] }), false);
   assert.equal(C.validState({ ...ok, logs: null }), false);
 });
+
+test('libreria standard: voci valide, versioni e abbinamento dei nomi', () => {
+  assert.ok(C.LIBRARY.length >= 48 && C.LIBRARY.length <= 55);
+  assert.equal(new Set(C.LIBRARY.map(x => x.key)).size, C.LIBRARY.length);
+  for (const x of C.LIBRARY) {
+    assert.ok(C.SECTIONS[x.section], x.key);
+    assert.ok(x.minutes > 0, x.key);
+    if (x.interval) assert.deepEqual(C.normInterval(x.interval), x.interval, x.key); // già in forma normalizzata
+  }
+  assert.deepEqual(C.STD['max-hang'].interval, { rounds: 4, workSeconds: 7, restSeconds: 180, cues: [] });
+  assert.deepEqual(C.STD.flash.interval, { rounds: 18, workSeconds: 45, restSeconds: 120, selfPaced: true, roundsPerSet: 3, setRestSeconds: 300, cues: ['Lettura', 'Piedi', 'Lentezza'] });
+  const v = C.stdVariant('limit');
+  assert.deepEqual([v.std, v.base, v.name, v.slot, v.interval, v.minutes], ['limit', true, 'Limit bouldering', 'wall', null, 40]);
+  C.stdVariant('max-hang').interval.rounds = 9;
+  assert.equal(C.STD['max-hang'].interval.rounds, 4); // le versioni non toccano lo standard
+  assert.equal(C.stdVariant('nonesiste'), null);
+  const cases = { 'Limit Karma': 'limit', 'Limit MoonBoard': 'limit', 'Limit sloper/compressione': 'limit', 'Compressione su sloper': 'technique', 'Tallone su strapiombo': 'technique',
+    'Open hand 20 mm 7"': 'max-hang', 'Half-crimp 20 mm 7"': 'max-hang', 'Sloper BM2000 7"': 'sloper-hang', 'Pinch block 7"': 'pinch-lift', 'TEST open hand 20 mm 7"': 'test',
+    'Trazioni zavorrate': 'weighted-pullup', 'KB press 1 braccio': 'press', 'Croci isometriche': 'iso-fly', 'Croci ai cavi (compressione)': 'fly', 'Push-up zavorrati o dip': 'pushup',
+    'Karma a Bleau': 'outdoor', 'Mobilità anche': 'hips', 'Riscaldamento': 'warmup-wall', 'Set tecnici al flash': 'flash', 'Pallof press': 'pallof', 'Qualcosa di mio': null };
+  for (const [name, std] of Object.entries(cases)) assert.equal(C.matchStd(name), std, name);
+  assert.equal(imported().exercises.find(e => /^Limit/.test(e.name)).std, 'limit');
+});
+
+test('test: modelli con parametri propri, senza "zavorra max" nel nome', () => {
+  assert.equal(new Set(C.TEST_TEMPLATES.map(t => t.key)).size, C.TEST_TEMPLATES.length);
+  for (const t of C.TEST_TEMPLATES) assert.ok(!/zavorra max|· max|\d"/.test(t.name), t.name);
+  assert.equal(C.testLabel(C.TEST_TEMPLATES.find(t => t.key === 'oh')), '20 mm · 7" · zavorra');
+  assert.equal(C.testLabel(C.TEST_TEMPLATES.find(t => t.key === 'onearm')), '22 mm · una mano');
+  assert.equal(C.testLabel({ name: 'x', unit: 'kg' }), '');
+});
