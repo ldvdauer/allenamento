@@ -1,23 +1,21 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const C = require('../src/core.js');
-const Seed = require('../src/seed.js');
+const Seed = require('./fixture.js');
 
 const imported = () => C.importBlokplan(Seed.blokplan());
 const exMapOf = r => Object.fromEntries(r.exercises.map(e => [e.id, e]));
 const weekMinutes = w => w.reduce((t, d) => t + d.sessions.reduce((a, s) => a + C.sessionMinutes(s), 0), 0);
 
-test('seed: struttura identica a quella mostrata da Blok Sessions', () => {
+test('import: struttura del piano di esempio', () => {
   const { plan, exercises } = imported();
-  assert.equal(plan.title, 'Karma 8A+');
+  assert.equal(plan.title, 'Piano di esempio');
   assert.equal(plan.startDate, '2026-11-16');
-  assert.equal(plan.weeks.length, 18);
-  assert.equal(exercises.length, 99);
-  // Totali letti dalla web app (317, 385, 283, 396, 247, 396) + 17 min di riposo attivo, che Blok non conta.
-  const expected = { 0: 334, 1: 402, 3: 300, 4: 413, 7: 264, 8: 413 };
-  for (const [w, min] of Object.entries(expected)) assert.equal(weekMinutes(plan.weeks[w]), min, 'settimana ' + (+w + 1));
-  for (const w of plan.weeks.slice(0, 16)) assert.equal(w.reduce((n, d) => n + d.sessions.length, 0), 9); // 8 per Blok + riposo attivo
-  assert.equal(plan.weeks[0][6].sessions.length, 0); // domenica: recupero
+  assert.equal(plan.weeks.length, 3);
+  assert.equal(exercises.length, 7); // 4 esercizi comuni + 3 varianti di hang (85/90/70%)
+  assert.deepEqual(plan.weeks.map(weekMinutes), [135, 135, 135]);
+  assert.deepEqual(plan.weeks[0].map(d => d.sessions.length), [2, 0, 1, 1, 0, 1, 0]);
+  assert.equal(plan.weeks[2][0].sessions[0].period, 'deload');
 });
 
 test('import: file non valido → errore, nessun risultato parziale', () => {
@@ -48,8 +46,8 @@ test('date: epoca Apple e posizione nel piano', () => {
   assert.equal(C.locate(plan, '2026-11-15'), null);
   assert.deepEqual(C.locate(plan, '2026-11-16'), { w: 0, d: 0 });
   assert.deepEqual(C.locate(plan, '2026-11-25'), { w: 1, d: 2 });
-  assert.equal(C.locate(plan, '2027-03-22'), null);
-  assert.equal(C.dateOf(plan, 17, 6), '2027-03-21');
+  assert.equal(C.locate(plan, '2026-12-07'), null);
+  assert.equal(C.dateOf(plan, 2, 6), '2026-12-06');
 });
 
 test('carichi: formula del foglio Google', () => {
@@ -106,7 +104,7 @@ test('utilità piano: copia giorno, conteggio uso, validazione backup', () => {
   assert.notEqual(copy.sessions[0].blocks[0].id, r.plan.weeks[0][0].sessions[0].blocks[0].id);
   assert.equal(copy.sessions[0].blocks[0].exId, r.plan.weeks[0][0].sessions[0].blocks[0].exId);
   const warmup = r.plan.weeks[0][0].sessions[0].blocks[0].exId;
-  assert.equal(C.usage([r.plan], warmup), 18 * 3 - 1); // 3 H a settimana, tranne l'ultimo sabato
+  assert.equal(C.usage([r.plan], warmup), 6); // 2 volte a settimana per 3 settimane
   assert.equal(C.validState({ plans: [r.plan], exercises: {}, logs: [], tests: [] }), true);
   assert.equal(C.validState({ plans: [{}], exercises: {}, logs: [], tests: [] }), false);
   assert.equal(C.validState(null), false);

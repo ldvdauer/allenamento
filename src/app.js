@@ -9,10 +9,8 @@
   const log = (area, msg, extra) => console.info(`[${area}] ${msg}`, extra === undefined ? '' : extra);
 
   /* ---------- Stato e persistenza ---------- */
-  function fresh() {
-    const r = C.importBlokplan(Seed.blokplan());
-    return migrate({ v: 1, plans: [r.plan], activePlan: r.plan.id, exercises: Object.fromEntries(r.exercises.map(e => [e.id, e])), logs: [], tests: [] });
-  }
+  // Primo avvio: nessun piano precaricato, ogni utente importa o crea i propri.
+  const fresh = () => migrate({ v: 1, plans: [], activePlan: null, exercises: {}, logs: [], tests: [] });
   function migrate(s) { // completa i campi mancanti di backup vecchi o parziali
     s.v = 1;
     s.testDefs = Array.isArray(s.testDefs) && s.testDefs.length ? s.testDefs : C.DEFAULT_TESTS.map(t => ({ ...t }));
@@ -24,7 +22,7 @@
   function load() {
     try {
       const raw = localStorage.getItem(KEY);
-      if (raw) { const s = JSON.parse(raw); if (C.validState(s)) return migrate(s); log('store', 'dati salvati non validi, riparto dal piano precaricato'); }
+      if (raw) { const s = JSON.parse(raw); if (C.validState(s)) return migrate(s); log('store', 'dati salvati non validi, riparto da zero'); }
     } catch (e) { console.warn('[store] lettura fallita', e); }
     return fresh();
   }
@@ -143,7 +141,8 @@
           h('div', { class: 'btns' }, btn('Riprendi', () => startSession(lp, S.live.w, S.live.d, S.live.si, S.live.idx), 'pri'), btn('Scarta', () => { S.live = null; save(); render(); }))));
       else S.live = null;
     }
-    if (!p) return out.concat(h('div', { class: 'card' }, h('p', {}, 'Nessun piano attivo.'), btn('Vai ai piani', () => { location.hash = 'piano'; }, 'pri')));
+    if (!p) return out.concat(h('div', { class: 'card' }, h('div', { class: 'big' }, 'Benvenuto'), h('p', { class: 'sub' }, 'Non c\'è ancora nessun piano. Importa un file .blokplan esportato da Blok Sessions oppure creane uno da zero.'),
+      h('div', { class: 'btns' }, fileBtn('Importa .blokplan'), btn('Crea un piano', () => { location.hash = 'piano'; planSheet(); }, 'sm pri'))));
     const pos = C.locate(p, t);
     out.push(h('div', { class: 'sub' }, p.title + (pos ? ` · settimana ${pos.w + 1} di ${p.weeks.length}` : '')));
     if (!pos) {
@@ -424,7 +423,7 @@
         btn('Salva', () => { S.settings.prep = Math.min(60, Math.max(0, Math.round(val(prep) || 0))); save(); toast('Salvato.'); }, 'sm')),
       h('h2', {}, 'Dati'), h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin-top:0' }, 'I dati restano solo su questo dispositivo. Fai un backup ogni tanto.'),
         h('div', { class: 'btns' }, btn('Backup completo', () => exportSheet('Backup', `allenamento-backup-${C.todayISO()}.json`, JSON.stringify(S)), 'sm pri'), fileBtn('Ripristina / importa file'),
-          btn('Azzera tutto', async () => { if (await confirmDlg('Cancellare piani, diario e test e ripartire dal piano Karma precaricato?', 'Azzera')) { S = fresh(); curWeek = null; save(); render(); } }, 'sm danger')))];
+          btn('Azzera tutto', async () => { if (await confirmDlg('Cancellare piani, esercizi, diario e test? L\'operazione non si può annullare: fai prima un backup.', 'Azzera')) { S = fresh(); curWeek = null; save(); render(); } }, 'sm danger')))];
   }
 
   /* ---------- Player ---------- */

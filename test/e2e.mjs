@@ -1,7 +1,11 @@
-// Smoke test end-to-end in Chrome headless (viewport iPhone). Uso: node test/e2e.mjs
+// Smoke test end-to-end in Chrome headless (viewport iPhone).
+// Uso: node test/e2e.mjs  — richiede private/Karma-8A+.blokplan (piano personale, non versionato).
+import { existsSync } from 'node:fs';
+const PLAN = fileURLToPath(new URL('../private/Karma-8A+.blokplan', import.meta.url));
 import puppeteer from 'puppeteer-core';
 import { fileURLToPath } from 'node:url';
 const url = 'file://' + fileURLToPath(new URL('../dist/index.html', import.meta.url));
+if (!existsSync(PLAN)) { console.log('E2E saltato: manca ' + PLAN); process.exit(0); }
 const b = await puppeteer.launch({ executablePath: '/usr/bin/google-chrome', args: ['--no-sandbox', '--autoplay-policy=no-user-gesture-required'] });
 const pg = await b.newPage();
 await pg.setViewport({ width: 390, height: 844, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
@@ -15,7 +19,7 @@ const clickText = async (t, root = 'body') => {
   if (!done) throw new Error('pulsante non trovato: ' + t);
 };
 const go = async h => { await pg.evaluate(h => { location.hash = h; }, h); await new Promise(r => setTimeout(r, 80)); };
-const shot = n => pg.screenshot({ path: `shots/${n}.png` });
+const shot = n => (process.env.SHOTS ? pg.screenshot({ path: `${process.env.SHOTS}/${n}.png` }) : null);
 
 // Data fissata a mercoledì 25 nov 2026 (settimana 2 del piano) per provare "Oggi" in modo deterministico.
 await pg.evaluateOnNewDocument(() => { const RD = Date, t0 = new RD(2026, 10, 25, 9, 0, 0).getTime(), s = RD.now();
@@ -23,7 +27,10 @@ await pg.evaluateOnNewDocument(() => { const RD = Date, t0 = new RD(2026, 10, 25
   class D extends RD { constructor(...a) { if (a.length) super(...a); else super(t0 + (RD.now() - s) + window.__adv); } static now() { return t0 + (RD.now() - s) + window.__adv; } }
   window.Date = D; });
 await pg.goto(url);
-ok((await txt('#view')).includes('Karma 8A+ · settimana 2 di 18'), 'Oggi: piano precaricato, settimana 2');
+ok((await txt('#view')).includes('Benvenuto') && (await pg.evaluate(() => __app.state.plans.length)) === 0, 'primo avvio: nessun piano precaricato');
+await (await pg.$('#view input[type=file]')).uploadFile(PLAN); await new Promise(r => setTimeout(r, 400));
+ok((await txt('#toast')).includes('Importato Karma 8A+'), 'import del piano da file');
+ok((await txt('#view')).includes('Karma 8A+ · settimana 2 di 18'), 'Oggi: piano importato, settimana 2');
 ok((await txt('#view')).includes('Sloper BM2000 7"'), 'Oggi: sessione del mercoledì');
 ok((await txt('#view')).includes('kg: mancano i massimali'), 'senza massimali il carico non viene inventato');
 await shot('1-oggi');
@@ -94,7 +101,6 @@ await shot('9-giorno');
 // Import: round trip tramite export, file non valido
 const r = await pg.evaluate(async () => {
   const s = __app.state, before = s.plans.length, json = JSON.stringify(Core.exportBlokplan(s.plans[0], s.exercises));
-  const inp = document.createElement('input'); // usa lo stesso percorso del pulsante "Importa"
   location.hash = 'piano'; await new Promise(r => setTimeout(r, 100));
   [...document.querySelectorAll('#view button')].find(b => b.innerText === 'Gestisci').click();
   const fi = document.querySelector('.sheet input[type=file]');

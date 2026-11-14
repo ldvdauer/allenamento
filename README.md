@@ -2,13 +2,12 @@
 
 PWA offline per piani di allenamento di arrampicata: piano settimanale, player guidato con timer,
 editor completo, diario con carichi in kg, test/progressi, import ed export `.blokplan`.
-Nessun backend e nessun account: i dati stanno nel `localStorage` del dispositivo (backup da *Altro*).
+Al primo avvio l'app è vuota: ogni utente importa o crea i propri piani. Nessun backend e nessun account: i dati stanno nel `localStorage` del dispositivo (backup da *Altro*).
 
 ## Struttura
 | File | Contenuto |
 |---|---|
 | `src/core.js` | Logica pura (date, carichi, passi del player, import/export). Unico file coperto da unit test. |
-| `src/seed.js` | Piano "Karma 8A+" esportato da Blok Sessions, in forma compatta. |
 | `src/app.js` | Interfaccia: viste, editor, player. |
 | `src/style.css`, `src/index.html` | Stile e scheletro della pagina. |
 | `public/` | Manifest, service worker e icona per la versione installabile. |

@@ -39,7 +39,7 @@
 
   /* ---- Carichi ---- */
   const num = s => parseFloat(String(s).replace(',', '.'));
-  /** Deduce massimale di riferimento e % da nome e prescrizione (formato usato nei piani di Leo). */
+  /** Deduce massimale di riferimento e % da nome e prescrizione (convenzione: "Open hand … · 85% max"). */
   function inferLoad(name, prescription) {
     const n = name || '';
     let ref = null, mode = 'hang';
