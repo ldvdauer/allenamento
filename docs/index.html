@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#0e1012">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Allenamento">
+<title>Allenamento</title>
+<link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon.png">
+<style>:root{--bg:#0e1012;--card:#181b1f;--line:#2a2f35;--tx:#eceef0;--mu:#8e969f;--ac:#ff7a45;--rest:#4cc2ff;--ok:#56d364;--warn:#f2cc60;--bad:#ff6b6b;
+  --st:env(safe-area-inset-top,0px);--sb:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--tx);font:16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;overscroll-behavior:none}
+button,input,select,textarea{font:inherit;color:inherit}
+#view{max-width:640px;margin:0 auto;padding:calc(var(--st) + 16px) 16px calc(var(--sb) + 84px)}
+h1{font-size:26px;margin:0 0 2px;letter-spacing:-.02em}h2{font-size:17px;margin:22px 0 8px}
+.sub{color:var(--mu);font-size:14px}.row{display:flex;align-items:center;gap:10px}.grow{flex:1;min-width:0}.right{margin-left:auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin:10px 0}
+.card.tap{cursor:pointer}.card.tap:active{background:#1f2328}
+.tag{display:inline-block;font-size:12px;padding:2px 8px;border-radius:99px;background:#252a30;color:var(--mu);white-space:nowrap}
+.tag.ok{background:#173322;color:var(--ok)}.tag.ac{background:#3a2218;color:var(--ac)}
+.blk{display:flex;gap:10px;padding:9px 0;border-top:1px solid var(--line);align-items:baseline}
+.blk:first-of-type{border-top:0}.blk .n{font-weight:600}.blk .p{color:var(--mu);font-size:13px}.blk .kg{color:var(--ac);font-size:13px;font-weight:600}
+.blk .m{margin-left:auto;color:var(--mu);font-size:13px;white-space:nowrap}
+.btn{border:1px solid var(--line);background:#22262b;border-radius:11px;padding:10px 14px;font-weight:600;cursor:pointer;min-height:44px}
+.btn:active{filter:brightness(1.25)}.btn.pri{background:var(--ac);border-color:var(--ac);color:#17100c}.btn.danger{color:var(--bad)}
+.btn.sm{min-height:36px;padding:6px 10px;font-size:14px}.btn.block{display:block;width:100%;margin-top:8px}.btn[disabled]{opacity:.4}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+label.f{display:block;margin:10px 0;font-size:13px;color:var(--mu)}
+label.f input,label.f select,label.f textarea,.inp{display:block;width:100%;margin-top:4px;background:#101316;border:1px solid var(--line);border-radius:10px;padding:10px;font-size:16px;color:var(--tx)}
+textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-columns:1fr 1fr;gap:10px}.cols3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+#tabs{position:fixed;left:0;right:0;bottom:0;display:flex;background:rgba(14,16,18,.94);backdrop-filter:blur(12px);border-top:1px solid var(--line);padding-bottom:var(--sb);z-index:5}
+#tabs a{flex:1;text-align:center;padding:10px 0 8px;color:var(--mu);text-decoration:none;font-size:11px}
+#tabs a svg{display:block;margin:0 auto 2px;width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#tabs a.on{color:var(--ac)}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:20;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--card);width:100%;max-width:640px;max-height:92%;overflow:auto;border-radius:18px 18px 0 0;padding:16px 16px calc(var(--sb) + 20px);border:1px solid var(--line)}
+.sheet h3{margin:0 0 6px;font-size:19px}.overlay.mid{align-items:center;padding:24px}.overlay.mid .sheet{border-radius:16px;max-width:380px}
+#toast{position:fixed;left:50%;bottom:calc(var(--sb) + 92px);transform:translateX(-50%);background:#2b3138;padding:10px 16px;border-radius:99px;font-size:14px;z-index:60;max-width:90%;text-align:center}
+.week{display:flex;align-items:center;gap:8px;margin:14px 0 4px}.week .t{flex:1;text-align:center}
+.day .wd{width:46px;text-transform:uppercase;font-size:12px;color:var(--mu);font-weight:700}.day.today{border-color:var(--ac)}
+.spark{width:110px;height:34px}.spark polyline{fill:none;stroke:var(--ac);stroke-width:2}.spark circle{fill:var(--ac)}
+.big{font-size:22px;font-weight:700}
+/* Player */
+#player{position:fixed;inset:0;z-index:40;background:var(--bg);display:flex;flex-direction:column;padding:calc(var(--st) + 14px) 18px calc(var(--sb) + 18px);--ph:var(--mu)}
+#player[data-ph=work]{--ph:var(--ac)}#player[data-ph=rest]{--ph:var(--rest)}#player[data-ph=prep]{--ph:var(--warn)}#player[data-ph=free]{--ph:var(--ok)}
+#player .bar{height:4px;background:var(--line);border-radius:4px;overflow:hidden}#player .bar i{display:block;height:100%;background:var(--ph);width:0}
+#player .ph{margin-top:22px;color:var(--ph);font-weight:800;letter-spacing:.14em;font-size:15px}
+#player .nm{font-size:24px;font-weight:700;margin-top:4px;line-height:1.15}#player .rd{color:var(--mu);margin-top:2px}
+#player .clock{flex:1;display:flex;align-items:center;justify-content:center;font-size:min(30vw,190px);font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.04em;color:var(--ph);line-height:1}
+#player .cue{text-align:center;font-size:21px;font-weight:600;min-height:28px}#player .kg{text-align:center;color:var(--ac);font-size:26px;font-weight:800;min-height:34px}
+#player .nx{text-align:center;color:var(--mu);font-size:14px;margin:8px 0 14px;min-height:20px}
+#player .ctl{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}#player .ctl2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+#player .btn{min-height:54px;font-size:17px}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<main id="view"></main>
+<nav id="tabs">
+  <a href="#oggi"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Oggi</a>
+  <a href="#piano"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Piano</a>
+  <a href="#diario"><svg viewBox="0 0 24 24"><path d="M5 4h12a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2zM9 9h6M9 13h6"/></svg>Diario</a>
+  <a href="#progressi"><svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M8 15l4-5 3 3 4-6"/></svg>Progressi</a>
+  <a href="#altro"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>Altro</a>
+</nav>
+<section id="player" hidden>
+  <div class="bar"><i id="p-bar"></i></div>
+  <div class="ph" id="p-ph"></div>
+  <div class="nm" id="p-name"></div>
+  <div class="rd" id="p-round"></div>
+  <div class="clock" id="p-clock">0</div>
+  <div class="cue" id="p-cue"></div>
+  <div class="kg" id="p-kg"></div>
+  <div class="nx" id="p-next"></div>
+  <div class="ctl">
+    <button class="btn" id="p-back" type="button">‹ Indietro</button>
+    <button class="btn" id="p-pause" type="button">Pausa</button>
+    <button class="btn" id="p-done" type="button">Fatto</button>
+  </div>
+  <div class="ctl2">
+    <button class="btn" id="p-plus" type="button">+30 s</button>
+    <button class="btn danger" id="p-quit" type="button">Esci</button>
+  </div>
+</section>
+<div id="toast" hidden></div>
+<script>/* Logica pura dell'app (nessun DOM): modello dati, import/export .blokplan, passi del player, carichi.
+   Funziona sia nel browser (window.Core) sia in Node (module.exports) per i test. */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.Core = factory();
+})(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+
+  const DAY_TYPES = { wall: 'Muro', strength: 'Fuori muro', skills: 'Tecnica', activeRest: 'Riposo attivo', setting: 'Tracciatura', rest: 'Recupero' };
+  const PERIODS = { base: 'Base', strength: 'Forza', power: 'Potenza', powerEndurance: 'Resistenza alla potenza', endurance: 'Resistenza', performance: 'Prestazione', deload: 'Scarico' };
+  const SLOTS = { warmup: 'Riscaldamento', strength: 'Forza', wall: 'Sul muro', mobility: 'Mobilità' };
+  const APPLE_EPOCH_MS = Date.UTC(2001, 0, 1);
+  // Massimali/test predefiniti. `mode: hang` = zavorra aggiunta al peso corporeo, `lift` = carico sollevato.
+  const DEFAULT_TESTS = [
+    { key: 'bw', name: 'Peso corporeo', unit: 'kg' },
+    { key: 'oh', name: 'Open hand 20 mm 7" · zavorra max', unit: 'kg' },
+    { key: 'hc', name: 'Half-crimp 20 mm 7" · zavorra max', unit: 'kg' },
+    { key: 'sl', name: 'Sloper BM2000 7" · zavorra max', unit: 'kg' },
+    { key: 'pinchL', name: 'Pinch block 7" SX · max', unit: 'kg' },
+    { key: 'pinchR', name: 'Pinch block 7" DX · max', unit: 'kg' },
+    { key: 'wrist', name: 'Flessione polso 6RM', unit: 'kg' },
+  ];
+
+  const uid = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    return (c === 'x' ? r : (r & 3) | 8).toString(16);
+  });
+
+  /* ---- Date (stringhe ISO locali YYYY-MM-DD: niente fusi orari nei dati) ---- */
+  const pad = n => String(n).padStart(2, '0');
+  const toISO = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const fromISO = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d, 12); };
+  const todayISO = () => toISO(new Date());
+  const addDays = (iso, n) => { const d = fromISO(iso); d.setDate(d.getDate() + n); return toISO(d); };
+  const diffDays = (a, b) => Math.round((fromISO(a) - fromISO(b)) / 864e5);
+  const appleToISO = sec => toISO(new Date(APPLE_EPOCH_MS + sec * 1000));
+  const isoToApple = iso => Math.round((fromISO(iso).getTime() - APPLE_EPOCH_MS) / 1000);
+  const mondayOf = iso => { const d = fromISO(iso); return addDays(iso, -((d.getDay() + 6) % 7)); };
+
+  /* ---- Carichi ---- */
+  const num = s => parseFloat(String(s).replace(',', '.'));
+  /** Deduce massimale di riferimento e % da nome e prescrizione (formato usato nei piani di Leo). */
+  function inferLoad(name, prescription) {
+    const n = name || '';
+    let ref = null, mode = 'hang';
+    if (/open hand/i.test(n)) ref = 'oh';
+    else if (/half.?crimp/i.test(n)) ref = 'hc';
+    else if (/sloper bm/i.test(n)) ref = 'sl';
+    else if (/pinch/i.test(n)) { ref = 'pinch'; mode = 'lift'; }
+    else if (/polso/i.test(n)) { ref = 'wrist'; mode = 'lift'; }
+    if (!ref) return null;
+    const m = /(\d+(?:[.,]\d+)?)\s*%/.exec(prescription || '');
+    return { ref, mode, pct: m ? num(m[1]) : null, test: /^TEST/i.test(n) };
+  }
+  /** Chiave del massimale per un cue (il pinch dipende dal lato SX/DX). */
+  function loadKey(load, cue) {
+    if (!load) return null;
+    if (load.ref !== 'pinch') return load.ref;
+    return /^\s*DX/i.test(cue || '') ? 'pinchR' : 'pinchL';
+  }
+  /** Carico in kg arrotondato a 0,5: zavorra (può essere negativa = scarico) o carico sollevato. */
+  function loadKg(load, cue, maxes) {
+    if (!load || load.pct == null) return null;
+    const max = maxes[loadKey(load, cue)];
+    if (max == null || isNaN(max)) return null;
+    if (load.mode === 'lift') return Math.round(max * load.pct / 100 * 2) / 2;
+    if (maxes.bw == null || isNaN(maxes.bw)) return null;
+    return Math.round(((maxes.bw + max) * load.pct / 100 - maxes.bw) * 2) / 2;
+  }
+  /** Ultimo valore registrato per ogni test = massimale corrente. */
+  function latestMaxes(tests) {
+    const out = {}, when = {};
+    for (const t of tests || []) {
+      if (!(t.key in when) || t.date >= when[t.key]) { when[t.key] = t.date; out[t.key] = t.value; }
+    }
+    return out;
+  }
+  const fmtKg = kg => (kg > 0 ? '+' : '') + String(kg).replace('.', ',') + ' kg';
+
+  /* ---- Timer ---- */
+  const cycle = a => { // periodo minimo di un array ripetuto
+    for (let k = 1; k <= a.length; k++) if (a.length % k === 0 && a.every((v, i) => v === a[i % k])) return a.slice(0, k);
+    return a;
+  };
+  const cueAt = (iv, i) => (iv && iv.cues && iv.cues.length ? iv.cues[i % iv.cues.length] : '');
+  const restAfter = (iv, r) => (iv.roundsPerSet && iv.setRestSeconds && (r + 1) % iv.roundsPerSet === 0 ? iv.setRestSeconds : iv.restSeconds || 0);
+  function intervalMinutes(iv) {
+    if (!iv) return 0;
+    let s = iv.rounds * iv.workSeconds;
+    for (let r = 0; r < iv.rounds - 1; r++) s += restAfter(iv, r);
+    return Math.ceil(s / 60);
+  }
+  /** Sequenza lineare di passi per il player. `blocks`: [{exId, minutes}], `exMap`: id → esercizio. */
+  function buildSteps(blocks, exMap, prepSeconds) {
+    const steps = [];
+    const prep = prepSeconds == null ? 10 : prepSeconds;
+    blocks.forEach((b, bi) => {
+      const ex = exMap[b.exId];
+      if (!ex) return;
+      const base = { block: bi, exId: ex.id, name: ex.name };
+      const iv = ex.interval;
+      if (!iv || !iv.rounds) {
+        steps.push({ ...base, kind: 'free', seconds: (b.minutes || 0) * 60, cue: ex.prescription || '', round: 1, rounds: 1 });
+        return;
+      }
+      for (let r = 0; r < iv.rounds; r++) {
+        const timed = !iv.selfPaced;
+        const prev = steps[steps.length - 1];
+        if (timed && prep > 0 && (!prev || prev.kind !== 'rest'))
+          steps.push({ ...base, kind: 'rest', prep: true, seconds: prep, cue: cueAt(iv, r), round: r + 1, rounds: iv.rounds });
+        steps.push({ ...base, kind: 'work', selfPaced: !!iv.selfPaced, seconds: iv.workSeconds || 0, reps: iv.reps || null, cue: cueAt(iv, r), round: r + 1, rounds: iv.rounds });
+        const last = r === iv.rounds - 1;
+        const rest = last ? iv.restSeconds || 0 : restAfter(iv, r);
+        const hasNext = !last || blocks.slice(bi + 1).some(x => exMap[x.exId]);
+        if (rest > 0 && hasNext)
+          steps.push({ ...base, kind: 'rest', seconds: rest, cue: last ? '' : cueAt(iv, r + 1), round: r + 1, rounds: iv.rounds, afterBlock: last });
+      }
+    });
+    return steps;
+  }
+
+  /* ---- Import / export .blokplan ---- */
+  const str = (v, d) => (typeof v === 'string' ? v.slice(0, 200) : d);
+  const int = v => (Number.isFinite(+v) && +v >= 0 ? Math.round(+v) : 0);
+  function normInterval(iv) {
+    if (!iv || typeof iv !== 'object' || !int(iv.rounds)) return null;
+    const out = { rounds: int(iv.rounds), workSeconds: int(iv.workSeconds), restSeconds: int(iv.restSeconds) };
+    if (iv.selfPaced) out.selfPaced = true;
+    if (int(iv.reps)) out.reps = int(iv.reps);
+    if (int(iv.roundsPerSet)) { out.roundsPerSet = int(iv.roundsPerSet); out.setRestSeconds = int(iv.setRestSeconds); }
+    out.cues = Array.isArray(iv.cues) ? cycle(iv.cues.map(c => str(c, ''))) : [];
+    return out;
+  }
+  function normExercise(b) {
+    const name = str(b.name, 'Esercizio');
+    const prescription = str(b.prescription, str(b.summary, ''));
+    return {
+      name, prescription,
+      slot: SLOTS[b.slot] ? b.slot : 'strength',
+      location: b.location === 'wall' ? 'wall' : 'off_wall',
+      domain: str(b.domain, 'other'), intensity: str(b.intensity, 'moderate'), risk: str(b.risk, 'low'),
+      equipment: Array.isArray(b.equipment) ? b.equipment.map(e => str(e, '')).filter(Boolean) : [],
+      interval: normInterval(b.interval),
+      load: inferLoad(name, prescription),
+    };
+  }
+  /** Converte un .blokplan in { plan, exercises }. Lancia Error se il file non è valido.
+      Gli esercizi identici vengono deduplicati; `existing` (id → esercizio) permette di riusare la libreria. */
+  function importBlokplan(obj, existing) {
+    if (!obj || typeof obj !== 'object' || !Array.isArray(obj.weeks) || !obj.weeks.length) throw new Error('Il file non è un piano Blok Sessions valido.');
+    const byKey = new Map(), exercises = [];
+    const keyOf = e => JSON.stringify([e.name, e.prescription, e.slot, e.location, e.interval]);
+    for (const e of Object.values(existing || {})) byKey.set(keyOf(e), e.id);
+    const blocksOf = list => (Array.isArray(list) ? list : []).filter(pb => pb && pb.block).map(pb => {
+      const e = normExercise(pb.block), k = keyOf(e);
+      if (!byKey.has(k)) { e.id = uid(); byKey.set(k, e.id); exercises.push(e); }
+      return { id: uid(), exId: byKey.get(k), minutes: int(pb.selectedDurationMinutes || pb.block.defaultMinutes) };
+    });
+    const weeks = obj.weeks.map(w => {
+      if (!Array.isArray(w)) throw new Error('Settimana non valida nel file.');
+      const days = w.slice(0, 7).map(d => {
+        const sessions = [];
+        if (d && DAY_TYPES[d.type] && d.type !== 'rest')
+          sessions.push({ type: d.type, period: PERIODS[d.period] ? d.period : 'base', blocks: blocksOf(d.plannedBlocks) });
+        if (d && d.secondType && DAY_TYPES[d.secondType])
+          sessions.push({ type: d.secondType, period: PERIODS[d.secondPeriod] ? d.secondPeriod : 'base', blocks: blocksOf(d.secondPlannedBlocks) });
+        return { sessions };
+      });
+      while (days.length < 7) days.push({ sessions: [] });
+      return days;
+    });
+    const startDate = Number.isFinite(obj.startDate) ? mondayOf(appleToISO(obj.startDate)) : mondayOf(todayISO());
+    return { plan: { id: uid(), title: str(obj.title, 'Piano importato'), startDate, weeks }, exercises };
+  }
+  function exportBlokplan(plan, exMap) {
+    const allPeriods = Object.keys(PERIODS);
+    const pb = b => {
+      const e = exMap[b.exId];
+      if (!e) return null;
+      const block = {
+        id: 'custom-' + e.id.toUpperCase(), sourceName: 'Climber', name: e.name, slot: e.slot, location: e.location,
+        domain: e.domain, goals: [], equipment: e.equipment || [], durations: [b.minutes], defaultMinutes: b.minutes,
+        intensity: e.intensity, risk: e.risk, periodTags: allPeriods, summary: e.prescription, prescription: e.prescription,
+        source: 'Custom', reviewNeeded: false,
+      };
+      if (e.interval) {
+        const iv = { ...e.interval };
+        iv.cues = iv.cues && iv.cues.length ? Array.from({ length: Math.min(iv.rounds, 20) }, (_, i) => cueAt(e.interval, i)) : [];
+        block.interval = iv;
+      }
+      return { id: uid().toUpperCase(), selectedDurationMinutes: b.minutes, block };
+    };
+    const weeks = plan.weeks.map(w => w.map(d => {
+      const [a, b] = d.sessions; // Blok supporta al massimo due sessioni al giorno
+      if (!a) return { type: 'rest' };
+      const out = { type: a.type, period: a.period, plannedBlocks: a.blocks.map(pb).filter(Boolean) };
+      if (b) Object.assign(out, { secondType: b.type, secondPeriod: b.period, secondPlannedBlocks: b.blocks.map(pb).filter(Boolean) });
+      return out;
+    }));
+    return { title: plan.title, isForSelf: true, athleteName: 'Climber', startDate: isoToApple(plan.startDate), weeks };
+  }
+
+  /* ---- Piano ---- */
+  /** Posizione di una data nel piano: { w, d } oppure null se fuori dal piano. */
+  function locate(plan, iso) {
+    const n = diffDays(iso, plan.startDate);
+    if (n < 0 || n >= plan.weeks.length * 7) return null;
+    return { w: Math.floor(n / 7), d: n % 7 };
+  }
+  const dateOf = (plan, w, d) => addDays(plan.startDate, w * 7 + d);
+  const sessionMinutes = s => s.blocks.reduce((t, b) => t + (b.minutes || 0), 0);
+  const cloneDay = day => ({ sessions: day.sessions.map(s => ({ ...s, blocks: s.blocks.map(b => ({ ...b, id: uid() })) })) });
+  const emptyWeek = () => Array.from({ length: 7 }, () => ({ sessions: [] }));
+  function usage(plans, exId) {
+    let n = 0;
+    for (const p of plans) for (const w of p.weeks) for (const d of w) for (const s of d.sessions) for (const b of s.blocks) if (b.exId === exId) n++;
+    return n;
+  }
+  /** Validazione minima di un backup completo. */
+  function validState(s) {
+    return !!s && typeof s === 'object' && Array.isArray(s.plans) && s.exercises && typeof s.exercises === 'object' &&
+      Array.isArray(s.logs) && Array.isArray(s.tests) && s.plans.every(p => p && Array.isArray(p.weeks) && typeof p.startDate === 'string');
+  }
+
+  return {
+    DAY_TYPES, PERIODS, SLOTS, DEFAULT_TESTS, uid, toISO, fromISO, todayISO, addDays, diffDays, appleToISO, isoToApple, mondayOf,
+    inferLoad, loadKey, loadKg, latestMaxes, fmtKg, cycle, cueAt, intervalMinutes, buildSteps, normInterval,
+    importBlokplan, exportBlokplan, locate, dateOf, sessionMinutes, cloneDay, emptyWeek, usage, validState,
+  };
+});
+</script>
+<script>/* Piano "Karma 8A+" esportato da Blok Sessions il 14/11/2026, in forma compatta.
+   Riga esercizio: nome|codici|dominio|prescrizione|attrezzatura|round|lavoro|recupero|selfPaced|rip|roundPerSerie|recuperoSerie|cue~cue
+   Codici: slot(w/s/m) luogo(w/o) intensità(lo/mo/hi/ma) rischio(l/m/h).
+   Riga giorno: tipo:periodo idx.minuti,... [/ tipo:periodo idx.minuti,...] */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.Seed = factory();
+})(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+  const EX = String.raw`Riscaldamento|wwlol|mobility|Mobilità · arrampicata progressiva · sospensioni fino all'80-90%|||||||||
+TEST open hand 20 mm 7"|somam|finger_strength|TEST · Carico crescente||4|7|180|||||Carico crescente
+TEST half-crimp 20 mm 7"|somam|finger_strength|TEST · Carico crescente||4|7|180|||||Carico crescente
+Limit MoonBoard|wwhim|power|≥ 3 tentativi per problema · stop quando cala la qualità|||||||||
+KB press 1 braccio|somol|general_strength|2 × 6-8 · rec. 2'|kettlebell|2|45|120|1|6|||6-8 rip. per braccio
+Extrarotazioni|solol|general_strength|2 × 12-15 · rec. 1'||2|45|60|1|12|||12-15 rip. per lato
+Nordic curl|sohil|general_strength|2 × 4 · rec. 2'||2|45|120|1|4|||4 rip.
+Hollow body hold|somol|stability|2 × 25" · rec. 1'||2|25|60|||||Hollow body
+TEST sloper BM2000 7"|somam|finger_strength|TEST · Carico crescente||4|7|180|||||Carico crescente
+TEST pinch block 7"|somam|finger_strength|TEST · 7" per mano, carico crescente||8|7|90|||||SX · carico crescente~DX · carico crescente
+TEST flessione polso 6RM|somam|finger_strength|TEST · 6 rip. · carico crescente||4|45|180|1|6|||6 rip. · carico crescente
+Limit sloper/compressione|wwmom|power|Facile|||||||||
+Trazioni zavorrate|somol|pulling_strength|2 × 4-5 · rec. 3'|added_weight|2|45|180|1|4|||4-5 rip. · RPE 7
+Croci ai cavi (compressione)|somol|general_strength|2 × 8 · rec. 1'30"|cable_machine|2|45|90|1|8|||8 rip.
+Ab wheel|somol|stability|2 × 6-8 · rec. 1'30"||2|45|90|1|6|||6-8 rip.
+Riscaldamento|wwlol|mobility|Generale · attivazione leggera core e dita|||||||||
+Set tecnici al flash|wwmol|technique|6 blocchi × 3 rip. · rec. 2' / 5' tra blocchi||18|60|120|1||3|300|Lettura (flash)~Piedi e tecnica~Lentezza e controllo
+Tallone su strapiombo|wwmol|technique|3 serie per lato · singolo movimento||6|30|60|1|1|||Lato Karma~Lato opposto
+Compressione su sloper|wwmol|technique|3 serie per lato · singolo movimento||6|30|60|1|1|||Lato Karma~Lato opposto
+Mobilità anche|molol|mobility|90/90 · rotazioni|||||||||
+Pallof press|solol|stability|3 × 10 per lato · rec. 45"|cable_machine|6|30|45|1|10|||Lato SX~Lato DX
+Limit Karma|wwmom|power|Solo posizioni · P1 · posizione 5"|||||||||
+Croci isometriche|somol|stability|2 × 10" · rec. 1'||2|10|60|||||Tieni in compressione
+Push-up zavorrati o dip|somol|general_strength|2 × 6-8 · rec. 2'|added_weight|2|45|120|1|6|||6-8 rip.
+Open hand 20 mm 7"|somam|finger_strength|4 × 7" · 85% max · margine 2-3"|hangboard|4|7|180|||||85% max
+Half-crimp 20 mm 7"|somam|finger_strength|2 × 7" · 85% max · margine 2-3"|hangboard|2|7|180|||||85% max
+KB press 1 braccio|somol|general_strength|3 × 6-8 · rec. 2'|kettlebell|3|45|120|1|6|||6-8 rip. per braccio
+Nordic curl|sohil|general_strength|3 × 4-6 · rec. 2'||3|45|120|1|4|||4-6 rip.
+Hollow body hold|somol|stability|3 × 25" · rec. 1'||3|25|60|||||Hollow body
+Sloper BM2000 7"|somam|finger_strength|4 × 7" · 82,5% max · margine 2-3"|hangboard|4|7|180|||||82,5% max
+Pinch block 7"|sohil|finger_strength|3 × 7" per mano · 75% max|pinch_block|6|7|75|||||SX · 75% max~DX · 75% max
+Flessione polso (manubri)|somol|general_strength|3 × 6-8 · 90% 6RM · rec. 2'|dumbbell|3|45|120|1|6|||6-8 rip. · 90% 6RM
+Limit sloper/compressione|wwhim|power|Blocchi di qualità al muro commerciale|||||||||
+Trazioni zavorrate|somol|pulling_strength|3 × 4-5 · rec. 3'|added_weight|3|45|180|1|4|||4-5 rip. · RPE 7
+Croci ai cavi (compressione)|somol|general_strength|3 × 8 · rec. 1'30"|cable_machine|3|45|90|1|8|||8 rip.
+Ab wheel|somol|stability|3 × 6-8 · rec. 1'30"||3|45|90|1|6|||6-8 rip.
+Tallone su strapiombo|wwmol|technique|5 serie per lato · singolo movimento||10|30|60|1|1|||Lato Karma~Lato opposto
+Ristabilimento su forme tonde|wwmol|technique|5 serie per lato · singolo movimento||10|30|60|1|1|||Lato Karma~Lato opposto
+Limit Karma|wwmam|power|Qualità/pattern 70/30 · P1 · posizione 5" · rec. 4-5'|||||||||
+Croci isometriche|somol|stability|3 × 10" · rec. 1'||3|10|60|||||Tieni in compressione
+Push-up zavorrati o dip|somol|general_strength|3 × 6-8 · rec. 2'|added_weight|3|45|120|1|6|||6-8 rip.
+Open hand 20 mm 7"|somam|finger_strength|4 × 7" · 87,5% max · margine 2-3"|hangboard|4|7|180|||||87,5% max
+Half-crimp 20 mm 7"|somam|finger_strength|2 × 7" · 87,5% max · margine 2-3"|hangboard|2|7|180|||||87,5% max
+Sloper BM2000 7"|somam|finger_strength|4 × 7" · 85% max · margine 2-3"|hangboard|4|7|180|||||85% max
+Pinch block 7"|sohil|finger_strength|3 × 7" per mano · 80% max|pinch_block|6|7|75|||||SX · 80% max~DX · 80% max
+Flessione polso (manubri)|somol|general_strength|3 × 6-8 · 92,5% 6RM · rec. 2'|dumbbell|3|45|120|1|6|||6-8 rip. · 92,5% 6RM
+Compressione su sloper|wwmol|technique|5 serie per lato · singolo movimento||10|30|60|1|1|||Lato Karma~Lato opposto
+Limit Karma|wwmam|power|Qualità/pattern 70/30 · P1 → tocca tacca · rec. 4-5'|||||||||
+Limit MoonBoard|wwmom|power|Facile|||||||||
+Set tecnici al flash|wwmol|technique|4 blocchi × 3 rip. · rec. 2' / 5' tra blocchi||12|60|120|1||3|300|Lettura (flash)~Piedi e tecnica~Lentezza e controllo
+Ristabilimento su forme tonde|wwmol|technique|3 serie per lato · singolo movimento||6|30|60|1|1|||Lato Karma~Lato opposto
+Limit Karma|wwmom|power|Solo posizioni · P1 · posizione|||||||||
+Open hand 20 mm 7"|somam|finger_strength|5 × 7" · 90% max · margine 1"|hangboard|5|7|180|||||90% max
+Half-crimp 20 mm 7"|somam|finger_strength|3 × 7" · 90% max · margine 1"|hangboard|3|7|180|||||90% max
+Nordic curl|sohil|general_strength|3 × 5-6 · rec. 2'||3|45|120|1|5|||5-6 rip.
+Sloper BM2000 7"|somam|finger_strength|5 × 7" · 85% max · margine 1"|hangboard|5|7|180|||||85% max
+Pinch block 7"|sohil|finger_strength|3 × 7" per mano · 85% max|pinch_block|6|7|75|||||SX · 85% max~DX · 85% max
+Flessione polso (manubri)|somol|general_strength|4 × 5-6 · 92,5% 6RM · rec. 2'|dumbbell|4|45|120|1|5|||5-6 rip. · 92,5% 6RM
+Limit Karma|wwmam|power|Qualità/pattern 50/50 · P1 → P2 movimento · rec. 4-5'|||||||||
+Open hand 20 mm 7"|somam|finger_strength|5 × 7" · 92,5% max · margine 1"|hangboard|5|7|180|||||92,5% max
+Half-crimp 20 mm 7"|somam|finger_strength|3 × 7" · 92,5% max · margine 1"|hangboard|3|7|180|||||92,5% max
+Sloper BM2000 7"|somam|finger_strength|5 × 7" · 87,5% max · margine 1"|hangboard|5|7|180|||||87,5% max
+Pinch block 7"|sohil|finger_strength|3 × 7" per mano · 87,5% max|pinch_block|6|7|75|||||SX · 87,5% max~DX · 87,5% max
+Flessione polso (manubri)|somol|general_strength|4 × 5-6 · 95% 6RM · rec. 2'|dumbbell|4|45|120|1|5|||5-6 rip. · 95% 6RM
+Open hand 20 mm 7"|somam|finger_strength|5 × 7" · 95% max · margine 1"|hangboard|5|7|180|||||95% max
+Half-crimp 20 mm 7"|somam|finger_strength|3 × 7" · 95% max · margine 1"|hangboard|3|7|180|||||95% max
+Sloper BM2000 7"|somam|finger_strength|5 × 7" · 90% max · margine 1"|hangboard|5|7|180|||||90% max
+Pinch block 7"|sohil|finger_strength|3 × 7" per mano · 90% max|pinch_block|6|7|75|||||SX · 90% max~DX · 90% max
+Flessione polso (manubri)|somol|general_strength|4 × 5-6 · 97,5% 6RM · rec. 2'|dumbbell|4|45|120|1|5|||5-6 rip. · 97,5% 6RM
+Limit Karma|wwmam|power|Qualità/pattern 50/50 · P3 ristabilimento · rec. 4-5'|||||||||
+Open hand 20 mm 7"|somam|finger_strength|2 × 7" · 80% max · margine ampio|hangboard|2|7|180|||||80% max
+Half-crimp 20 mm 7"|somam|finger_strength|1 × 7" · 80% max · margine ampio|hangboard|1|7|180|||||80% max
+Sloper BM2000 7"|somam|finger_strength|2 × 7" · 75% max · margine ampio|hangboard|2|7|180|||||75% max
+Pinch block 7"|sohil|finger_strength|2 × 7" per mano · 70% max|pinch_block|4|7|75|||||SX · 70% max~DX · 70% max
+Flessione polso (manubri)|somol|general_strength|2 × 8 · 80% 6RM · rec. 2'|dumbbell|2|45|120|1|8|||8 rip. · 80% 6RM
+Limit Karma|wwmom|power|Solo posizioni · P1 / P3 posizioni|||||||||
+Limit Karma|wwmam|power|Qualità/pattern 50/50 · P1 → P2 collegamento · rec. 4-5'|||||||||
+Flessione polso (manubri)|somol|general_strength|4 × 5-6 · 100% 6RM · rec. 2'|dumbbell|4|45|120|1|5|||5-6 rip. · 100% 6RM
+Limit Karma|wwmam|power|Qualità/pattern 50/50 · P1 → P2 → P3 · rec. 4-5'|||||||||
+Open hand 20 mm 7"|somam|finger_strength|3 × 7" · 92,5% max · margine 2"|hangboard|3|7|180|||||92,5% max
+Half-crimp 20 mm 7"|somam|finger_strength|2 × 7" · 92,5% max · margine 2"|hangboard|2|7|180|||||92,5% max
+Nordic curl|sohil|general_strength|2 × 5 · rec. 2'||2|45|120|1|5|||5 rip.
+Sloper BM2000 7"|somam|finger_strength|3 × 7" · 87,5% max · margine 2"|hangboard|3|7|180|||||87,5% max
+Pinch block 7"|sohil|finger_strength|2 × 7" per mano · 85% max|pinch_block|4|7|75|||||SX · 85% max~DX · 85% max
+Flessione polso (manubri)|somol|general_strength|2 × 6 · 90% 6RM · rec. 2'|dumbbell|2|45|120|1|6|||6 rip. · 90% 6RM
+Set tecnici al flash|wwmol|technique|5 blocchi × 3 rip. · rec. 2' / 5' tra blocchi||15|60|120|1||3|300|Lettura (flash)~Piedi e tecnica~Lentezza e controllo
+Limit Karma|wwmam|power|Qualità/pattern 20/80 · Sequenza completa · rec. 4-5'|||||||||
+Limit Karma|wwmam|power|Qualità/pattern 20/80 · Sequenza, varia le prese · rec. 4-5'|||||||||
+Limit Karma|wwmam|power|Qualità/pattern 20/80 · Sequenza, pochi tentativi · rec. 4-5'|||||||||
+Open hand 20 mm 7"|somam|finger_strength|1 × 7" · 85% max · margine ampio|hangboard|1|7|180|||||85% max
+Half-crimp 20 mm 7"|somam|finger_strength|1 × 7" · 85% max · margine ampio|hangboard|1|7|180|||||85% max
+KB press 1 braccio|somol|general_strength|1 × 6-8 · rec. 2'|kettlebell|1|45|120|1|6|||6-8 rip. per braccio
+Extrarotazioni|solol|general_strength|1 × 12-15 · rec. 1'||1|45|60|1|12|||12-15 rip. per lato
+Hollow body hold|somol|stability|1 × 25" · rec. 1'||1|25|60|||||Hollow body
+Sloper BM2000 7"|somam|finger_strength|1 × 7" · 80% max · margine ampio|hangboard|1|7|180|||||80% max
+Pinch block 7"|sohil|finger_strength|1 × 7" per mano · 80% max|pinch_block|2|7|75|||||SX · 80% max~DX · 80% max
+Flessione polso (manubri)|somol|general_strength|1 × 6 · 80% 6RM · rec. 2'|dumbbell|1|45|120|1|6|||6 rip. · 80% 6RM
+Sessione di attivazione|wwlom|technique|Facile, pochi blocchi|||||||||
+Karma a Bleau|wwmam|power|Giornate fredde e secche|||||||||`;
+
+  const WEEKS = `wall:strength 0.20,1.10,2.10,3.30 / strength:strength 4.4,5.3
+strength:strength 6.4,7.2
+wall:strength 0.20,8.10,9.12,10.12,11.15 / strength:strength 12.5,13.3,14.3
+skills:strength 15.15,16.67,17.8,18.8
+activeRest:strength 19.10,20.7
+wall:strength 0.20,21.30 / strength:strength 22.2,23.4
+rest
+=
+wall:strength 0.20,24.10,25.4,3.35 / strength:strength 26.7,5.3
+strength:strength 27.7,28.4
+wall:strength 0.20,29.10,30.7,31.7,32.30 / strength:strength 33.9,34.6,35.6
+skills:strength 15.15,16.67,36.14,37.14
+activeRest:strength 19.10,20.7
+wall:strength 0.20,38.60 / strength:strength 39.3,40.7
+rest
+=
+wall:strength 0.20,41.10,42.4,3.35 / strength:strength 26.7,5.3
+strength:strength 27.7,28.4
+wall:strength 0.20,43.10,44.7,45.7,32.30 / strength:strength 33.9,34.6,35.6
+skills:strength 15.15,16.67,36.14,46.14
+activeRest:strength 19.10,20.7
+wall:strength 0.20,47.60 / strength:strength 39.3,40.7
+rest
+=
+wall:deload 0.20,1.10,2.10,48.20 / strength:deload 4.4,5.3
+strength:deload 6.4,7.2
+wall:deload 0.20,8.10,9.12,10.12,11.15 / strength:deload 12.5,13.3,14.3
+skills:deload 15.15,49.43,17.8,50.8
+activeRest:deload 19.10,20.7
+wall:deload 0.20,51.30 / strength:deload 22.2,23.4
+rest
+=
+wall:strength 0.20,52.13,53.7,3.35 / strength:strength 26.7,5.3
+strength:strength 54.7,28.4
+wall:strength 0.20,55.13,56.7,57.9,32.30 / strength:strength 33.9,34.6,35.6
+skills:strength 15.15,16.67,36.14,46.14
+activeRest:strength 19.10,20.7
+wall:strength 0.20,58.60 / strength:strength 39.3,40.7
+rest
+=
+wall:strength 0.20,59.13,60.7,3.35 / strength:strength 26.7,5.3
+strength:strength 54.7,28.4
+wall:strength 0.20,61.13,62.7,63.9,32.30 / strength:strength 33.9,34.6,35.6
+skills:strength 15.15,16.67,36.14,37.14
+activeRest:strength 19.10,20.7
+wall:strength 0.20,58.60 / strength:strength 39.3,40.7
+rest
+=
+wall:strength 0.20,64.13,65.7,3.35 / strength:strength 26.7,5.3
+strength:strength 54.7,28.4
+wall:strength 0.20,66.13,67.7,68.9,32.30 / strength:strength 33.9,34.6,35.6
+skills:strength 15.15,16.67,36.14,46.14
+activeRest:strength 19.10,20.7
+wall:strength 0.20,69.60 / strength:strength 39.3,40.7
+rest
+=
+wall:deload 0.20,70.4,71.1,48.20 / strength:deload 4.4,5.3
+strength:deload 6.4,7.2
+wall:deload 0.20,72.4,73.5,74.4,11.15 / strength:deload 12.5,13.3,14.3
+skills:deload 15.15,49.43,17.8,50.8
+activeRest:deload 19.10,20.7
+wall:deload 0.20,75.30 / strength:deload 22.2,23.4
+rest
+=
+wall:strength 0.20,59.13,60.7,3.35 / strength:strength 26.7,5.3
+strength:strength 54.7,28.4
+wall:strength 0.20,61.13,62.7,63.9,32.30 / strength:strength 33.9,34.6,35.6
+skills:strength 15.15,16.67,36.14,46.14
+activeRest:strength 19.10,20.7
+wall:strength 0.20,76.60 / strength:strength 39.3,40.7
+rest
+=
+wall:strength 0.20,64.13,65.7,3.35 / strength:strength 26.7,5.3
+strength:strength 54.7,28.4
+wall:strength 0.20,66.13,67.7,68.9,32.30 / strength:strength 33.9,34.6,35.6
+skills:strength 15.15,16.67,36.14,37.14
+activeRest:strength 19.10,20.7
+wall:strength 0.20,76.60 / strength:strength 39.3,40.7
+rest
+=
+wall:strength 0.20,64.13,65.7,3.35 / strength:strength 26.7,5.3
+strength:strength 54.7,28.4
+wall:strength 0.20,66.13,67.7,77.9,32.30 / strength:strength 33.9,34.6,35.6
+skills:strength 15.15,16.67,36.14,46.14
+activeRest:strength 19.10,20.7
+wall:strength 0.20,78.60 / strength:strength 39.3,40.7
+rest
+=
+wall:deload 0.20,1.10,2.10,48.20 / strength:deload 4.4,5.3
+strength:deload 6.4,7.2
+wall:deload 0.20,8.10,9.12,10.12,11.15 / strength:deload 12.5,13.3,14.3
+skills:deload 15.15,49.43,17.8,50.8
+activeRest:deload 19.10,20.7
+wall:deload 0.20,75.30 / strength:deload 22.2,23.4
+rest
+=
+wall:performance 0.20,79.7,80.4,3.30 / strength:performance 26.7,5.3
+strength:performance 81.4,28.4
+wall:performance 0.20,82.7,83.5,84.4,32.30 / strength:performance 33.9,34.6,35.6
+skills:performance 15.15,85.55,36.14,46.14
+activeRest:performance 19.10,20.7
+wall:performance 0.20,86.60 / strength:performance 39.3,40.7
+rest
+=
+wall:performance 0.20,79.7,80.4,3.30 / strength:performance 26.7,5.3
+strength:performance 81.4,28.4
+wall:performance 0.20,82.7,83.5,84.4,32.30 / strength:performance 33.9,34.6,35.6
+skills:performance 15.15,85.55,36.14,37.14
+activeRest:performance 19.10,20.7
+wall:performance 0.20,86.60 / strength:performance 39.3,40.7
+rest
+=
+wall:performance 0.20,79.7,80.4,3.30 / strength:performance 26.7,5.3
+strength:performance 81.4,28.4
+wall:performance 0.20,82.7,83.5,84.4,32.30 / strength:performance 33.9,34.6,35.6
+skills:performance 15.15,85.55,36.14,46.14
+activeRest:performance 19.10,20.7
+wall:performance 0.20,87.60 / strength:performance 39.3,40.7
+rest
+=
+wall:performance 0.20,79.7,80.4,3.30 / strength:performance 26.7,5.3
+strength:performance 81.4,28.4
+wall:performance 0.20,82.7,83.5,84.4,32.30 / strength:performance 33.9,34.6,35.6
+skills:performance 15.15,49.43,36.14,46.14
+activeRest:performance 19.10,20.7
+wall:performance 0.20,88.60 / strength:performance 39.3,40.7
+rest
+=
+wall:performance 0.20,89.1,90.1,48.20 / strength:performance 91.1,92.1
+strength:performance 93.1
+wall:performance 0.20,94.1,95.2,96.1
+skills:performance 15.15,97.30
+activeRest:performance 19.10
+wall:performance 98.120
+rest`;
+  // Le settimane 12 e 16 del piano riusano una settimana già definita.
+  const ORDER = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 11, 15, 16];
+  const INT = { lo: 'low', mo: 'moderate', hi: 'high', ma: 'max' }, RISK = { l: 'low', m: 'moderate', h: 'high' };
+
+  function exercise(line, i) {
+    const [name, code, domain, prescription, equip, rounds, work, rest, self, reps, perSet, setRest, cues] = line.split('|');
+    const slot = code[0] === 's' ? 'strength' : code[0] === 'm' ? 'mobility' : /^Riscaldamento/.test(name) ? 'warmup' : 'wall';
+    const b = {
+      id: 'custom-seed-' + i, name, slot, location: code[1] === 'w' ? 'wall' : 'off_wall', domain,
+      intensity: INT[code.slice(2, 4)], risk: RISK[code[4]], prescription, summary: prescription,
+      equipment: equip ? equip.split(',') : [],
+    };
+    if (rounds) {
+      const n = +rounds, c = cues ? cues.split('~') : [];
+      b.interval = { rounds: n, workSeconds: +work, restSeconds: +rest, cues: Array.from({ length: n }, (_, k) => c[k % c.length] || '') };
+      if (self) b.interval.selfPaced = true;
+      if (reps) b.interval.reps = +reps;
+      if (perSet) { b.interval.roundsPerSet = +perSet; b.interval.setRestSeconds = +setRest; }
+    }
+    return b;
+  }
+  /** Ricostruisce il piano nel formato .blokplan, così passa dallo stesso importer dei file veri. */
+  function blokplan() {
+    const ex = EX.split('\n').map(exercise);
+    const blocks = s => s.split(',').map(t => { const [i, m] = t.split('.'); return { selectedDurationMinutes: +m, block: ex[+i] }; });
+    const part = s => { const [head, list] = s.trim().split(' '); const [type, period] = head.split(':'); return { type, period, list: list ? blocks(list) : [] }; };
+    const day = line => {
+      if (line === 'rest') return { type: 'rest' };
+      const [a, b] = line.split(' / ').map(part);
+      const d = { type: a.type, period: a.period, plannedBlocks: a.list };
+      if (b) Object.assign(d, { secondType: b.type, secondPeriod: b.period, secondPlannedBlocks: b.list });
+      return d;
+    };
+    const unique = WEEKS.split('\n=\n').map(w => w.split('\n').map(day));
+    return { title: 'Karma 8A+', isForSelf: true, athleteName: 'Climber', startDate: 816519600, weeks: ORDER.map(i => unique[i]) };
+  }
+  return { blokplan };
+});
+</script>
+<script>/* Interfaccia: viste, editor, player. Tutta la logica testabile sta in core.js. */
+(function () {
+  'use strict';
+  const C = Core, KEY = 'allenamento.v1';
+  const WD = ['lun', 'mar', 'mer', 'gio', 'ven', 'sab', 'dom'];
+  const MONTHS = ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic'];
+  const fmtDate = iso => { const d = C.fromISO(iso); return `${d.getDate()} ${MONTHS[d.getMonth()]}`; };
+  const wdOf = iso => WD[(C.fromISO(iso).getDay() + 6) % 7];
+  const log = (area, msg, extra) => console.info(`[${area}] ${msg}`, extra === undefined ? '' : extra);
+
+  /* ---------- Stato e persistenza ---------- */
+  function fresh() {
+    const r = C.importBlokplan(Seed.blokplan());
+    return migrate({ v: 1, plans: [r.plan], activePlan: r.plan.id, exercises: Object.fromEntries(r.exercises.map(e => [e.id, e])), logs: [], tests: [] });
+  }
+  function migrate(s) { // completa i campi mancanti di backup vecchi o parziali
+    s.v = 1;
+    s.testDefs = Array.isArray(s.testDefs) && s.testDefs.length ? s.testDefs : C.DEFAULT_TESTS.map(t => ({ ...t }));
+    s.settings = Object.assign({ prep: 10, sound: true }, s.settings);
+    if (!s.plans.some(p => p.id === s.activePlan)) s.activePlan = s.plans[0] ? s.plans[0].id : null;
+    s.live = s.live || null;
+    return s;
+  }
+  function load() {
+    try {
+      const raw = localStorage.getItem(KEY);
+      if (raw) { const s = JSON.parse(raw); if (C.validState(s)) return migrate(s); log('store', 'dati salvati non validi, riparto dal piano precaricato'); }
+    } catch (e) { console.warn('[store] lettura fallita', e); }
+    return fresh();
+  }
+  let storeOk = true;
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(S)); storeOk = true; }
+    catch (e) {
+      console.warn('[store] scrittura fallita', e);
+      if (storeOk) toast('Salvataggio non disponibile qui: fai un backup da Altro.');
+      storeOk = false;
+    }
+  }
+  let S = load();
+  const plan = () => S.plans.find(p => p.id === S.activePlan) || null;
+  const maxes = () => C.latestMaxes(S.tests);
+
+  /* ---------- DOM ---------- */
+  function h(tag, attrs, ...kids) {
+    const el = document.createElement(tag);
+    for (const k in attrs || {}) {
+      const v = attrs[k];
+      if (v == null || v === false) continue;
+      if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+      else if (k === 'class') el.className = v;
+      else if (k === 'checked' || k === 'disabled') el[k] = !!v;
+      else if (k !== 'value') el.setAttribute(k, v);
+    }
+    for (const c of kids.flat(Infinity)) if (c != null && c !== false) el.append(c.nodeType ? c : document.createTextNode(String(c)));
+    if (attrs && attrs.value != null) el.value = attrs.value; // dopo i figli: serve ai <select>
+    return el;
+  }
+  const $ = id => document.getElementById(id);
+  const btn = (label, onclick, cls) => h('button', { type: 'button', class: 'btn ' + (cls || ''), onclick }, label);
+  const field = (label, input) => h('label', { class: 'f' }, label, input);
+  const opts = (map, value, extra) => h('select', { value, ...(extra || {}) }, Object.entries(map).map(([k, v]) => h('option', { value: k }, v)));
+  const numInp = (value, extra) => h('input', { type: 'text', inputmode: 'decimal', autocomplete: 'off', value: value == null ? '' : String(value).replace('.', ','), ...(extra || {}) }); // testo + virgola: i campi number perdono la virgola su alcune tastiere
+  const val = el => { const n = parseFloat(String(el.value).replace(',', '.')); return Number.isFinite(n) ? n : null; };
+
+  let toastTimer;
+  function toast(msg) {
+    const t = $('toast'); t.textContent = msg; t.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 3200);
+  }
+  function openSheet(title, body, mid) {
+    const ov = h('div', { class: 'overlay' + (mid ? ' mid' : ''), onclick: e => { if (e.target === ov) ov.remove(); } },
+      h('div', { class: 'sheet' }, h('div', { class: 'row' }, h('h3', { class: 'grow' }, title), mid ? null : btn('Chiudi', () => ov.remove(), 'sm')), body));
+    document.body.append(ov);
+    return ov;
+  }
+  // I dialoghi nativi (confirm/alert) non sono affidabili in una PWA: conferma costruita in pagina.
+  function confirmDlg(msg, okLabel) {
+    return new Promise(res => {
+      const ov = openSheet('Conferma', [h('p', {}, msg), h('div', { class: 'btns' },
+        btn('Annulla', () => { ov.remove(); res(false); }), btn(okLabel || 'Conferma', () => { ov.remove(); res(true); }, 'danger'))], true);
+    });
+  }
+  function download(name, text) {
+    try {
+      const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+      const a = h('a', { href: url, download: name }); document.body.append(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    } catch (e) { console.warn('[export] download non riuscito', e); toast('Download non disponibile: usa Copia.'); }
+  }
+  function exportSheet(title, name, text) {
+    const ta = h('textarea', { readonly: '', class: 'inp', style: 'min-height:140px;font-size:12px' }); ta.value = text;
+    openSheet(title, [h('p', { class: 'sub' }, name + ' · ' + Math.ceil(text.length / 1024) + ' KB'), ta, h('div', { class: 'btns' },
+      btn('Scarica file', () => download(name, text), 'pri'),
+      btn('Copia', async () => { try { await navigator.clipboard.writeText(text); toast('Copiato.'); } catch (e) { ta.select(); toast('Seleziona e copia manualmente.'); } }))]);
+  }
+
+  /* ---------- Elementi condivisi ---------- */
+  function loadHint(ex) {
+    if (!ex.load || ex.load.pct == null) return '';
+    const cues = ex.interval && ex.interval.cues.length ? ex.interval.cues : [''];
+    const m = maxes(), out = [];
+    for (const c of cues) {
+      const kg = C.loadKg(ex.load, c, m);
+      if (kg == null) return 'kg: mancano i massimali';
+      const side = ex.load.ref === 'pinch' ? (/^\s*DX/i.test(c) ? 'DX ' : 'SX ') : '';
+      const s = side + (ex.load.mode === 'hang' ? C.fmtKg(kg) : String(kg).replace('.', ',') + ' kg');
+      if (!out.includes(s)) out.push(s);
+    }
+    return out.join(' · ');
+  }
+  const isDone = (p, w, d, si) => S.logs.some(l => l.planId === p.id && l.w === w && l.d === d && l.si === si);
+  const sessTitle = s => `${C.DAY_TYPES[s.type]} · ${C.PERIODS[s.period]}`;
+  function blockRow(b, onclick) {
+    const ex = S.exercises[b.exId];
+    if (!ex) return h('div', { class: 'blk' }, h('span', { class: 'p' }, 'Esercizio rimosso'));
+    const hint = loadHint(ex);
+    return h('div', { class: 'blk', onclick, style: onclick ? 'cursor:pointer' : null },
+      h('div', { class: 'grow' }, h('div', { class: 'n' }, ex.name), h('div', { class: 'p' }, ex.prescription), hint ? h('div', { class: 'kg' }, hint) : null),
+      h('div', { class: 'm' }, b.minutes + ' min'));
+  }
+  function sessionCard(p, w, d, si, edit) {
+    const s = p.weeks[w][d].sessions[si], done = isDone(p, w, d, si);
+    return h('div', { class: 'card' },
+      h('div', { class: 'row' }, h('div', { class: 'grow big', style: 'font-size:17px' }, sessTitle(s)),
+        done ? h('span', { class: 'tag ok' }, 'Fatta') : null, h('span', { class: 'tag' }, C.sessionMinutes(s) + ' min')),
+      s.blocks.map((b, bi) => blockRow(b, edit ? () => blockSheet(p, w, d, si, bi) : null)),
+      s.blocks.length ? null : h('p', { class: 'sub' }, 'Nessun esercizio.'),
+      h('div', { class: 'btns' },
+        btn(done ? 'Ripeti' : 'Avvia', () => startSession(p, w, d, si, 0), 'pri'),
+        edit ? [btn('+ Esercizio', () => pickExercise(id => { s.blocks.push({ id: C.uid(), exId: id, minutes: C.intervalMinutes(S.exercises[id].interval) || 10 }); save(); render(); }), 'sm'),
+          btn('Sessione…', () => sessionSheet(p, w, d, si), 'sm')] : null));
+  }
+
+  /* ---------- Viste ---------- */
+  let curWeek = null;
+  function viewToday() {
+    const p = plan(), t = C.todayISO(), out = [h('div', { class: 'sub' }, `${wdOf(t)} ${fmtDate(t)}`), h('h1', {}, 'Oggi')];
+    if (S.live) {
+      const lp = S.plans.find(x => x.id === S.live.planId);
+      if (lp && lp.weeks[S.live.w] && lp.weeks[S.live.w][S.live.d].sessions[S.live.si])
+        out.push(h('div', { class: 'card', style: 'border-color:var(--warn)' }, h('div', { class: 'n' }, 'Sessione interrotta'),
+          h('div', { class: 'btns' }, btn('Riprendi', () => startSession(lp, S.live.w, S.live.d, S.live.si, S.live.idx), 'pri'), btn('Scarta', () => { S.live = null; save(); render(); }))));
+      else S.live = null;
+    }
+    if (!p) return out.concat(h('div', { class: 'card' }, h('p', {}, 'Nessun piano attivo.'), btn('Vai ai piani', () => { location.hash = 'piano'; }, 'pri')));
+    const pos = C.locate(p, t);
+    out.push(h('div', { class: 'sub' }, p.title + (pos ? ` · settimana ${pos.w + 1} di ${p.weeks.length}` : '')));
+    if (!pos) {
+      const before = C.diffDays(t, p.startDate) < 0;
+      out.push(h('div', { class: 'card' }, h('p', {}, before ? `Il piano inizia ${wdOf(p.startDate)} ${fmtDate(p.startDate)} (tra ${-C.diffDays(t, p.startDate)} giorni).` : 'Il piano è concluso.'),
+        btn(before ? 'Apri il primo giorno' : 'Apri il piano', () => { location.hash = before ? 'giorno-0-0' : 'piano'; }, 'pri')));
+    } else {
+      const day = p.weeks[pos.w][pos.d];
+      if (!day.sessions.length) out.push(h('div', { class: 'card' }, h('div', { class: 'big' }, 'Recupero'), h('p', { class: 'sub' }, 'Nessuna sessione in programma.')));
+      day.sessions.forEach((_, si) => out.push(sessionCard(p, pos.w, pos.d, si, false)));
+      out.push(btn('Modifica il giorno', () => { location.hash = `giorno-${pos.w}-${pos.d}`; }, 'sm'));
+    }
+    const mon = C.mondayOf(t), wk = S.logs.filter(l => l.date >= mon && l.date <= C.addDays(mon, 6));
+    out.push(h('h2', {}, 'Questa settimana'), h('div', { class: 'card row' },
+      h('div', { class: 'grow' }, h('div', { class: 'big' }, wk.length), h('div', { class: 'sub' }, 'sessioni')),
+      h('div', { class: 'grow' }, h('div', { class: 'big' }, wk.reduce((a, l) => a + (l.minutes || 0), 0)), h('div', { class: 'sub' }, 'minuti'))));
+    return out;
+  }
+
+  function viewPlan() {
+    const p = plan(), out = [h('h1', {}, 'Piano')];
+    out.push(h('div', { class: 'row' },
+      S.plans.length ? h('select', { class: 'inp grow', style: 'margin:0', value: S.activePlan, onchange: e => { S.activePlan = e.target.value; curWeek = null; save(); render(); } },
+        S.plans.map(x => h('option', { value: x.id }, x.title))) : h('div', { class: 'grow sub' }, 'Nessun piano'),
+      btn('Gestisci', planSheet, 'sm')));
+    if (!p) return out;
+    if (curWeek == null || curWeek >= p.weeks.length) { const pos = C.locate(p, C.todayISO()); curWeek = pos ? pos.w : 0; }
+    const w = curWeek, week = p.weeks[w], t = C.todayISO();
+    const periods = [...new Set(week.flatMap(d => d.sessions.map(s => C.PERIODS[s.period])))].join(', ');
+    const tot = week.reduce((a, d) => a + d.sessions.reduce((x, s) => x + C.sessionMinutes(s), 0), 0);
+    out.push(h('div', { class: 'week' }, btn('‹', () => { curWeek--; render(); }, 'sm' + (w === 0 ? ' ' : '')),
+      h('div', { class: 't' }, h('div', { class: 'big', style: 'font-size:17px' }, `Settimana ${w + 1} / ${p.weeks.length}`),
+        h('div', { class: 'sub' }, `${fmtDate(C.dateOf(p, w, 0))} – ${fmtDate(C.dateOf(p, w, 6))} · ${tot} min${periods ? ' · ' + periods : ''}`)),
+      btn('›', () => { curWeek++; render(); }, 'sm')));
+    out[out.length - 1].firstChild.disabled = w === 0;
+    out[out.length - 1].lastChild.disabled = w === p.weeks.length - 1;
+    week.forEach((day, d) => {
+      const iso = C.dateOf(p, w, d);
+      out.push(h('div', { class: 'card tap day row' + (iso === t ? ' today' : ''), onclick: () => { location.hash = `giorno-${w}-${d}`; } },
+        h('div', { class: 'wd' }, WD[d], h('div', { style: 'font-weight:400;text-transform:none' }, fmtDate(iso))),
+        h('div', { class: 'grow' }, day.sessions.length ? day.sessions.map((s, si) => h('div', { style: 'margin:2px 0' },
+          h('div', { class: 'n', style: 'font-weight:600' }, C.DAY_TYPES[s.type], ' ', h('span', { class: 'sub' }, C.sessionMinutes(s) + ' min'), isDone(p, w, d, si) ? h('span', { class: 'tag ok', style: 'margin-left:6px' }, '✓') : null),
+          h('div', { class: 'sub', style: 'white-space:nowrap;overflow:hidden;text-overflow:ellipsis' }, s.blocks.map(b => (S.exercises[b.exId] || {}).name).filter(Boolean).join(' · ')))) : h('div', { class: 'sub' }, 'Recupero'))));
+    });
+    return out;
+  }
+
+  function planSheet() {
+    const p = plan(), body = [];
+    let ov;
+    const done = () => { save(); ov.remove(); render(); };
+    if (p) {
+      const title = h('input', { value: p.title }), start = h('input', { type: 'date', value: p.startDate });
+      const target = h('select', {}, p.weeks.map((_, i) => i === curWeek ? null : h('option', { value: i }, 'Settimana ' + (i + 1))));
+      body.push(field('Nome', title), field('Inizio (viene portato al lunedì)', start),
+        btn('Salva nome e data', () => { p.title = title.value.trim() || p.title; if (start.value) p.startDate = C.mondayOf(start.value); done(); }, 'pri block'),
+        h('h2', {}, `Settimane (${p.weeks.length})`),
+        h('div', { class: 'btns' }, btn('+ Aggiungi in fondo', () => { p.weeks.push(C.emptyWeek()); done(); }, 'sm'),
+          btn('Duplica la settimana ' + (curWeek + 1), () => { p.weeks.splice(curWeek + 1, 0, p.weeks[curWeek].map(C.cloneDay)); done(); }, 'sm'),
+          btn('Elimina la settimana ' + (curWeek + 1), async () => { if (p.weeks.length > 1 && await confirmDlg(`Eliminare la settimana ${curWeek + 1}? Le successive scalano di una.`, 'Elimina')) { p.weeks.splice(curWeek, 1); done(); } }, 'sm danger')),
+        p.weeks.length > 1 ? h('div', { class: 'row', style: 'margin-top:10px' }, h('span', { class: 'sub' }, `Copia la ${curWeek + 1} su`), h('div', { class: 'grow' }, target),
+          btn('Copia', async () => { const i = +target.value; if (await confirmDlg(`Sovrascrivere la settimana ${i + 1} con la ${curWeek + 1}?`, 'Sovrascrivi')) { p.weeks[i] = p.weeks[curWeek].map(C.cloneDay); done(); } }, 'sm')) : null,
+        h('h2', {}, 'File'),
+        h('div', { class: 'btns' }, btn('Esporta .blokplan', () => {
+          if (p.weeks.some(w => w.some(d => d.sessions.length > 2))) toast('Nota: Blok accetta 2 sessioni al giorno, le altre non vengono esportate.');
+          exportSheet('Esporta piano', p.title.replace(/[^\w+-]+/g, '_') + '.blokplan', JSON.stringify(C.exportBlokplan(p, S.exercises)));
+        }, 'sm'),
+          btn('Elimina piano', async () => { if (await confirmDlg(`Eliminare "${p.title}"? Il diario resta.`, 'Elimina')) { S.plans = S.plans.filter(x => x !== p); S.activePlan = S.plans[0] ? S.plans[0].id : null; curWeek = null; done(); } }, 'sm danger')));
+    }
+    const nTitle = h('input', { placeholder: 'Blocco di forza' }), nWeeks = numInp(4, { min: 1, max: 52 });
+    body.push(h('h2', {}, 'Nuovo piano'), h('div', { class: 'cols' }, field('Nome', nTitle), field('Settimane', nWeeks)),
+      h('div', { class: 'btns' }, btn('Crea', () => {
+        const n = Math.min(52, Math.max(1, Math.round(val(nWeeks) || 4)));
+        const np = { id: C.uid(), title: nTitle.value.trim() || 'Nuovo piano', startDate: C.mondayOf(C.todayISO()), weeks: Array.from({ length: n }, C.emptyWeek) };
+        S.plans.push(np); S.activePlan = np.id; curWeek = 0; done();
+      }, 'sm pri'), fileBtn('Importa .blokplan', () => ov.remove())));
+    ov = openSheet('Gestisci piani', body);
+  }
+
+  function fileBtn(label, after) {
+    const inp = h('input', { type: 'file', accept: '.blokplan,.json,application/json', hidden: '', onchange: async () => {
+      const f = inp.files[0]; inp.value = '';
+      if (!f) return;
+      try { await importText(await f.text()); if (after) after(); }
+      catch (e) { console.warn('[import] fallito', e); toast(e instanceof SyntaxError ? 'Il file non è JSON valido.' : e.message); }
+    } });
+    return h('span', {}, inp, btn(label, () => inp.click(), 'sm'));
+  }
+  async function importText(text) {
+    const obj = JSON.parse(text);
+    if (C.validState(obj)) { // backup completo
+      if (!await confirmDlg('Questo è un backup completo: sostituire TUTTI i dati attuali?', 'Sostituisci')) return;
+      S = migrate(obj); curWeek = null; save(); render(); toast('Backup ripristinato.'); log('import', 'backup ripristinato');
+      return;
+    }
+    const r = C.importBlokplan(obj, S.exercises); // lancia se non valido: lo stato non viene toccato
+    for (const e of r.exercises) S.exercises[e.id] = e;
+    S.plans.push(r.plan); S.activePlan = r.plan.id; curWeek = null; save(); render();
+    toast(`Importato ${r.plan.title}.`); log('import', 'piano importato', { title: r.plan.title, weeks: r.plan.weeks.length, nuoviEsercizi: r.exercises.length });
+  }
+
+  function viewDay(w, d) {
+    const p = plan();
+    if (!p || !p.weeks[w] || !p.weeks[w][d]) return [h('p', {}, 'Giorno non trovato.'), btn('Al piano', () => { location.hash = 'piano'; })];
+    curWeek = w;
+    const day = p.weeks[w][d], iso = C.dateOf(p, w, d);
+    return [h('div', { class: 'row' }, btn('‹ Piano', () => { location.hash = 'piano'; }, 'sm'), h('div', { class: 'sub right' }, `Settimana ${w + 1}`)),
+      h('h1', { style: 'margin-top:10px;text-transform:capitalize' }, `${wdOf(iso)} ${fmtDate(iso)}`), h('div', { class: 'sub' }, 'Tocca un esercizio per modificarlo.'),
+      day.sessions.map((_, si) => sessionCard(p, w, d, si, true)),
+      day.sessions.length ? null : h('div', { class: 'card' }, h('div', { class: 'big' }, 'Recupero')),
+      h('div', { class: 'btns' }, btn('+ Sessione', () => { day.sessions.push({ type: 'wall', period: (day.sessions[0] || {}).period || 'base', blocks: [] }); save(); render(); }, 'sm'),
+        btn('Copia su un altro giorno…', () => copyDaySheet(p, w, d), 'sm'))];
+  }
+  function copyDaySheet(p, w, d) {
+    const wk = h('select', { value: w }, p.weeks.map((_, i) => h('option', { value: i }, 'Settimana ' + (i + 1))));
+    const dd = h('select', { value: (d + 1) % 7 }, WD.map((n, i) => h('option', { value: i }, n)));
+    const ov = openSheet('Copia giorno', [h('div', { class: 'cols' }, field('Settimana', wk), field('Giorno', dd)),
+      btn('Sovrascrivi il giorno scelto', () => { p.weeks[+wk.value][+dd.value] = C.cloneDay(p.weeks[w][d]); save(); ov.remove(); toast('Giorno copiato.'); render(); }, 'pri block')]);
+  }
+  function sessionSheet(p, w, d, si) {
+    const day = p.weeks[w][d], s = day.sessions[si];
+    const ty = opts(Object.fromEntries(Object.entries(C.DAY_TYPES).filter(([k]) => k !== 'rest')), s.type), pe = opts(C.PERIODS, s.period);
+    const ov = openSheet('Sessione', [h('div', { class: 'cols' }, field('Tipo', ty), field('Periodo', pe)),
+      btn('Salva', () => { s.type = ty.value; s.period = pe.value; save(); ov.remove(); render(); }, 'pri block'),
+      h('div', { class: 'btns' }, si > 0 ? btn('Sposta prima', () => { day.sessions.splice(si - 1, 0, day.sessions.splice(si, 1)[0]); save(); ov.remove(); render(); }, 'sm') : null,
+        btn('Elimina sessione', async () => { if (await confirmDlg('Eliminare questa sessione dal giorno?', 'Elimina')) { day.sessions.splice(si, 1); save(); ov.remove(); render(); } }, 'sm danger'))]);
+  }
+  function blockSheet(p, w, d, si, bi) {
+    const s = p.weeks[w][d].sessions[si], b = s.blocks[bi], ex = S.exercises[b.exId], n = C.usage(S.plans, b.exId);
+    const min = numInp(b.minutes, { min: 0 });
+    const close = () => { save(); ov.remove(); render(); };
+    const move = k => { s.blocks.splice(bi + k, 0, s.blocks.splice(bi, 1)[0]); close(); };
+    const ov = openSheet(ex ? ex.name : 'Esercizio', [ex ? h('p', { class: 'sub' }, ex.prescription) : null,
+      field('Minuti previsti', min), btn('Salva minuti', () => { b.minutes = Math.max(0, Math.round(val(min) || 0)); close(); }, 'pri block'),
+      h('div', { class: 'btns' }, btn('↑ Su', () => move(-1), 'sm' + (bi === 0 ? ' ' : '')), btn('↓ Giù', () => move(1), 'sm'),
+        btn('Sostituisci…', () => pickExercise(id => { b.exId = id; close(); }), 'sm'), btn('Rimuovi', () => { s.blocks.splice(bi, 1); close(); }, 'sm danger')),
+      ex ? h('div', { class: 'btns' }, btn(`Modifica esercizio (${n} ${n === 1 ? 'uso' : 'usi'})`, () => { ov.remove(); exerciseSheet(ex.id); }, 'sm'),
+        n > 1 ? btn('Modifica solo qui', () => { const c = JSON.parse(JSON.stringify(ex)); c.id = C.uid(); S.exercises[c.id] = c; b.exId = c.id; save(); ov.remove(); exerciseSheet(c.id); }, 'sm') : null) : null]);
+    const mv = ov.querySelectorAll('.btns')[0].children;
+    mv[0].disabled = bi === 0; mv[1].disabled = bi === s.blocks.length - 1;
+  }
+
+  function pickExercise(cb) {
+    const list = h('div', {}), q = h('input', { class: 'inp', placeholder: 'Cerca…', oninput: () => fill() });
+    let ov;
+    const fill = () => {
+      const t = q.value.trim().toLowerCase();
+      const items = Object.values(S.exercises).filter(e => !t || (e.name + ' ' + e.prescription).toLowerCase().includes(t))
+        .sort((a, b) => a.name.localeCompare(b.name) || a.prescription.localeCompare(b.prescription)).slice(0, 80);
+      list.replaceChildren(...items.map(e => h('div', { class: 'blk', style: 'cursor:pointer', onclick: () => { ov.remove(); cb(e.id); } },
+        h('div', { class: 'grow' }, h('div', { class: 'n' }, e.name), h('div', { class: 'p' }, e.prescription)), h('span', { class: 'tag' }, C.SLOTS[e.slot]))));
+      if (!items.length) list.append(h('p', { class: 'sub' }, 'Nessun risultato.'));
+    };
+    ov = openSheet('Scegli esercizio', [h('div', { class: 'row' }, h('div', { class: 'grow' }, q), btn('+ Nuovo', () => { ov.remove(); exerciseSheet(null, cb); }, 'sm pri')), list]);
+    fill();
+  }
+
+  function exerciseSheet(id, onCreate) {
+    const isNew = !id, e = isNew ? { id: C.uid(), name: '', prescription: '', slot: 'strength', location: 'off_wall', domain: 'other', intensity: 'moderate', risk: 'low', equipment: [], interval: null, load: null } : S.exercises[id];
+    const iv = e.interval || {}, ld = e.load || {};
+    const name = h('input', { value: e.name, placeholder: 'Open hand 20 mm 7"' }), pres = h('input', { value: e.prescription, placeholder: '4 × 7" · 85% max' });
+    const slot = opts(C.SLOTS, e.slot);
+    const mode = opts({ none: 'Solo durata (nessun timer)', timed: 'A tempo (countdown)', reps: 'A ripetizioni (tocco "Fatto")' }, !e.interval ? 'none' : iv.selfPaced ? 'reps' : 'timed', { onchange: () => sync() });
+    const rounds = numInp(iv.rounds || 3, { min: 1 }), work = numInp(iv.workSeconds || 7, { min: 0 }), rest = numInp(iv.restSeconds == null ? 180 : iv.restSeconds, { min: 0 });
+    const reps = numInp(iv.reps), perSet = numInp(iv.roundsPerSet), setRest = numInp(iv.setRestSeconds);
+    const cues = h('textarea', { placeholder: 'Un cue per riga, ripetuti a rotazione\nSX · 75% max\nDX · 75% max' }); cues.value = (iv.cues || []).join('\n');
+    const refs = { '': 'Nessuno', oh: 'Open hand', hc: 'Half-crimp', sl: 'Sloper', pinch: 'Pinch (SX/DX dal cue)', wrist: 'Polso 6RM' };
+    for (const t of S.testDefs) if (!C.DEFAULT_TESTS.some(x => x.key === t.key)) refs[t.key] = t.name;
+    const ref = opts(refs, ld.ref || ''), pct = numInp(ld.pct, { min: 0 });
+    const lmode = opts({ hang: 'Zavorra su peso corporeo', lift: 'Carico sollevato' }, ld.mode || 'hang'), isTest = h('input', { type: 'checkbox', checked: ld.test });
+    const timer = h('div', {}, h('div', { class: 'cols3' }, field('Round', rounds), field('Lavoro (s)', work), field('Recupero (s)', rest)),
+      h('div', { class: 'cols3' }, field('Rip. (facolt.)', reps), field('Round per serie', perSet), field('Rec. serie (s)', setRest)), field('Cue', cues));
+    const sync = () => { timer.hidden = mode.value === 'none'; };
+    let ov;
+    const body = [field('Nome', name), field('Prescrizione', pres), h('div', { class: 'cols' }, field('Sezione', slot), field('Timer', mode)), timer,
+      h('h2', {}, 'Carico in kg'), h('div', { class: 'cols' }, field('Massimale di riferimento', ref), field('% del massimale', pct)),
+      h('div', { class: 'cols' }, field('Tipo di carico', lmode), h('label', { class: 'f' }, 'Blocco di test', h('div', { style: 'margin-top:12px' }, isTest, ' registra il risultato a fine sessione'))),
+      btn(isNew ? 'Crea esercizio' : 'Salva', () => {
+        if (!name.value.trim()) return toast('Serve un nome.');
+        e.name = name.value.trim().slice(0, 200); e.prescription = pres.value.trim().slice(0, 200); e.slot = slot.value;
+        e.interval = mode.value === 'none' ? null : C.normInterval({ rounds: Math.max(1, val(rounds) || 1), workSeconds: val(work) || 0, restSeconds: val(rest) || 0, selfPaced: mode.value === 'reps',
+          reps: val(reps) || 0, roundsPerSet: val(perSet) || 0, setRestSeconds: val(setRest) || 0, cues: cues.value.split('\n').map(s => s.trim()).filter(Boolean) });
+        e.load = ref.value ? { ref: ref.value, mode: lmode.value, pct: val(pct), test: isTest.checked } : null;
+        S.exercises[e.id] = e; save(); ov.remove(); render();
+        if (isNew && onCreate) onCreate(e.id);
+      }, 'pri block')];
+    if (!isNew) {
+      const n = C.usage(S.plans, e.id);
+      body.push(h('div', { class: 'btns' }, btn(n ? `In uso in ${n} blocchi` : 'Elimina dalla libreria', async () => {
+        if (n) return toast('Rimuovilo prima dai giorni che lo usano.');
+        if (await confirmDlg(`Eliminare "${e.name}" dalla libreria?`, 'Elimina')) { delete S.exercises[e.id]; save(); ov.remove(); render(); }
+      }, 'sm danger')));
+    }
+    ov = openSheet(isNew ? 'Nuovo esercizio' : 'Modifica esercizio', body);
+    sync();
+  }
+
+  function viewLibrary() {
+    const list = h('div', {}), q = h('input', { class: 'inp', placeholder: 'Cerca…', oninput: () => fill() });
+    const fill = () => {
+      const t = q.value.trim().toLowerCase();
+      list.replaceChildren(...Object.values(S.exercises).filter(e => !t || (e.name + ' ' + e.prescription).toLowerCase().includes(t))
+        .sort((a, b) => a.name.localeCompare(b.name) || a.prescription.localeCompare(b.prescription))
+        .map(e => h('div', { class: 'blk', style: 'cursor:pointer', onclick: () => exerciseSheet(e.id) },
+          h('div', { class: 'grow' }, h('div', { class: 'n' }, e.name), h('div', { class: 'p' }, e.prescription)), h('div', { class: 'm' }, C.usage(S.plans, e.id) + ' usi'))));
+    };
+    fill();
+    return [h('div', { class: 'row' }, btn('‹ Altro', () => { location.hash = 'altro'; }, 'sm'), btn('+ Nuovo', () => exerciseSheet(null), 'sm pri right')),
+      h('h1', { style: 'margin-top:10px' }, 'Esercizi'), h('div', { class: 'sub' }, Object.keys(S.exercises).length + ' in libreria'), h('div', { style: 'margin-top:10px' }, q), h('div', { class: 'card' }, list)];
+  }
+
+  function logSheet(l) {
+    const isNew = !l; l = l || { id: C.uid(), date: C.todayISO(), title: 'Sessione libera', minutes: 60, rpe: null, feel: null, notes: '', loads: [] };
+    const date = h('input', { type: 'date', value: l.date }), title = h('input', { value: l.title }), min = numInp(l.minutes, { min: 0 });
+    const rpe = numInp(l.rpe, { min: 1, max: 10 }), feel = opts({ '': '—', 1: '1 · Distrutto', 2: '2 · Stanco', 3: '3 · Così così', 4: '4 · Bene', 5: '5 · Ottimo' }, l.feel || '');
+    const notes = h('textarea', {}); notes.value = l.notes || '';
+    const ov = openSheet(isNew ? 'Registra sessione' : 'Modifica registrazione', [h('div', { class: 'cols' }, field('Data', date), field('Minuti', min)), field('Titolo', title),
+      h('div', { class: 'cols' }, field('RPE (1-10)', rpe), field('Come ti sentivi', feel)), field('Note', notes),
+      (l.loads || []).length ? h('div', { class: 'sub' }, l.loads.map(x => `${x.name}: ${x.kg}`).join(' · ')) : null,
+      btn('Salva', () => {
+        Object.assign(l, { date: date.value || l.date, title: title.value.trim() || 'Sessione', minutes: Math.max(0, Math.round(val(min) || 0)), rpe: val(rpe), feel: feel.value ? +feel.value : null, notes: notes.value.trim() });
+        if (isNew) S.logs.push(l);
+        save(); ov.remove(); render();
+      }, 'pri block'),
+      isNew ? null : btn('Elimina', async () => { if (await confirmDlg('Eliminare questa registrazione?', 'Elimina')) { S.logs = S.logs.filter(x => x !== l); save(); ov.remove(); render(); } }, 'danger block')]);
+  }
+  function viewDiary() {
+    const logs = [...S.logs].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+    return [h('div', { class: 'row' }, h('h1', { class: 'grow' }, 'Diario'), btn('+ Registra', () => logSheet(null), 'sm pri')),
+      h('div', { class: 'sub' }, `${logs.length} sessioni · ${logs.reduce((a, l) => a + (l.minutes || 0), 0)} minuti`),
+      logs.length ? null : h('div', { class: 'card' }, h('p', { class: 'sub' }, 'Le sessioni completate con il player finiscono qui, con RPE, note e carichi.')),
+      logs.map(l => h('div', { class: 'card tap', onclick: () => logSheet(l) },
+        h('div', { class: 'row' }, h('div', { class: 'grow n', style: 'font-weight:600' }, l.title), h('span', { class: 'tag' }, (l.minutes || 0) + ' min')),
+        h('div', { class: 'sub' }, `${wdOf(l.date)} ${fmtDate(l.date)}${l.rpe ? ' · RPE ' + l.rpe : ''}${l.feel ? ' · sensazione ' + l.feel + '/5' : ''}`),
+        (l.loads || []).length ? h('div', { class: 'p', style: 'color:var(--ac);font-size:13px' }, l.loads.map(x => `${x.name}: ${x.kg}`).join(' · ')) : null,
+        l.notes ? h('div', { class: 'sub', style: 'margin-top:4px;color:var(--tx)' }, l.notes) : null))];
+  }
+
+  function spark(vals) {
+    if (vals.length < 2) return null;
+    const lo = Math.min(...vals), hi = Math.max(...vals), sp = hi - lo || 1;
+    const pts = vals.map((v, i) => [4 + i * 102 / (vals.length - 1), 30 - (v - lo) / sp * 26]);
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('class', 'spark'); svg.setAttribute('viewBox', '0 0 110 34');
+    svg.innerHTML = `<polyline points="${pts.map(p => p.map(n => n.toFixed(1)).join(',')).join(' ')}"/><circle cx="${pts[pts.length - 1][0].toFixed(1)}" cy="${pts[pts.length - 1][1].toFixed(1)}" r="3"/>`;
+    return svg;
+  }
+  function testSheet(def) {
+    const date = h('input', { type: 'date', value: C.todayISO() }), v = numInp(null);
+    const hist = S.tests.filter(t => t.key === def.key).sort((a, b) => (a.date < b.date ? 1 : -1));
+    let ov;
+    const again = () => { save(); ov.remove(); render(); };
+    ov = openSheet(def.name, [h('div', { class: 'cols' }, field('Data', date), field(`Valore (${def.unit})`, v)),
+      btn('Aggiungi risultato', () => { const n = val(v); if (n == null) return toast('Inserisci un numero.'); S.tests.push({ id: C.uid(), key: def.key, date: date.value || C.todayISO(), value: n }); again(); }, 'pri block'),
+      h('h2', {}, 'Storico'), hist.length ? hist.map(t => h('div', { class: 'blk' }, h('div', { class: 'grow' }, `${fmtDate(t.date)} ${t.date.slice(0, 4)}`), h('div', { class: 'n' }, String(t.value).replace('.', ',') + ' ' + def.unit),
+        btn('✕', () => { S.tests = S.tests.filter(x => x !== t); again(); }, 'sm'))) : h('p', { class: 'sub' }, 'Ancora nessun risultato.'),
+      C.DEFAULT_TESTS.some(x => x.key === def.key) ? null : btn('Elimina questo test', async () => { if (await confirmDlg(`Eliminare "${def.name}" e il suo storico?`, 'Elimina')) { S.testDefs = S.testDefs.filter(x => x !== def); S.tests = S.tests.filter(t => t.key !== def.key); again(); } }, 'danger block')]);
+  }
+  function viewProgress() {
+    const name = h('input', { placeholder: 'Hang a una mano 22 mm' }), unit = h('input', { placeholder: 's', value: 'kg' });
+    return [h('h1', {}, 'Progressi'), h('div', { class: 'sub' }, 'L\'ultimo valore di ogni test è il massimale usato per calcolare i kg nel piano e nel player.'),
+      S.testDefs.map(def => {
+        const hist = S.tests.filter(t => t.key === def.key).sort((a, b) => (a.date < b.date ? -1 : 1)), last = hist[hist.length - 1];
+        return h('div', { class: 'card tap row', onclick: () => testSheet(def) },
+          h('div', { class: 'grow' }, h('div', { class: 'sub' }, def.name), h('div', { class: 'big' }, last ? String(last.value).replace('.', ',') + ' ' + def.unit : '—'),
+            h('div', { class: 'sub' }, last ? `${fmtDate(last.date)} · ${hist.length} ${hist.length === 1 ? 'risultato' : 'risultati'}` : 'Tocca per aggiungere')),
+          spark(hist.map(t => t.value)));
+      }),
+      h('h2', {}, 'Nuovo test'), h('div', { class: 'card' }, h('div', { class: 'cols' }, field('Nome', name), field('Unità', unit)),
+        btn('Aggiungi test', () => { if (!name.value.trim()) return toast('Serve un nome.'); S.testDefs.push({ key: 'c-' + C.uid().slice(0, 8), name: name.value.trim(), unit: unit.value.trim() || 'kg' }); save(); render(); }, 'sm'))];
+  }
+
+  function viewMore() {
+    const prep = numInp(S.settings.prep, { min: 0, max: 60 }), sound = h('input', { type: 'checkbox', checked: S.settings.sound, onchange: () => { S.settings.sound = sound.checked; save(); } });
+    return [h('h1', {}, 'Altro'),
+      h('div', { class: 'card tap row', onclick: () => { location.hash = 'libreria'; } }, h('div', { class: 'grow' }, h('div', { class: 'n', style: 'font-weight:600' }, 'Libreria esercizi'), h('div', { class: 'sub' }, Object.keys(S.exercises).length + ' esercizi')), '›'),
+      h('h2', {}, 'Player'), h('div', { class: 'card' }, h('div', { class: 'cols' }, field('Preparazione prima di un hang (s)', prep), h('label', { class: 'f' }, 'Segnali acustici', h('div', { style: 'margin-top:12px' }, sound, ' attivi'))),
+        btn('Salva', () => { S.settings.prep = Math.min(60, Math.max(0, Math.round(val(prep) || 0))); save(); toast('Salvato.'); }, 'sm')),
+      h('h2', {}, 'Dati'), h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin-top:0' }, 'I dati restano solo su questo dispositivo. Fai un backup ogni tanto.'),
+        h('div', { class: 'btns' }, btn('Backup completo', () => exportSheet('Backup', `allenamento-backup-${C.todayISO()}.json`, JSON.stringify(S)), 'sm pri'), fileBtn('Ripristina / importa file'),
+          btn('Azzera tutto', async () => { if (await confirmDlg('Cancellare piani, diario e test e ripartire dal piano Karma precaricato?', 'Azzera')) { S = fresh(); curWeek = null; save(); render(); } }, 'sm danger')))];
+  }
+
+  /* ---------- Player ---------- */
+  let P = null, ac = null, wl = null;
+  function audioInit() { try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); ac.resume(); } catch (e) { ac = null; } }
+  function beep(freq, dur) {
+    if (!S.settings.sound || !ac) return;
+    try {
+      const o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime;
+      o.frequency.value = freq; o.connect(g); g.connect(ac.destination);
+      g.gain.setValueAtTime(0.3, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      o.start(t); o.stop(t + dur);
+    } catch (e) { /* audio non disponibile: il player continua senza suoni */ }
+  }
+  async function wake() { try { if (navigator.wakeLock) wl = await navigator.wakeLock.request('screen'); } catch (e) { wl = null; } }
+  document.addEventListener('visibilitychange', () => { if (P && document.visibilityState === 'visible') { wake(); tick(); } });
+  const mmss = s => { s = Math.max(0, Math.round(s)); return s >= 60 ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` : String(s); };
+  const isAuto = st => st.kind === 'rest' || (st.kind === 'work' && !st.selfPaced);
+
+  function startSession(p, w, d, si, idx) {
+    const s = p.weeks[w][d].sessions[si], steps = C.buildSteps(s.blocks, S.exercises, S.settings.prep);
+    if (!steps.length) return toast('Questa sessione non ha esercizi.');
+    audioInit(); wake();
+    const resumed = S.live && S.live.planId === p.id && S.live.w === w && S.live.d === d && S.live.si === si;
+    P = { steps, p, w, d, si, s, startedAt: resumed ? S.live.startedAt : Date.now(), paused: false };
+    S.live = { planId: p.id, w, d, si, idx: 0, startedAt: P.startedAt };
+    $('player').hidden = false;
+    P.timer = setInterval(tick, 200);
+    enter(Math.min(idx || 0, steps.length - 1));
+    log('player', 'sessione avviata', { piano: p.title, settimana: w + 1, giorno: d + 1, passi: steps.length });
+  }
+  function enter(i) {
+    P.idx = i; P.endAt = Date.now() + P.steps[i].seconds * 1000; P.lastBeep = null; P.freeDone = false;
+    if (P.paused) P.remain = P.steps[i].seconds * 1000;
+    S.live.idx = i; save(); draw();
+  }
+  function next() { if (P.idx + 1 >= P.steps.length) finish(); else enter(P.idx + 1); }
+  function remaining() { return ((P.paused ? P.remain : P.endAt - Date.now())) / 1000; }
+  function tick() {
+    if (!P || P.paused) return;
+    const st = P.steps[P.idx], rem = Math.ceil(remaining());
+    if (isAuto(st)) {
+      if (rem <= 0) { beep(st.kind === 'rest' ? 1320 : 660, 0.5); return next(); }
+      if (rem <= 3 && rem !== P.lastBeep) { P.lastBeep = rem; beep(880, 0.12); }
+    } else if (st.kind === 'free' && st.seconds > 0 && rem <= 0 && !P.freeDone) { P.freeDone = true; beep(660, 0.5); }
+    drawClock();
+  }
+  function drawClock() {
+    const st = P.steps[P.idx], rem = remaining();
+    let txt;
+    if (isAuto(st)) txt = mmss(Math.ceil(rem));
+    else if (st.kind === 'work') txt = mmss(st.seconds - rem); // a ripetizioni: tempo trascorso
+    else txt = rem >= 0 ? mmss(Math.ceil(rem)) : '+' + mmss(-rem);
+    $('p-clock').textContent = txt;
+  }
+  function draw() {
+    const st = P.steps[P.idx], nx = P.steps[P.idx + 1], ex = S.exercises[st.exId];
+    const ph = st.prep ? 'prep' : st.kind;
+    $('player').dataset.ph = ph;
+    $('p-bar').style.width = (P.idx / P.steps.length * 100) + '%';
+    $('p-ph').textContent = { prep: 'PREPARATI', work: st.selfPaced ? 'ESEGUI' : 'LAVORO', rest: 'RECUPERO', free: 'A TEMPO LIBERO' }[ph];
+    $('p-name').textContent = st.kind === 'rest' && st.afterBlock && nx ? 'Prossimo: ' + nx.name : st.name;
+    $('p-round').textContent = st.kind === 'free' ? '' : `Round ${st.round} di ${st.rounds}` + (st.reps && st.kind === 'work' ? '' : '');
+    $('p-cue').textContent = st.kind === 'rest' && st.afterBlock ? (nx ? nx.cue : '') : st.cue;
+    const src = st.kind === 'rest' && st.afterBlock && nx ? { ex: S.exercises[nx.exId], cue: nx.cue } : { ex, cue: st.cue };
+    const kg = src.ex && st.kind !== 'free' ? C.loadKg(src.ex.load, src.cue, maxes()) : null;
+    $('p-kg').textContent = kg == null ? '' : (src.ex.load.mode === 'hang' ? C.fmtKg(kg) : String(kg).replace('.', ',') + ' kg');
+    $('p-next').textContent = nx ? 'Poi: ' + (nx.kind === 'rest' ? `recupero ${mmss(nx.seconds)}` : nx.name + (nx.cue && nx.kind !== 'free' ? ' · ' + nx.cue : '')) : 'Ultimo passo';
+    $('p-done').textContent = isAuto(st) ? 'Salta' : 'Fatto';
+    $('p-done').className = 'btn ' + (isAuto(st) ? '' : 'pri');
+    $('p-plus').disabled = st.kind !== 'rest';
+    $('p-pause').textContent = P.paused ? 'Riprendi' : 'Pausa';
+    drawClock();
+  }
+  function closePlayer() { clearInterval(P.timer); try { if (wl) wl.release(); } catch (e) { /* già rilasciato */ } wl = null; $('player').hidden = true; }
+  function finish() {
+    const { p, w, d, si, s } = P, minutes = Math.max(1, Math.round((Date.now() - P.startedAt) / 60000));
+    closePlayer(); P = null; beep(1320, 0.8);
+    const m = maxes(), loadRows = [], testRows = [], seen = new Set();
+    for (const b of s.blocks) {
+      const ex = S.exercises[b.exId];
+      if (!ex || !ex.load) continue;
+      if (ex.load.test) {
+        const keys = ex.load.ref === 'pinch' ? ['pinchL', 'pinchR'] : [ex.load.ref];
+        for (const k of keys) if (!seen.has(k)) { seen.add(k); const def = S.testDefs.find(t => t.key === k); if (def) testRows.push({ def, inp: numInp(null, { placeholder: m[k] == null ? '' : 'precedente: ' + m[k] }) }); }
+      } else loadRows.push({ name: ex.name, inp: h('input', { value: loadHint(ex).replace('kg: mancano i massimali', '') }) });
+    }
+    const min = numInp(minutes, { min: 0 }), rpe = numInp(null, { min: 1, max: 10 }), notes = h('textarea', {});
+    const feel = opts({ '': '—', 1: '1 · Distrutto', 2: '2 · Stanco', 3: '3 · Così così', 4: '4 · Bene', 5: '5 · Ottimo' }, '');
+    let ov;
+    const end = () => { S.live = null; save(); ov.remove(); location.hash = 'diario'; render(); };
+    ov = openSheet('Sessione completata', [h('div', { class: 'cols3' }, field('Minuti', min), field('RPE (1-10)', rpe), field('Sensazione', feel)),
+      testRows.length ? [h('h2', {}, 'Risultati dei test'), h('p', { class: 'sub' }, 'Diventano i nuovi massimali per il calcolo dei kg.'), testRows.map(r => field(`${r.def.name} (${r.def.unit})`, r.inp))] : null,
+      loadRows.length ? [h('h2', {}, 'Carichi usati'), loadRows.map(r => field(r.name, r.inp))] : null,
+      field('Note', notes),
+      btn('Salva nel diario', () => {
+        const date = C.todayISO();
+        for (const r of testRows) { const n = val(r.inp); if (n != null) S.tests.push({ id: C.uid(), key: r.def.key, date, value: n }); }
+        S.logs.push({ id: C.uid(), date, planId: p.id, w, d, si, title: `${sessTitle(s)} · ${p.title} S${w + 1}`, minutes: Math.max(0, Math.round(val(min) || 0)), rpe: val(rpe), feel: feel.value ? +feel.value : null,
+          notes: notes.value.trim(), loads: loadRows.map(r => ({ name: r.name, kg: r.inp.value.trim() })).filter(x => x.kg) });
+        log('player', 'sessione salvata', { minuti: minutes });
+        end();
+      }, 'pri block'), btn('Non salvare', end, 'block')]);
+  }
+  function wirePlayer() {
+    $('p-done').onclick = () => next();
+    $('p-back').onclick = () => enter(Math.max(0, P.idx - 1));
+    $('p-plus').onclick = () => { if (P.paused) P.remain += 30000; else P.endAt += 30000; P.lastBeep = null; drawClock(); };
+    $('p-pause').onclick = () => {
+      if (P.paused) { P.endAt = Date.now() + P.remain; P.paused = false; audioInit(); } else { P.remain = P.endAt - Date.now(); P.paused = true; }
+      draw();
+    };
+    $('p-quit').onclick = async () => {
+      const was = P.paused; if (!was) $('p-pause').onclick();
+      const ov = openSheet('Uscire dalla sessione?', h('div', { class: 'btns' },
+        btn('Continua', () => { ov.remove(); if (!was) $('p-pause').onclick(); }), btn('Termina e registra', () => { ov.remove(); finish(); }, 'pri'),
+        btn('Esci (riprendi dopo)', () => { ov.remove(); closePlayer(); P = null; render(); }), btn('Abbandona', () => { ov.remove(); closePlayer(); P = null; S.live = null; save(); render(); }, 'danger')), true);
+      ov.style.zIndex = 50;
+    };
+  }
+
+  /* ---------- Router ---------- */
+  const VIEWS = { oggi: viewToday, piano: viewPlan, giorno: viewDay, diario: viewDiary, progressi: viewProgress, altro: viewMore, libreria: viewLibrary };
+  function render() {
+    const [name, a, b] = (location.hash.slice(1) || 'oggi').split('-');
+    const fn = VIEWS[name] || viewToday;
+    let nodes;
+    try { nodes = fn(+a, +b); }
+    catch (e) { console.error('[ui] errore nella vista ' + name, e); nodes = [h('h1', {}, 'Qualcosa è andato storto'), h('p', { class: 'sub' }, String(e.message || e)), btn('Torna a Oggi', () => { location.hash = 'oggi'; render(); })]; }
+    $('view').replaceChildren(...[nodes].flat(Infinity).filter(n => n != null && n !== false));
+    const tab = { giorno: 'piano', libreria: 'altro' }[name] || (VIEWS[name] ? name : 'oggi');
+    for (const el of document.querySelectorAll('#tabs a')) el.classList.toggle('on', el.getAttribute('href') === '#' + tab);
+  }
+  window.addEventListener('hashchange', () => { for (const o of document.querySelectorAll('.overlay')) o.remove(); window.scrollTo(0, 0); render(); });
+  wirePlayer();
+  render();
+  window.__app = { get state() { return S; }, render }; // utile per debug dalla console
+})();
+</script>
+<script>if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(e=>console.warn('[sw] registrazione fallita',e));</script>
+</body>
+</html>
