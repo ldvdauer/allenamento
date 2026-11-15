@@ -15,14 +15,34 @@
 
   /* ---------- Stato e persistenza ---------- */
   // Primo avvio: nessun piano precaricato, ogni utente importa o crea i propri.
-  const fresh = () => migrate({ v: 4, plans: [], activePlan: null, exercises: {}, logs: [], tests: [] });
+  const fresh = () => migrate({ v: 5, plans: [], activePlan: null, exercises: {}, logs: [], tests: [] });
   /** I test da cui dipendono i kg degli esercizi (e il peso corporeo) devono esistere nella sezione Test. */
   function ensureTests(s) {
     const need = new Set(['bw'].concat(Object.values(s.exercises).filter(e => e.load).flatMap(e => C.refKeys(e.load.ref))));
     for (const t of C.TEST_TEMPLATES) if (need.has(t.key) && !s.testDefs.some(d => d.key === t.key)) s.testDefs.push({ ...t });
     s.testDefs.sort((a, b) => (b.key === 'bw') - (a.key === 'bw'));
   }
+  /** Ogni esercizio di una sessione è un'istanza privata con i suoi parametri: niente è condiviso tra sessioni.
+      Dal testo libero ereditato da un import resta solo ciò che non è un parametro, come nota del blocco. */
+  function privatize(st, sess) {
+    for (const b of sess.blocks) {
+      const e = st.exercises[b.exId];
+      if (!e) continue;
+      const c = JSON.parse(JSON.stringify(e));
+      c.id = C.uid();
+      if (c.prescription && !b.note) { const n = C.leftoverNote(c.prescription); if (n) b.note = n; }
+      delete c.prescription; delete c.base; delete c.minutes;
+      st.exercises[c.id] = c; b.exId = c.id;
+    }
+  }
+  const allSessions = st => st.plans.flatMap(p => p.weeks.flatMap(w => w.flatMap(d => d.sessions))).concat(st.extras);
+  /** Toglie gli esercizi che nessuna sessione usa più. */
+  function prune(st) {
+    const used = new Set(allSessions(st).flatMap(x => x.blocks.map(b => b.exId)));
+    for (const id of Object.keys(st.exercises)) if (!used.has(id)) delete st.exercises[id];
+  }
   function migrate(s) { // completa i campi mancanti di backup vecchi o parziali
+    const fromV = s.v || 1;
     s.extras = Array.isArray(s.extras) ? s.extras : [];
     s.surfaces = Array.isArray(s.surfaces) && s.surfaces.length ? s.surfaces : C.DEFAULT_SURFACES.map(x => ({ ...x }));
     s.settings = Object.assign({ prep: 10, sound: true, gradeScale: 'font', lastBackup: null }, s.settings);
@@ -55,7 +75,11 @@
     s.testDefs = s.testDefs.filter(d => d.mode !== undefined || d.key === 'bw' || refd.has(d.key) || s.tests.some(t => t.key === d.key)); // dei vecchi predefiniti restano solo quelli in uso
     for (const d of s.testDefs) if (d.mode === undefined) Object.assign(d, C.TEST_TEMPLATES.find(t => t.key === d.key) || { mode: 'value' });
     ensureTests(s);
-    s.v = 4;
+    // v5: i parametri (serie, recuperi, %, cue) stanno nel blocco della sessione; spariscono le "versioni" condivise e le descrizioni testuali
+    s.custom = Array.isArray(s.custom) ? s.custom : [];
+    if (fromV < 5) for (const x of allSessions(s)) privatize(s, x);
+    prune(s);
+    s.v = 5;
     return s;
   }
   function load() {
@@ -262,14 +286,14 @@
   }
   // Se la versione ha un nome suo ("Limit Karma"), accanto si legge l'esercizio standard da cui deriva ("Limit bouldering").
   const stdName = e => (e.std && C.STD[e.std] && C.STD[e.std].name !== e.name ? C.STD[e.std].name : '');
-  const exLine = e => [stdName(e), e.prescription, e.surface ? surfName(e.surface) : ''].filter(Boolean).join(' · ');
+  const exLine = e => [stdName(e), C.describe(e), e.surface ? surfName(e.surface) : ''].filter(Boolean).join(' · ');
   function blockRow(b, onclick, drag) {
     const ex = S.exercises[b.exId];
     const grip = drag ? h('span', { class: 'grip', 'data-grip': '', role: 'img', 'aria-label': 'Trascina per riordinare', onclick: e => e.stopPropagation() }, '≡') : null;
     if (!ex) return h('div', { class: 'blk', 'data-id': b.id }, grip, h('span', { class: 'p' }, 'Esercizio rimosso'));
     const hint = loadHint(ex);
     return h('div', { class: 'blk', 'data-id': b.id, onclick, style: onclick ? 'cursor:pointer' : null }, grip,
-      h('div', { class: 'grow' }, h('div', { class: 'n' }, ex.name), h('div', { class: 'p' }, exLine(ex)), hint ? h('div', { class: 'kg' }, hint) : null, propLine(ex)),
+      h('div', { class: 'grow' }, h('div', { class: 'n' }, ex.name), h('div', { class: 'p' }, exLine(ex)), hint ? h('div', { class: 'kg' }, hint) : null, propLine(ex), b.note ? h('div', { class: 'p' }, b.note) : null),
       h('div', { class: 'm' }, b.minutes + ' min'));
   }
   /** Riordino per trascinamento dalla maniglia: la riga segue il dito, l'ordine si salva al rilascio. */
@@ -294,18 +318,20 @@
       document.addEventListener('pointermove', move); document.addEventListener('pointerup', up); document.addEventListener('pointercancel', up);
     });
   }
-  const addBlock = (s, id) => s.blocks.push({ id: C.uid(), exId: id, minutes: C.intervalMinutes(S.exercises[id].interval) || S.exercises[id].minutes || 10 });
+  /** Aggiunge alla sessione un'istanza nuova dell'esercizio, a partire da un modello (standard, personale o test). */
+  function addBlock(s, tpl) {
+    const e = { id: C.uid(), ...JSON.parse(JSON.stringify(tpl)) }, minutes = C.intervalMinutes(e.interval) || e.minutes || 10;
+    delete e.base; delete e.minutes; delete e.prescription;
+    S.exercises[e.id] = e;
+    s.blocks.push({ id: C.uid(), exId: e.id, minutes });
+  }
   /** Esercizio "test" per un test della sezione Test: a fine esercizio chiede il risultato, che aggiorna il massimale. */
   function testExercise(ref) {
-    const hit = Object.values(S.exercises).find(x => x.std === 'test' && x.base && x.load && x.load.ref === ref);
-    if (hit) return hit.id;
     const two = !!C.PAIRS[ref], d = S.testDefs.find(t => t.key === (two ? ref + 'L' : ref));
     const interval = C.normInterval({ rounds: two ? 8 : 4, workSeconds: d.seconds || 45, restSeconds: two ? 90 : 180, selfPaced: !d.seconds, reps: d.reps || 0,
       cues: two ? ['SX · carico crescente', 'DX · carico crescente'] : [d.mode === 'value' ? 'Al massimo' : 'Carico crescente'] });
-    const e = { id: C.uid(), std: 'test', base: true, name: 'Test: ' + (two ? C.PAIRS[ref] : d.name), prescription: C.testLabel(d), slot: 'strength', location: 'off_wall', domain: 'finger_strength',
+    return { std: 'test', name: 'Test: ' + (two ? C.PAIRS[ref] : d.name), slot: 'strength', location: 'off_wall', domain: 'finger_strength',
       intensity: 'max', risk: 'moderate', equipment: [], interval, load: { ref, mode: d.mode === 'lift' ? 'lift' : 'hang', pct: null, test: true }, surface: '' };
-    S.exercises[e.id] = e;
-    return e.id;
   }
   function pickTest(cb) {
     const pairs = pairsPresent();
@@ -324,7 +350,7 @@
       list, s.blocks.length ? null : h('p', { class: 'sub' }, 'Nessun esercizio: aggiungili qui oppure durante la sessione.'),
       h('div', { class: 'btns' },
         btn(done ? 'Ripeti' : 'Avvia', () => startSession(r), 'pri'),
-        edit ? [btn('+ Esercizio', () => pickExercise(id => { addBlock(s, id); save(); render(); }), 'sm'), btn('+ Test', () => pickTest(id => { addBlock(s, id); save(); render(); }), 'sm'),
+        edit ? [btn('+ Esercizio', () => pickExercise(tpl => { addBlock(s, tpl); save(); render(); }), 'sm'), btn('+ Test', () => pickTest(tpl => { addBlock(s, tpl); save(); render(); }), 'sm'),
           btn('Modifica', () => sessionSheet(r), 'sm')] : btn('Modifica', () => go('calendario-' + (r.x ? r.x.date : C.dateOf(r.p, r.w, r.d))), 'sm')));
   }
   const climbText = c => surfName(c.surface) + (c.top ? ' ' + fmtG(c.top) : '') + (c.sends != null ? ` · ${c.sends} ${c.sends === 1 ? 'blocco' : 'blocchi'}` : '');
@@ -376,7 +402,7 @@
       btn('Copia', () => {
         const iso = C.validISO(date.value);
         if (!iso) return toast('Scegli una data valida.');
-        S.extras.push({ ...C.cloneSession(s), date: iso, title: s.title || '' });
+        const copy = { ...C.cloneSession(s), date: iso, title: s.title || '' }; privatize(S, copy); S.extras.push(copy);
         save(); ov.remove(); toast(`Copiata su ${wdOf(iso)} ${fmtDate(iso)}.`); render();
       }, 'pri block')]);
   }
@@ -440,7 +466,7 @@
       S = migrate(obj); calSel = calMonth = null; save(); render(); toast('Backup ripristinato.'); log('import', 'backup ripristinato');
       return;
     }
-    const r = C.importBlokplan(obj, S.exercises); // lancia se non valido: lo stato non viene toccato
+    const r = C.importBlokplan(obj, {}); // lancia se non valido: lo stato non viene toccato
     const title = h('input', { value: r.plan.title }), start = h('input', { type: 'date', value: r.plan.startDate });
     const ov = openSheet('Importa programma', [h('p', { class: 'sub' }, `${r.plan.weeks.length} settimane. Scegli da quando parte: le sessioni compaiono nel calendario.`),
       field('Nome', title), field('Inizio (viene portato al lunedì di quella settimana)', start),
@@ -450,7 +476,9 @@
         r.plan.title = title.value.trim().slice(0, 80) || r.plan.title; r.plan.startDate = C.mondayOf(iso);
         for (const e of r.exercises) S.exercises[e.id] = e;
         ensureTests(S);
-        S.plans.push(r.plan); save(); ov.remove();
+        S.plans.push(r.plan);
+        for (const w of r.plan.weeks) for (const d of w) for (const x of d.sessions) privatize(S, x); // i parametri diventano di ogni sessione
+        prune(S); save(); ov.remove();
         toast(`Importato ${r.plan.title}.`); log('import', 'programma importato', { title: r.plan.title, weeks: r.plan.weeks.length, nuoviEsercizi: r.exercises.length });
         go('calendario-' + r.plan.startDate);
       }, 'pri block')]);
@@ -473,123 +501,93 @@
           save(); ov.remove(); render();
         }, 'sm danger'))]);
   }
-  const exUsage = id => C.usage(S.plans, id) + S.extras.reduce((a, x) => a + x.blocks.filter(y => y.exId === id).length, 0);
+  /** Parametri di un esercizio in questa sessione. Valgono solo qui: gli esercizi di base non hanno descrizioni né valori fissi. */
   function blockSheet(r, bi) {
-    const s = sessOf(r), b = s.blocks[bi], ex = S.exercises[b.exId], n = exUsage(b.exId);
-    const min = numInp(b.minutes);
+    const s = sessOf(r), b = s.blocks[bi], e = S.exercises[b.exId];
     const close = () => { save(); ov.remove(); render(); };
-    const ov = openSheet(ex ? ex.name : 'Esercizio', [ex ? h('p', { class: 'sub' }, exLine(ex)) : null,
-      field('Minuti previsti', min), btn('Salva minuti', () => { b.minutes = Math.max(0, Math.round(val(min) || 0)); close(); }, 'pri block'),
-      h('div', { class: 'btns' }, btn('Sostituisci…', () => pickExercise(id => { b.exId = id; close(); }), 'sm'), btn('Rimuovi', () => { s.blocks.splice(bi, 1); close(); }, 'sm danger')),
-      ex ? h('div', { class: 'btns' }, btn(`Modifica esercizio (${n} ${n === 1 ? 'uso' : 'usi'})`, () => { ov.remove(); exerciseSheet(ex.id); }, 'sm'),
-        n > 1 ? btn('Modifica solo qui', () => { const c = JSON.parse(JSON.stringify(ex)); c.id = C.uid(); S.exercises[c.id] = c; b.exId = c.id; save(); ov.remove(); exerciseSheet(c.id); }, 'sm') : null) : null]);
-  }
-
-  /* ---------- Esercizi ---------- */
-  const secHead = t => h('div', { class: 'sec' }, t);
-  const matches = (e, t) => !t || (e.name + ' ' + exLine(e)).toLowerCase().includes(t);
-  /** Versione predefinita di uno standard: si riusa se c'è, altrimenti si crea. */
-  function useStd(key) {
-    let e = Object.values(S.exercises).find(x => x.std === key && x.base);
-    if (!e) { e = { id: C.uid(), ...C.stdVariant(key) }; S.exercises[e.id] = e; }
-    return e.id;
-  }
-  function pickExercise(cb) {
-    const list = h('div', {}), tabs = h('div', {}), q = h('input', { class: 'inp', placeholder: 'Cerca…', oninput: () => fill() });
-    let ov, tab = 'lib';
-    const row = (name, sub, onclick, tag) => h('div', { class: 'blk', style: 'cursor:pointer', onclick }, h('div', { class: 'grow' }, h('div', { class: 'n' }, name), sub ? h('div', { class: 'p' }, sub) : null), tag ? h('span', { class: 'tag' }, tag) : null);
-    const fill = () => {
-      const t = q.value.trim().toLowerCase(), mine = Object.values(S.exercises).filter(e => !e.base && matches(e, t)).sort((a, b) => a.name.localeCompare(b.name) || a.prescription.localeCompare(b.prescription));
-      tabs.replaceChildren(seg([['lib', 'Libreria'], ['mine', `Le mie versioni (${mine.length})`]], tab, k => { tab = k; fill(); }));
-      const nodes = [];
-      if (tab === 'lib') for (const [sec, label] of Object.entries(C.SECTIONS)) {
-        const items = C.LIBRARY.filter(x => x.section === sec && (!t || x.name.toLowerCase().includes(t)));
-        if (items.length) nodes.push(secHead(label), ...items.map(x => row(x.name, x.interval ? `${x.interval.rounds} round` : `${x.minutes} min`, () => { ov.remove(); cb(useStd(x.key)); })));
-      } else nodes.push(...mine.slice(0, 120).map(e => row(e.name, exLine(e), () => { ov.remove(); cb(e.id); })));
-      if (!nodes.length) nodes.push(h('p', { class: 'sub' }, tab === 'lib' ? 'Niente in libreria con questo nome: guarda tra le tue versioni o creane uno con "+ Nuovo".' : 'Nessuna versione: scegli dalla libreria e personalizzala toccandola nella sessione.'));
-      list.replaceChildren(...nodes);
-    };
-    ov = openSheet('Scegli esercizio', [h('div', { class: 'row' }, h('div', { class: 'grow' }, q), btn('+ Nuovo', () => { ov.remove(); exerciseSheet(null, cb); }, 'sm pri')), tabs, list]);
-    fill();
-  }
-
-  function exerciseSheet(id, onCreate) {
-    const isNew = !id, e = isNew ? { id: C.uid(), std: null, name: '', prescription: '', slot: 'wall', location: 'wall', domain: 'other', intensity: 'moderate', risk: 'low', equipment: [], interval: null, load: null, surface: '' } : S.exercises[id];
+    if (!e) { const ov0 = openSheet('Esercizio rimosso', btn('Togli dalla sessione', () => { s.blocks.splice(bi, 1); save(); ov0.remove(); render(); }, 'danger block')); return; }
     const iv = e.interval || {}, ld = e.load || {};
-    const name = h('input', { value: e.name, placeholder: 'Limit MoonBoard' }), pres = h('input', { value: e.prescription, placeholder: '≥ 3 tentativi per problema' });
-    const slot = opts(C.SLOTS, e.slot);
+    const name = h('input', { value: e.name }), min = numInp(b.minutes), note = h('input', { value: b.note || '', placeholder: 'Facoltativa: indicazioni per questa sessione' });
     const sfSel = opts(surfOpts().concat([['+new', '＋ Aggiungi nuova…']]), e.surface || '', { onchange: () => sync() }), sfNew = h('input', { placeholder: 'Es. Spray wall' });
     const sfNewField = field('Nome della nuova superficie', sfNew);
-    const mode = opts([['none', 'Solo durata (nessun timer)'], ['timed', 'A tempo (countdown)'], ['reps', 'A ripetizioni (tocco "Fatto")']], !e.interval ? 'none' : iv.selfPaced ? 'reps' : 'timed', { onchange: () => sync() });
+    const mode = opts([['none', 'Solo durata'], ['timed', 'A tempo (countdown)'], ['reps', 'A ripetizioni (tocco "Fatto")']], !e.interval ? 'none' : iv.selfPaced ? 'reps' : 'timed', { onchange: () => sync() });
     const rounds = numInp(iv.rounds || 3), work = numInp(iv.workSeconds || 7), rest = numInp(iv.restSeconds == null ? 180 : iv.restSeconds);
     const reps = numInp(iv.reps), perSet = numInp(iv.roundsPerSet), setRest = numInp(iv.setRestSeconds);
-    const cues = h('textarea', { placeholder: 'Un cue per riga, ripetuti a rotazione\nSX · 75% max\nDX · 75% max' }); cues.value = (iv.cues || []).join('\n');
-    const std = opts([['', 'Nessuno (personalizzato)']].concat(C.LIBRARY.map(x => [x.key, x.name]), [['test', 'Test']]), e.std || '');
+    const cues = h('textarea', { placeholder: 'Uno per riga, a rotazione sui round\nSX\nDX' }); cues.value = (iv.cues || []).join('\n');
     const pairs = pairsPresent();
     const refs = [['', 'Nessuno']].concat(S.testDefs.filter(t => t.key !== 'bw' && !inPair(t.key, pairs)).map(t => [t.key, t.name]), pairs.map(k => [k, C.PAIRS[k] + ' (SX/DX dal cue)']));
     const ref = opts(refs, ld.ref || ''), pct = numInp(ld.pct);
-    const lmode = opts({ hang: 'Zavorra su peso corporeo', lift: 'Carico sollevato' }, ld.mode || 'hang'), isTest = h('input', { type: 'checkbox', checked: ld.test });
-    const timer = h('div', {}, h('div', { class: 'cols3' }, field('Round', rounds), field('Lavoro (s)', work), field('Recupero (s)', rest)),
-      h('div', { class: 'cols3' }, field('Rip. (facolt.)', reps), field('Round per serie', perSet), field('Rec. serie (s)', setRest)), field('Cue', cues));
-    const sync = () => { timer.hidden = mode.value === 'none'; sfNewField.hidden = sfSel.value !== '+new'; };
-    let ov;
-    const body = [field('Nome', name), field('Versione di (esercizio standard)', std), field('Prescrizione', pres),
-      h('div', { class: 'cols' }, field('Sezione', slot), field('Superficie di arrampicata', sfSel)), sfNewField, field('Timer', mode), timer,
-      h('h2', {}, 'Carico'), h('div', { class: 'cols' }, field('Test di riferimento', ref), field('% del massimale', pct)),
-      h('div', { class: 'cols' }, field('Tipo di carico', lmode), h('label', { class: 'f' }, 'È un test', h('div', { style: 'margin-top:12px' }, isTest, ' chiede il risultato a fine esercizio'))),
-      btn(isNew ? 'Crea esercizio' : 'Salva', () => {
+    const workF = field('Lavoro (s)', work), repsF = field('Ripetizioni', reps);
+    const timer = h('div', {}, h('div', { class: 'cols3' }, field('Round', rounds), workF, repsF, field('Recupero (s)', rest)),
+      h('div', { class: 'cols' }, field('Round per serie (facolt.)', perSet), field('Recupero tra serie (s)', setRest)), field('Cue', cues));
+    const sync = () => { timer.hidden = mode.value === 'none'; workF.hidden = mode.value !== 'timed'; repsF.hidden = mode.value !== 'reps'; sfNewField.hidden = sfSel.value !== '+new'; };
+    const isTest = !!ld.test;
+    const ov = openSheet(e.std && C.STD[e.std] ? C.STD[e.std].name : e.name, [h('p', { class: 'sub' }, 'Parametri di questo esercizio in questa sessione.'),
+      h('div', { class: 'cols' }, field('Nome', name), field('Minuti previsti', min)), field('Timer', mode), timer,
+      isTest ? null : h('div', { class: 'cols' }, field('Carico: test di riferimento', ref), field('% del massimale', pct)),
+      e.slot === 'wall' || e.slot === 'warmup' || e.surface ? [field('Superficie di arrampicata', sfSel), sfNewField] : null,
+      field('Nota', note),
+      btn('Salva', () => {
         if (!name.value.trim()) return toast('Serve un nome.');
         let sf = sfSel.value;
-        if (sf === '+new') {
-          const nm = sfNew.value.trim().slice(0, 40);
-          if (!nm) return toast('Scrivi il nome della nuova superficie.');
-          sf = addSurface(nm);
-        }
-        e.name = name.value.trim().slice(0, 200); e.prescription = pres.value.trim().slice(0, 200); e.slot = slot.value; e.surface = sf; e.std = std.value || null; e.base = false;
-        e.location = e.slot === 'wall' || e.slot === 'warmup' ? 'wall' : 'off_wall';
-        e.interval = mode.value === 'none' ? null : C.normInterval({ rounds: Math.max(1, val(rounds) || 1), workSeconds: val(work) || 0, restSeconds: val(rest) || 0, selfPaced: mode.value === 'reps',
-          reps: val(reps) || 0, roundsPerSet: val(perSet) || 0, setRestSeconds: val(setRest) || 0, cues: cues.value.split('\n').map(s => s.trim()).filter(Boolean) });
-        e.load = ref.value ? { ref: ref.value, mode: lmode.value, pct: val(pct), test: isTest.checked } : null;
-        S.exercises[e.id] = e; save(); ov.remove(); render();
-        if (isNew && onCreate) onCreate(e.id);
-      }, 'pri block')];
-    if (!isNew) {
-      const n = exUsage(e.id);
-      body.push(h('div', { class: 'btns' }, btn(n ? `In uso in ${n} blocchi` : 'Elimina dalla libreria', async () => {
-        if (n) return toast('Rimuovilo prima dalle sessioni che lo usano.');
-        if (await confirmDlg(`Eliminare "${e.name}" dalla libreria?`, 'Elimina')) { delete S.exercises[e.id]; save(); ov.remove(); render(); }
-      }, 'sm danger')));
-    }
-    ov = openSheet(isNew ? 'Nuovo esercizio' : 'Modifica esercizio', body);
+        if (sf === '+new') { const nm = sfNew.value.trim().slice(0, 40); if (!nm) return toast('Scrivi il nome della nuova superficie.'); sf = addSurface(nm); }
+        e.name = name.value.trim().slice(0, 80); e.surface = sf;
+        e.interval = mode.value === 'none' ? null : C.normInterval({ rounds: Math.max(1, val(rounds) || 1), workSeconds: mode.value === 'timed' ? val(work) || 0 : 45, restSeconds: val(rest) || 0, selfPaced: mode.value === 'reps',
+          reps: mode.value === 'reps' ? val(reps) || 0 : 0, roundsPerSet: val(perSet) || 0, setRestSeconds: val(setRest) || 0, cues: cues.value.split('\n').map(x => x.trim()).filter(Boolean) });
+        if (!isTest) { const d = S.testDefs.find(t => t.key === C.refKeys(ref.value)[0]); e.load = ref.value ? { ref: ref.value, mode: d && d.mode === 'hang' ? 'hang' : 'lift', pct: val(pct), test: false } : null; }
+        const m = val(min); b.minutes = m == null ? C.intervalMinutes(e.interval) || b.minutes : Math.max(0, Math.round(m));
+        b.note = note.value.trim().slice(0, 200);
+        close();
+      }, 'pri block'),
+      h('div', { class: 'btns' }, btn('Sostituisci…', () => pickExercise(tpl => { s.blocks.splice(bi, 1); addBlock(s, tpl); s.blocks.splice(bi, 0, s.blocks.pop()); close(); }), 'sm'), btn('Rimuovi', () => { s.blocks.splice(bi, 1); close(); }, 'sm danger'))]);
     sync();
   }
 
-  function stdSheet(x) {
-    const vers = Object.values(S.exercises).filter(e => e.std === x.key).sort((a, b) => (b.base ? 1 : 0) - (a.base ? 1 : 0) || a.name.localeCompare(b.name) || a.prescription.localeCompare(b.prescription));
-    const ov = openSheet(x.name, [h('p', { class: 'sub' }, `${C.SECTIONS[x.section]} · ${x.interval ? x.interval.rounds + ' round' : x.minutes + ' min'} di base`),
-      vers.length ? vers.map(e => h('div', { class: 'blk', style: 'cursor:pointer', onclick: () => { ov.remove(); exerciseSheet(e.id); } },
-        h('div', { class: 'grow' }, h('div', { class: 'n' }, e.name + (e.base ? ' (predefinita)' : '')), h('div', { class: 'p' }, [e.prescription, e.surface ? surfName(e.surface) : ''].filter(Boolean).join(' · '))), h('div', { class: 'm' }, exUsage(e.id) + ' usi')))
-        : h('p', { class: 'sub' }, 'Ancora nessuna versione.'),
-      btn('Nuova versione', () => { const e = { id: C.uid(), ...C.stdVariant(x.key), base: false }; S.exercises[e.id] = e; save(); ov.remove(); exerciseSheet(e.id); }, 'pri block')]);
+  /* ---------- Esercizi: libreria standard + esercizi propri (solo nome e sezione; i parametri si impostano nella sessione) ---------- */
+  const secHead = t => h('div', { class: 'sec' }, t);
+  const customTpl = c => ({ std: null, custom: c.key, name: c.name, slot: c.slot, location: c.slot === 'wall' || c.slot === 'warmup' ? 'wall' : 'off_wall', domain: 'other', intensity: 'moderate', risk: 'low', equipment: [], interval: null, load: null, surface: '' });
+  function customSheet(onDone) {
+    const name = h('input', { placeholder: 'Es. Circuito spray' }), slot = opts(C.SLOTS, 'wall');
+    const ov = openSheet('Nuovo esercizio', [h('p', { class: 'sub' }, 'Entra nella tua libreria. Serie, tempi e carichi li imposti ogni volta nella sessione.'), h('div', { class: 'cols' }, field('Nome', name), field('Sezione', slot)),
+      btn('Crea esercizio', () => {
+        const n = name.value.trim().slice(0, 80);
+        if (!n) return toast('Serve un nome.');
+        const c = { key: 'c-' + C.uid().slice(0, 8), name: n, slot: slot.value };
+        S.custom.push(c); save(); ov.remove();
+        if (onDone) onDone(customTpl(c)); else render();
+      }, 'pri block')]);
+  }
+  function pickExercise(cb) {
+    const list = h('div', {}), q = h('input', { class: 'inp', placeholder: 'Cerca…', oninput: () => fill() });
+    let ov;
+    const row = (name, sub, tpl) => h('div', { class: 'blk', style: 'cursor:pointer', onclick: () => { ov.remove(); cb(tpl()); } }, h('div', { class: 'grow n' }, name), sub ? h('div', { class: 'm' }, sub) : null);
+    const fill = () => {
+      const t = q.value.trim().toLowerCase(), nodes = [], mine = S.custom.filter(c => !t || c.name.toLowerCase().includes(t));
+      if (mine.length) nodes.push(secHead('I miei esercizi'), ...mine.map(c => row(c.name, '', () => customTpl(c))));
+      for (const [sec, label] of Object.entries(C.SECTIONS)) {
+        const items = C.LIBRARY.filter(x => x.section === sec && (!t || x.name.toLowerCase().includes(t)));
+        if (items.length) nodes.push(secHead(label), ...items.map(x => row(x.name, '', () => C.stdVariant(x.key))));
+      }
+      list.replaceChildren(...(nodes.length ? nodes : [h('p', { class: 'sub' }, 'Nessun esercizio con questo nome: crealo con "+ Nuovo".')]));
+    };
+    ov = openSheet('Scegli esercizio', [h('div', { class: 'row' }, h('div', { class: 'grow' }, q), btn('+ Nuovo', () => { ov.remove(); customSheet(cb); }, 'sm pri')), list]);
+    fill();
   }
   function viewLibrary() {
     const list = h('div', {}), q = h('input', { class: 'inp', placeholder: 'Cerca…', oninput: () => fill() });
-    const count = k => Object.values(S.exercises).filter(e => e.std === k && !e.base).length;
     const fill = () => {
-      const t = q.value.trim().toLowerCase(), nodes = [];
+      const t = q.value.trim().toLowerCase(), nodes = [], mine = S.custom.filter(c => !t || c.name.toLowerCase().includes(t));
+      if (mine.length) nodes.push(secHead('I miei esercizi'), ...mine.map(c => h('div', { class: 'blk' }, h('div', { class: 'grow' }, h('div', { class: 'n' }, c.name), h('div', { class: 'p' }, C.SLOTS[c.slot])),
+        btn('Elimina', async () => { if (await confirmDlg(`Eliminare "${c.name}" dalla libreria? Le sessioni che lo contengono non cambiano.`, 'Elimina')) { S.custom = S.custom.filter(x => x !== c); save(); render(); } }, 'sm danger'))));
       for (const [sec, label] of Object.entries(C.SECTIONS)) {
         const items = C.LIBRARY.filter(x => x.section === sec && (!t || x.name.toLowerCase().includes(t)));
-        if (items.length) nodes.push(secHead(label), ...items.map(x => { const n = count(x.key); return h('div', { class: 'blk', style: 'cursor:pointer', onclick: () => stdSheet(x) }, h('div', { class: 'grow n' }, x.name), h('div', { class: 'm' }, n ? `${n} ${n === 1 ? 'versione' : 'versioni'}` : '')); }));
-      }
-      for (const [label, f] of [['Test', e => e.std === 'test'], ['Personalizzati (senza standard)', e => !e.std]]) {
-        const items = Object.values(S.exercises).filter(e => f(e) && matches(e, t)).sort((a, b) => a.name.localeCompare(b.name));
-        if (items.length) nodes.push(secHead(label), ...items.map(e => h('div', { class: 'blk', style: 'cursor:pointer', onclick: () => exerciseSheet(e.id) }, h('div', { class: 'grow' }, h('div', { class: 'n' }, e.name), h('div', { class: 'p' }, exLine(e))), h('div', { class: 'm' }, exUsage(e.id) + ' usi'))));
+        if (items.length) nodes.push(secHead(label), ...items.map(x => h('div', { class: 'blk' }, h('div', { class: 'grow n' }, x.name))));
       }
       list.replaceChildren(...(nodes.length ? nodes : [h('p', { class: 'sub' }, 'Nessun risultato.')]));
     };
     fill();
-    return [h('div', { class: 'row' }, btn('‹ Altro', () => { location.hash = 'altro'; }, 'sm'), btn('+ Nuovo', () => exerciseSheet(null), 'sm pri right')),
-      h('h1', { style: 'margin-top:10px' }, 'Esercizi'), h('div', { class: 'sub' }, `${C.LIBRARY.length} esercizi standard. Ogni esercizio nel calendario è una versione personalizzata di uno di questi.`),
+    return [h('div', { class: 'row' }, btn('‹ Altro', () => { location.hash = 'altro'; }, 'sm'), btn('+ Nuovo', () => customSheet(null), 'sm pri right')),
+      h('h1', { style: 'margin-top:10px' }, 'Esercizi'), h('div', { class: 'sub' }, 'Gli esercizi di base hanno solo un nome. Serie, tempi, ripetizioni e carichi sono parametri che imposti in ogni sessione.'),
       h('div', { style: 'margin-top:10px' }, q), h('div', { class: 'card' }, list)];
   }
 
@@ -783,7 +781,7 @@
     const prep = numInp(S.settings.prep), sound = h('input', { type: 'checkbox', checked: S.settings.sound, onchange: () => { S.settings.sound = sound.checked; save(); } });
     const sfNew = h('input', { class: 'inp', style: 'margin:0', placeholder: 'Nuova superficie' });
     return [h('h1', {}, 'Altro'),
-      h('div', { class: 'card tap row', onclick: () => { location.hash = 'libreria'; } }, h('div', { class: 'grow' }, h('div', { class: 'n', style: 'font-weight:600' }, 'Libreria esercizi'), h('div', { class: 'sub' }, Object.keys(S.exercises).length + ' esercizi')), '›'),
+      h('div', { class: 'card tap row', onclick: () => { location.hash = 'libreria'; } }, h('div', { class: 'grow' }, h('div', { class: 'n', style: 'font-weight:600' }, 'Libreria esercizi'), h('div', { class: 'sub' }, (C.LIBRARY.length + S.custom.length) + ' esercizi')), '›'),
       h('h2', {}, 'Programmi'), h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin-top:0' }, 'Un programma è un insieme di sessioni: lo importi, scegli da quando parte e lo ritrovi nel calendario.'),
         S.plans.map(p => h('div', { class: 'blk', style: 'cursor:pointer', onclick: () => planSheet(p) }, h('div', { class: 'grow' }, h('div', { class: 'n' }, p.title),
           h('div', { class: 'p' }, `${fmtDate(p.startDate)} – ${fmtDate(C.dateOf(p, p.weeks.length - 1, 6))} · ${p.weeks.length} settimane`)), h('div', { class: 'm' }, '›'))),
@@ -848,7 +846,7 @@
     $('runner').replaceChildren(h('div', { class: 'in' },
       h('div', { class: 'row' }, h('div', { class: 'grow' }, h('div', { class: 'sub' }, 'Sessione in corso'), h('h1', {}, s.title || 'Sessione')), btn('Esci', quit, 'sm')),
       h('div', { class: 'card' }, s.blocks.map(row), s.blocks.length ? null : h('p', { class: 'sub', style: 'margin:0' }, 'Nessun esercizio: aggiungine uno per iniziare.')),
-      h('div', { class: 'btns' }, btn('+ Esercizio', () => pickExercise(id => { addBlock(s, id); save(); drawRunner(); }), ''), btn('+ Test', () => pickTest(id => { addBlock(s, id); save(); drawRunner(); }), ''),
+      h('div', { class: 'btns' }, btn('+ Esercizio', () => pickExercise(tpl => { addBlock(s, tpl); save(); drawRunner(); }), ''), btn('+ Test', () => pickTest(tpl => { addBlock(s, tpl); save(); drawRunner(); }), ''),
         btn('Termina sessione', finishSession, nextB ? '' : 'pri'))));
   }
 

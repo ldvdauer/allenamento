@@ -49,6 +49,9 @@ ok(await pg.evaluate(() => location.hash === '#calendario-2026-11-16'), 'dopo l\
 let cal = await txt('#view');
 ok(cal.includes('TEST open hand') && cal.includes('KB press 1 braccio') && !/Fuori muro|Muro ·/.test(cal), 'una sola sessione al giorno, senza etichette Muro / Fuori muro');
 ok(await pg.evaluate(() => __app.state.plans[0].weeks.every(w => w.every(d => d.sessions.length <= 1))), 'ogni giorno del programma ha al massimo una sessione');
+ok(await pg.evaluate(() => Object.values(__app.state.exercises).every(e => !('prescription' in e) && !('base' in e)) && new Set(__app.state.plans[0].weeks.flatMap(w => w.flatMap(d => d.sessions.flatMap(x => x.blocks.map(b => b.exId))))).size === Object.keys(__app.state.exercises).length), 'import: nessuna descrizione testuale negli esercizi; ogni blocco ha i suoi parametri (nessuna versione condivisa)');
+await go('calendario-2026-11-25');
+ok((await txt('#view')).includes('4 × 7" · rec. 3\' · 82,5%') && (await txt('#view')).includes('margine 2-3"'), 'la riga dell\'esercizio nasce dai parametri; il testo non parametrico resta come nota della sessione');
 await shot('1-calendario');
 
 // Massimali → kg
@@ -111,15 +114,13 @@ await clickText('Salva', '.sheet');
 // Aggiungere un esercizio durante la sessione
 const nBlocks = (await pg.$$('#runner .run-r')).length;
 await clickText('+ Esercizio', '#runner');
-ok((await txt('.sheet')).includes('DITA') && (await txt('.sheet')).includes('Limit bouldering'), 'scelta esercizio: libreria standard per sezioni');
-await clickText('Le mie versioni', '.sheet'); await pg.type('.sheet input', 'Limit Moon'); await sleep(80);
-ok((await txt('.sheet')).includes('Limit bouldering ·'), 'le versioni mostrano lo standard da cui derivano');
-await clickText('Limit MoonBoard', '.sheet', true);
+ok((await txt('.sheet')).includes('DITA') && (await txt('.sheet')).includes('Limit bouldering') && !/versioni|Karma|MoonBoard/.test(await txt('.sheet')), 'scelta esercizio: solo esercizi di base per sezione, niente ereditato dal programma');
+await pg.type('.sheet input', 'limit'); await sleep(80); await clickText('Limit bouldering', '.sheet', true);
 ok((await pg.$$('#runner .run-r')).length === nBlocks + 1, 'esercizio aggiunto durante la sessione');
 await pg.evaluate(() => { const r = [...document.querySelectorAll('#runner .run-r')]; r[r.length - 1].querySelector('button').click(); }); await sleep(60);
-ok((await txt('#p-name')) === 'Limit MoonBoard' && (await txt('#p-round')) === 'MoonBoard', 'il nuovo esercizio parte con il suo timer e la sua superficie');
+ok((await txt('#p-name')) === 'Limit bouldering' && (await txt('#p-clock')) === '40:00', 'il nuovo esercizio parte con il suo timer (durata di base)');
 await adv(6 * 60000); await pg.click('#p-quit');
-ok((await pg.$eval('.sheet select', e => e.value)) === 'moonboard', 'registrazione: superficie precompilata');
+await pg.select('.sheet .cols label:nth-child(1) select', 'moonboard');
 await pg.select('.sheet .cols label:nth-child(2) select', '7A+');
 await pg.type('.sheet .cols + label input', '3');
 await pg.type('.sheet label:last-of-type input', 'buone sensazioni');
@@ -156,11 +157,17 @@ ok(await pg.evaluate(() => location.hash === '#calendario-2026-12-25') && (await
 await clickText('+ Esercizio', '#view'); await clickText('+ Nuovo');
 await pg.type('.sheet input', 'Circuito spray'); await clickText('Crea esercizio');
 ok((await txt('#view')).includes('Circuito spray'), 'esercizio nuovo aggiunto alla sessione');
-// Libreria standard → versione predefinita riusata; test aggiunto alla sessione → risultato nella sezione Test
-await clickText('+ Esercizio', '#view'); await pg.type('.sheet input', 'trazioni zav'); await sleep(80); await clickText('Trazioni zavorrate', '.sheet', true);
+// Libreria → ogni aggiunta è un'istanza con parametri propri: modificarne una non tocca l'altra
 await clickText('+ Esercizio', '#view'); await pg.type('.sheet input', 'max hang'); await sleep(80); await clickText('Max hang', '.sheet', true);
 await clickText('+ Esercizio', '#view'); await pg.type('.sheet input', 'max hang'); await sleep(80); await clickText('Max hang', '.sheet', true);
-ok(await pg.evaluate(() => { const s = __app.state, x = s.extras[0], ids = x.blocks.slice(-2).map(b => b.exId); return ids[0] === ids[1] && s.exercises[ids[0]].std === 'max-hang' && s.exercises[ids[0]].base && x.blocks[x.blocks.length - 1].minutes === 10; }), 'libreria: lo standard si aggiunge con i suoi valori e la versione predefinita si riusa');
+ok(await pg.evaluate(() => { const s = __app.state, x = s.extras[0], ids = x.blocks.slice(-2).map(b => b.exId); return ids[0] !== ids[1] && s.exercises[ids[0]].std === 'max-hang' && x.blocks[x.blocks.length - 1].minutes === 10; }), 'libreria: lo standard si aggiunge con i valori di base, come istanza separata');
+await pg.evaluate(() => { const r = [...document.querySelectorAll('#view .blk')].filter(x => x.innerText.includes('Max hang')); r[r.length - 1].click(); }); await sleep(60); // l'ultimo dei due
+await pg.evaluate(() => { const l = [...document.querySelectorAll('.sheet label')]; const set = (t, v) => { const i = l.find(x => x.innerText.startsWith(t)).querySelector('input,select'); i.value = v; i.dispatchEvent(new Event('change')); };
+  set('Round', '6'); set('Lavoro', '10'); set('Recupero (s)', '150'); set('Carico: test', 'hc'); set('% del', '90'); set('Minuti', ''); set('Nota', 'margine 1"'); });
+await clickText('Salva', '.sheet');
+const mh = await txt('#view');
+ok(mh.includes('6 × 10" · rec. 2\'30" · 90%') && mh.includes('4 × 7" · rec. 3\'') && mh.includes('margine 1"'), 'parametri (round, secondi, recupero, %) impostati nella sessione: valgono solo per quel blocco');
+ok(await pg.evaluate(() => { const x = __app.state.extras[0]; return x.blocks[x.blocks.length - 1].minutes === 14; }), 'minuti ricalcolati dai parametri');
 await clickText('+ Test', '#view');
 ok((await txt('.sheet')).includes('Half-crimp') && (await txt('.sheet')).includes('SX e DX'), '+ Test: elenco dei test definiti');
 await clickText('Half-crimp', '.sheet', true);
@@ -182,7 +189,7 @@ await clickText('Crea test', '.sheet');
 ok((await txt('#view')).includes('Hang a una mano') && (await txt('#view')).includes('22 mm · una mano'), 'test personalizzato: tacca, mani e unità sono parametri');
 await shot('11-test', true);
 await go('libreria'); await shot('12-libreria');
-ok((await txt('#view')).includes('Limit bouldering') && /Limit bouldering\s+\d+ versioni/.test(await txt('#view')), 'libreria: standard con il numero di versioni');
+ok((await txt('#view')).includes('Limit bouldering') && (await txt('#view')).includes('I MIEI ESERCIZI') && (await txt('#view')).includes('Circuito spray') && !/versioni|Karma|\d ×/.test(await txt('#view')), 'libreria: solo nomi, più i miei esercizi; nessun parametro né descrizione');
 await go('calendario-2026-12-25');
 await shot('8-calendario-giorno');
 
@@ -219,7 +226,7 @@ await pg.evaluate(() => { __app.state.settings.gh = null; });
 
 // Persistenza e migrazione di un backup v2 con due sessioni nello stesso giorno
 await pg.reload();
-ok(await pg.evaluate(() => __app.state.logs.length === 2 && __app.state.extras.length === 1 && __app.state.v === 4), 'i dati sopravvivono al ricaricamento');
+ok(await pg.evaluate(() => __app.state.logs.length === 2 && __app.state.extras.length === 1 && __app.state.v === 5), 'i dati sopravvivono al ricaricamento');
 const mig = await pg.evaluate(async () => {
   const mk = (id, ex) => ({ id, type: 'wall', period: 'base', blocks: [{ id: id + 'b', exId: ex, minutes: 5 }] });
   const old = { v: 2, plans: [{ id: 'p', title: 'Vecchio', startDate: '2026-11-23', weeks: [[{ sessions: [mk('s1', 'e1'), mk('s2', 'e2')] }, ...Array.from({ length: 6 }, () => ({ sessions: [] }))]] }],

@@ -237,6 +237,25 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
     return steps;
   }
 
+  /* ---- Parametri di un esercizio in una sessione → riga leggibile ---- */
+  const fmtRest = s => (s >= 60 ? Math.floor(s / 60) + "'" + (s % 60 ? String(s % 60).padStart(2, '0') + '"' : '') : s + '"');
+  /** "4 × 7" · rec. 3' · 85%" a partire dai parametri (timer e carico), mai da un testo libero. */
+  function describe(e) {
+    const iv = e.interval, out = [];
+    if (iv && iv.rounds) {
+      const sets = iv.roundsPerSet && iv.rounds % iv.roundsPerSet === 0 ? iv.rounds / iv.roundsPerSet : 0;
+      const unit = iv.selfPaced ? (iv.reps ? iv.reps + ' rip.' : '') : iv.workSeconds + '"';
+      const count = sets ? `${sets} serie × ${iv.roundsPerSet}` : String(iv.rounds);
+      out.push(unit ? `${count} × ${unit}` : sets ? count : `${count} round`);
+      if (iv.restSeconds) out.push('rec. ' + fmtRest(iv.restSeconds) + (sets && iv.setRestSeconds ? ' / ' + fmtRest(iv.setRestSeconds) + ' tra le serie' : ''));
+    }
+    if (e.load && e.load.pct != null) out.push(String(e.load.pct).replace('.', ',') + '%');
+    return out.join(' · ');
+  }
+  /** Di una prescrizione testuale importata tiene solo ciò che non è un parametro (serie, recuperi, %): diventa la nota del blocco. */
+  const leftoverNote = text => String(text || '').split(' · ').map(x => x.trim())
+    .filter(x => x && !/^\d+\s*(×|x|blocchi|serie)\b/i.test(x) && !/^\d+ (×|x) /i.test(x) && !/\brec\./i.test(x) && !/\d\s*%/.test(x) && !/^test$/i.test(x)).join(' · ');
+
   /* ---- Import / export .blokplan ---- */
   const str = (v, d) => (typeof v === 'string' ? v.slice(0, 200) : d);
   const int = v => (Number.isFinite(+v) && +v >= 0 ? Math.round(+v) : 0);
@@ -298,10 +317,12 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
     const pb = b => {
       const e = exMap[b.exId];
       if (!e) return null;
+      // I parametri stanno nel blocco: la riga descrittiva del file si genera da quelli, più l'eventuale nota.
+      const presc = e.prescription != null ? e.prescription : [describe(e), b.note].filter(Boolean).join(' · ').slice(0, 200);
       const block = {
         id: 'custom-' + e.id.toUpperCase(), sourceName: 'Climber', name: e.name, slot: e.slot, location: e.location,
         domain: e.domain, goals: [], equipment: e.equipment || [], durations: [b.minutes], defaultMinutes: b.minutes,
-        intensity: e.intensity, risk: e.risk, periodTags: allPeriods, summary: e.prescription, prescription: e.prescription,
+        intensity: e.intensity, risk: e.risk, periodTags: allPeriods, summary: presc, prescription: presc,
         source: 'Custom', reviewNeeded: false,
       };
       if (e.interval) {
@@ -482,7 +503,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
   }
 
   return {
-    PAIRS, refKeys, recordsOf, lastRecord, nextLoad, TEST_TEMPLATES, testLabel, SECTIONS, LIBRARY, STD, stdVariant, matchStd,
+    describe, leftoverNote, fmtRest, PAIRS, refKeys, recordsOf, lastRecord, nextLoad, TEST_TEMPLATES, testLabel, SECTIONS, LIBRARY, STD, stdVariant, matchStd,
     DAY_TYPES, PERIODS, SLOTS, GRADES, GRADE_SCALES, gradeIdx, fmtGrade, DEFAULT_SURFACES, inferSurface, validISO, uid, toISO, fromISO, todayISO, addDays, diffDays, appleToISO, isoToApple, mondayOf,
     inferLoad, loadKey, loadKg, latestMaxes, fmtKg, cycle, cueAt, intervalMinutes, buildSteps, normInterval,
     importBlokplan, exportBlokplan, locate, dateOf, sessionMinutes, cloneSession, cloneDay, emptyWeek, usage, validState,

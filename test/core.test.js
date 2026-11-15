@@ -277,3 +277,23 @@ test('progressione e serie per esercizio standard: hang a due mani, lift per lat
   assert.equal(C.lastRecord(logs, 'max-hang|oh').kgs[0].kg, 8); // log vecchio ricondotto allo standard dal nome
   assert.equal(C.lastRecord(logs, 'nessuno'), null);
 });
+
+test('parametri → riga descrittiva; dalle prescrizioni importate resta solo la nota', () => {
+  assert.equal(C.describe({ interval: { rounds: 4, workSeconds: 7, restSeconds: 180, cues: [] }, load: { ref: 'hc', pct: 87.5 } }), '4 × 7" · rec. 3\' · 87,5%');
+  assert.equal(C.describe({ interval: { rounds: 3, workSeconds: 45, restSeconds: 90, selfPaced: true, reps: 8, cues: [] } }), '3 × 8 rip. · rec. 1\'30"');
+  assert.equal(C.describe({ interval: { rounds: 18, workSeconds: 60, restSeconds: 120, selfPaced: true, roundsPerSet: 3, setRestSeconds: 300, cues: [] } }), '6 serie × 3 · rec. 2\' / 5\' tra le serie');
+  assert.equal(C.describe({ interval: { rounds: 2, workSeconds: 30, restSeconds: 45, selfPaced: true, cues: [] } }), '2 round · rec. 45"');
+  assert.equal(C.describe({ interval: null, load: null }), '');
+  assert.equal(C.leftoverNote('4 × 7" · 85% max · margine 2-3"'), 'margine 2-3"');
+  assert.equal(C.leftoverNote('2 × 6-8 · rec. 2\''), '');
+  assert.equal(C.leftoverNote('3 × 7" per mano · 75% max'), '');
+  assert.equal(C.leftoverNote('6 blocchi × 3 rip. · rec. 2\' / 5\' tra blocchi'), '');
+  assert.equal(C.leftoverNote('3 serie per lato · singolo movimento'), 'singolo movimento');
+  assert.equal(C.leftoverNote('≥ 3 tentativi per problema · stop quando cala la qualità'), '≥ 3 tentativi per problema · stop quando cala la qualità');
+  assert.equal(C.leftoverNote('TEST · Carico crescente'), 'Carico crescente');
+  assert.equal(C.leftoverNote(''), '');
+  // export: senza testo libero la riga del file nasce dai parametri e dalla nota del blocco
+  const ex = { e1: { id: 'e1', name: 'Max hang', slot: 'strength', location: 'off_wall', domain: 'x', intensity: 'max', risk: 'low', interval: { rounds: 4, workSeconds: 7, restSeconds: 180, cues: [] }, load: { ref: 'hc', pct: 85 } } };
+  const plan = { title: 'P', startDate: '2026-11-16', weeks: [[{ sessions: [{ id: 's', type: 'wall', period: 'base', blocks: [{ id: 'b', exId: 'e1', minutes: 10, note: 'margine 2"' }] }] }, ...Array.from({ length: 6 }, () => ({ sessions: [] }))]] };
+  assert.equal(C.exportBlokplan(plan, ex).weeks[0][0].plannedBlocks[0].block.prescription, '4 × 7" · rec. 3\' · 85% · margine 2"');
+});
