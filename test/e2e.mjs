@@ -200,6 +200,23 @@ await shot('9-altro');
 await go('analisi'); ok((await txt('#view')).includes('Volume settimanale') && !(await txt('#view')).includes('tipo di sessione'), 'Analisi: grafici presenti, niente "tipo di sessione"');
 await shot('10-analisi', true);
 
+// Backup automatico su GitHub (rete simulata): primo backup, file senza token, errore di autenticazione
+await go('altro');
+await pg.evaluate(() => { window.__gh = []; window.__ghStatus = { GET: 404, PUT: 201 };
+  window.fetch = async (url, o = {}) => { const m = o.method || 'GET'; __gh.push({ url, m, auth: o.headers.Authorization, body: o.body }); const st = __ghStatus[m]; return { ok: st < 300, status: st, json: async () => ({ sha: 'abc' }), text: async () => '{}' }; }; });
+await pg.type('#view input[placeholder="utente/nome-repository"]', 'https://github.com/leo/allenamento-dati/'); await pg.type('#view input[type=password]', 'github_pat_FINTO');
+await clickText('Salva e prova', '#view'); await sleep(200);
+const gh = await pg.evaluate(() => { const put = __gh.find(x => x.m === 'PUT'), body = JSON.parse(put.body), txt = new TextDecoder().decode(Uint8Array.from(atob(body.content), c => c.charCodeAt(0))), data = JSON.parse(txt);
+  return { url: put.url, auth: put.auth, sha: body.sha, hasToken: txt.includes('github_pat'), logs: data.logs.length, repo: data.settings.gh.repo, toast: document.getElementById('toast').textContent, last: __app.state.settings.lastBackup, kept: __app.state.settings.gh.token }; });
+ok(gh.url === 'https://api.github.com/repos/leo/allenamento-dati/contents/allenamento-backup.json' && gh.auth === 'Bearer github_pat_FINTO' && gh.sha === undefined, 'backup GitHub: file creato nel repository indicato');
+ok(!gh.hasToken && gh.logs === 2 && gh.repo === 'leo/allenamento-dati' && gh.kept === 'github_pat_FINTO', 'il backup contiene i dati ma non il token, che resta sul dispositivo');
+ok(/Backup salvato su GitHub/.test(gh.toast) && gh.last === '2026-11-25' && (await txt('#view')).includes('Attivo. Ultimo backup'), 'esito mostrato e data dell\'ultimo backup aggiornata');
+await pg.evaluate(async () => { __ghStatus.GET = 200; __gh.length = 0; await __app.cloudBackup(true); });
+ok(await pg.evaluate(() => JSON.parse(__gh.find(x => x.m === 'PUT').body).sha === 'abc'), 'backup successivi: aggiornano il file esistente');
+await pg.evaluate(async () => { __ghStatus.GET = 401; __app.state.settings.prep = 11; await __app.cloudBackup(false); });
+await go('home'); ok((await txt('#view')).includes('Backup automatico non riuscito: token non valido o scaduto'), 'errore del backup automatico segnalato in Home, senza perdere dati');
+await pg.evaluate(() => { __app.state.settings.gh = null; });
+
 // Persistenza e migrazione di un backup v2 con due sessioni nello stesso giorno
 await pg.reload();
 ok(await pg.evaluate(() => __app.state.logs.length === 2 && __app.state.extras.length === 1 && __app.state.v === 4), 'i dati sopravvivono al ricaricamento');

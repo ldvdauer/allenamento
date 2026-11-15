@@ -898,7 +898,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
   }
   let storeOk = true;
   function save() {
-    try { localStorage.setItem(KEY, JSON.stringify(S)); storeOk = true; }
+    try { localStorage.setItem(KEY, JSON.stringify(S)); storeOk = true; scheduleCloud(); }
     catch (e) {
       console.warn('[store] scrittura fallita', e);
       if (storeOk) toast('Salvataggio non disponibile qui: fai un backup da Altro.');
@@ -906,6 +906,60 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
     }
   }
   let S = load();
+
+  /* ---------- Backup automatico su un repository GitHub privato ----------
+     Il token resta solo su questo dispositivo: non entra mai nei file di backup, né in quelli caricati né in quelli esportati. */
+  const cloudOn = () => { const g = S.settings.gh; return !!(g && g.token && g.repo); };
+  const backupText = () => JSON.stringify({ ...S, live: null, settings: { ...S.settings, lastBackup: C.todayISO(), gh: S.settings.gh ? { repo: S.settings.gh.repo } : null } });
+  const b64 = text => { const u = new TextEncoder().encode(text); let bin = ''; for (let i = 0; i < u.length; i += 0x8000) bin += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(bin); };
+  const ghUrl = () => `https://api.github.com/repos/${S.settings.gh.repo}/contents/allenamento-backup.json`;
+  const ghHeaders = accept => ({ Authorization: 'Bearer ' + S.settings.gh.token, Accept: accept || 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' });
+  const ghError = r => new Error(r.status === 401 ? 'token non valido o scaduto' : r.status === 403 ? 'il token non ha il permesso di scrivere nel repository' : r.status === 404 ? 'repository non trovato (nome sbagliato o token senza accesso)' : 'GitHub ha risposto ' + r.status);
+  let cloudTimer = null, cloudBusy = false, cloudLast = '', cloudAt = 0;
+  /** Carica il backup. `manual` mostra l'esito; in automatico gli errori finiscono in Home, senza interrompere. */
+  async function cloudBackup(manual) {
+    if (!cloudOn() || cloudBusy) return false;
+    const g = S.settings.gh, text = backupText();
+    if (!manual && text === cloudLast) return true; // niente di nuovo da salvare
+    cloudBusy = true;
+    try {
+      const get = await fetch(ghUrl(), { headers: ghHeaders(), cache: 'no-store' });
+      if (!get.ok && get.status !== 404) throw ghError(get);
+      const sha = get.ok ? (await get.json()).sha : undefined; // 404 = primo backup: il file ancora non esiste
+      const put = await fetch(ghUrl(), { method: 'PUT', headers: ghHeaders(), body: JSON.stringify({ message: 'Backup ' + new Date().toISOString().slice(0, 16).replace('T', ' '), content: b64(text), sha }) });
+      if (!put.ok) throw ghError(put);
+      cloudLast = text; cloudAt = Date.now(); g.error = null; S.settings.lastBackup = C.todayISO();
+      log('backup', 'salvato su GitHub', { kb: Math.ceil(text.length / 1024) });
+      if (manual) toast('Backup salvato su GitHub.');
+      return true;
+    } catch (e) {
+      g.error = e instanceof TypeError ? 'rete non disponibile' : String(e.message || e);
+      console.warn('[backup] GitHub: ' + g.error, e);
+      if (manual) toast('Backup non riuscito: ' + g.error + '.');
+      return false;
+    } finally {
+      cloudBusy = false;
+      try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* già segnalato da save() */ }
+      if (manual) render();
+    }
+  }
+  /** Dopo ogni salvataggio: un backup al massimo ogni 5 minuti, 20 secondi dopo l'ultima modifica. */
+  function scheduleCloud() {
+    if (!S || !cloudOn()) return;
+    clearTimeout(cloudTimer);
+    cloudTimer = setTimeout(() => cloudBackup(false), Math.max(20000, 300000 - (Date.now() - cloudAt)));
+  }
+  async function cloudRestore() {
+    try {
+      const r = await fetch(ghUrl(), { headers: ghHeaders('application/vnd.github.raw+json'), cache: 'no-store' });
+      if (!r.ok) throw ghError(r);
+      const obj = JSON.parse(await r.text());
+      if (!C.validState(obj)) throw new Error('il file su GitHub non è un backup valido');
+      if (!await confirmDlg('Sostituire TUTTI i dati di questo dispositivo con il backup su GitHub?', 'Sostituisci')) return;
+      const gh = S.settings.gh; // collegamento e token restano quelli di questo dispositivo
+      S = migrate(obj); S.settings.gh = gh; calSel = calMonth = null; cloudLast = backupText(); save(); render(); toast('Backup ripristinato da GitHub.');
+    } catch (e) { console.warn('[backup] ripristino fallito', e); toast('Ripristino non riuscito: ' + (e instanceof TypeError ? 'rete non disponibile' : e.message) + '.'); }
+  }
   const maxes = () => C.latestMaxes(S.tests);
   const surfName = k => (S.surfaces.find(x => x.key === k) || { name: k }).name;
   const surfOpts = () => [['', '—']].concat(S.surfaces.map(x => [x.key, x.name]));
@@ -1123,7 +1177,9 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
       else S.live = null;
     }
     const since = S.settings.lastBackup ? C.diffDays(t, S.settings.lastBackup) : null;
-    if (S.logs.length && (since == null || since >= 7))
+    if (cloudOn() && S.settings.gh.error) out.push(h('div', { class: 'card', style: 'border-color:var(--bad)' }, h('div', { class: 'sub' }, 'Backup automatico non riuscito: ' + S.settings.gh.error + '.'),
+      h('div', { class: 'btns' }, btn('Riprova', () => cloudBackup(true), 'sm'), btn('Impostazioni', () => go('altro'), 'sm'))));
+    else if (S.logs.length && (since == null || since >= 7))
       out.push(h('div', { class: 'card row' }, h('div', { class: 'grow sub' }, since == null ? 'I tuoi dati non hanno ancora un backup.' : `Ultimo backup ${since} giorni fa.`), btn('Salva backup', doBackup, 'sm')));
     refs.forEach(r => out.push(sessionCard(r, false)));
     if (!refs.length) out.push(h('div', { class: 'card' }, h('div', { class: 'big' }, 'Rest day'), h('p', { class: 'sub', style: 'margin-bottom:0' }, 'Nessuna sessione in programma oggi.')));
@@ -1528,8 +1584,9 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
   }
   /** Backup su file: con il menu di condivisione di iOS finisce in File/iCloud Drive; dove non c'è, download o copia. */
   async function doBackup() {
+    if (cloudOn()) return cloudBackup(true);
     const name = `allenamento-backup-${C.todayISO()}.json`, mark = () => { S.settings.lastBackup = C.todayISO(); save(); render(); };
-    const text = JSON.stringify({ ...S, settings: { ...S.settings, lastBackup: C.todayISO() } });
+    const text = backupText();
     try {
       const file = new File([text], name, { type: 'application/json' });
       if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: 'Backup Allenamento' }); mark(); return toast('Backup salvato.'); }
@@ -1538,6 +1595,19 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
       console.warn('[backup] condivisione non riuscita, ripiego sul file', e);
     }
     exportSheet('Backup', name, text); mark();
+  }
+  function cloudCard() {
+    const g = S.settings.gh || {}, repo = h('input', { value: g.repo || '', placeholder: 'utente/nome-repository', autocapitalize: 'off', autocorrect: 'off' }), token = h('input', { type: 'password', value: g.token || '', placeholder: 'github_pat_…', autocomplete: 'off' });
+    return h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin-top:0' }, 'Salva da solo i dati in un tuo repository GitHub privato, pochi secondi dopo ogni modifica. Serve un token "fine-grained" limitato a quel repository, con permesso Contents: Read and write. Il token resta solo su questo dispositivo.'),
+      field('Repository privato', repo), field('Token', token),
+      cloudOn() ? h('p', { class: 'sub' }, g.error ? 'Ultimo tentativo non riuscito: ' + g.error + '.' : S.settings.lastBackup ? `Attivo. Ultimo backup: ${fmtDate(S.settings.lastBackup)}.` : 'Attivo. Nessun backup ancora.') : null,
+      h('div', { class: 'btns' }, btn('Salva e prova', () => {
+        const r = repo.value.trim().replace(/^https:\/\/github\.com\//, '').replace(/\.git$|\/$/g, '');
+        if (!/^[\w.-]+\/[\w.-]+$/.test(r)) return toast('Scrivi il repository come utente/nome.');
+        if (!token.value.trim()) return toast('Incolla il token.');
+        S.settings.gh = { repo: r, token: token.value.trim(), error: null }; save(); cloudBackup(true);
+      }, 'sm pri'),
+        cloudOn() ? [btn('Ripristina da GitHub', cloudRestore, 'sm'), btn('Scollega', async () => { if (await confirmDlg('Scollegare GitHub? Il token viene cancellato da questo dispositivo, i backup già caricati restano nel repository.', 'Scollega')) { S.settings.gh = null; clearTimeout(cloudTimer); save(); render(); } }, 'sm danger')] : null));
   }
   function viewMore() {
     const pr = S.settings.prog, progOn = h('input', { type: 'checkbox', checked: pr.on }), progStep = numInp(pr.step), progRpe = numInp(pr.rpe);
@@ -1558,8 +1628,9 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
       h('h2', {}, 'Progressione dei carichi'), h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin-top:0' }, 'A fine esercizio registri carico e RPE. La volta dopo l\'app propone il carico: più alto se l\'RPE era entro la soglia, più basso se era molto sopra, uguale negli altri casi.'),
         h('div', { class: 'cols3' }, h('label', { class: 'f' }, 'Proposte', h('div', { style: 'margin-top:12px' }, progOn, ' attive')), field('Aumento (%)', progStep), field('Soglia RPE', progRpe)),
         btn('Salva', () => { Object.assign(S.settings.prog, { on: progOn.checked, step: Math.min(20, Math.max(0.5, val(progStep) || 2.5)), rpe: Math.min(10, Math.max(1, val(progRpe) || 8)) }); save(); toast('Salvato.'); render(); }, 'sm')),
-      h('h2', {}, 'Dati'), h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin-top:0' }, 'I dati restano solo su questo dispositivo. "Salva backup" apre il menu di condivisione: scegli "Salva su File" per metterlo in iCloud Drive.' + (S.settings.lastBackup ? ` Ultimo backup: ${fmtDate(S.settings.lastBackup)}.` : ' Nessun backup finora.')),
-        h('div', { class: 'btns' }, btn('Salva backup', doBackup, 'sm pri'), fileBtn('Ripristina / importa file'),
+      h('h2', {}, 'Backup automatico'), cloudCard(),
+      h('h2', {}, 'Dati'), h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin-top:0' }, (cloudOn() ? 'Il backup automatico su GitHub è attivo. ' : 'I dati restano solo su questo dispositivo. "Salva backup" apre il menu di condivisione: scegli "Salva su File" per metterlo in iCloud Drive.') + (S.settings.lastBackup ? ` Ultimo backup: ${fmtDate(S.settings.lastBackup)}.` : ' Nessun backup finora.')),
+        h('div', { class: 'btns' }, btn(cloudOn() ? 'Backup adesso' : 'Salva backup', doBackup, 'sm pri'), fileBtn('Ripristina / importa file'),
           btn('Azzera tutto', async () => { if (await confirmDlg('Cancellare programmi, sessioni, esercizi, registrazioni e test? L\'operazione non si può annullare: fai prima un backup.', 'Azzera')) { S = fresh(); calSel = calMonth = null; save(); render(); } }, 'sm danger')))];
   }
 
@@ -1757,7 +1828,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
   });
   wirePlayer();
   render();
-  window.__app = { get state() { return S; }, render }; // utile per debug dalla console
+  window.__app = { get state() { return S; }, render, cloudBackup }; // utile per debug dalla console
 })();
 </script>
 <script>if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(e=>console.warn('[sw] registrazione fallita',e));</script>
