@@ -960,12 +960,19 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
   const ghUrl = () => `https://api.github.com/repos/${S.settings.gh.repo}/contents/allenamento-backup.json`;
   const ghHeaders = accept => ({ Authorization: 'Bearer ' + S.settings.gh.token, Accept: accept || 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' });
   const ghError = r => new Error(r.status === 401 ? 'token non valido o scaduto' : r.status === 403 ? 'il token non ha il permesso di scrivere nel repository' : r.status === 404 ? 'repository non trovato (nome sbagliato o token senza accesso)' : 'GitHub ha risposto ' + r.status);
-  let cloudTimer = null, cloudBusy = false, cloudLast = '', cloudAt = 0;
+  let cloudTimer = null, cloudBusy = false, cloudAt = 0;
+  /** Impronta dei dati (senza date di backup né collegamento): dice se c'è qualcosa di nuovo da caricare, anche dopo un riavvio. */
+  function cloudSig() {
+    const t = JSON.stringify({ ...S, live: null, settings: { ...S.settings, lastBackup: null, gh: null } });
+    let h = 5381;
+    for (let i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0;
+    return t.length + ':' + h;
+  }
   /** Carica il backup. `manual` mostra l'esito; in automatico gli errori finiscono in Home, senza interrompere. */
   async function cloudBackup(manual) {
     if (!cloudOn() || cloudBusy) return false;
-    const g = S.settings.gh, text = backupText();
-    if (!manual && text === cloudLast) return true; // niente di nuovo da salvare
+    const g = S.settings.gh, text = backupText(), sig = cloudSig();
+    if (!manual && !g.error && g.sig === sig) return true; // niente di nuovo da salvare
     cloudBusy = true;
     try {
       const get = await fetch(ghUrl(), { headers: ghHeaders(), cache: 'no-store' });
@@ -973,7 +980,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
       const sha = get.ok ? (await get.json()).sha : undefined; // 404 = primo backup: il file ancora non esiste
       const put = await fetch(ghUrl(), { method: 'PUT', headers: ghHeaders(), body: JSON.stringify({ message: 'Backup ' + new Date().toISOString().slice(0, 16).replace('T', ' '), content: b64(text), sha }) });
       if (!put.ok) throw ghError(put);
-      cloudLast = text; cloudAt = Date.now(); g.error = null; S.settings.lastBackup = C.todayISO();
+      g.sig = sig; cloudAt = Date.now(); g.error = null; S.settings.lastBackup = C.todayISO();
       log('backup', 'salvato su GitHub', { kb: Math.ceil(text.length / 1024) });
       if (manual) toast('Backup salvato su GitHub.');
       return true;
@@ -994,6 +1001,10 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
     clearTimeout(cloudTimer);
     cloudTimer = setTimeout(() => cloudBackup(false), Math.max(20000, 300000 - (Date.now() - cloudAt)));
   }
+  // Quello che registri senza rete resta sul dispositivo; appena la rete torna (o riapri l'app) il backup riparte da solo.
+  const cloudRetry = () => { if (cloudOn() && navigator.onLine !== false) { clearTimeout(cloudTimer); cloudTimer = setTimeout(() => cloudBackup(false).then(() => { if (!R && !P) render(); }), 3000); } };
+  window.addEventListener('online', cloudRetry);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') cloudRetry(); });
   async function cloudRestore() {
     try {
       const r = await fetch(ghUrl(), { headers: ghHeaders('application/vnd.github.raw+json'), cache: 'no-store' });
@@ -1002,7 +1013,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
       if (!C.validState(obj)) throw new Error('il file su GitHub non è un backup valido');
       if (!await confirmDlg('Sostituire TUTTI i dati di questo dispositivo con il backup su GitHub?', 'Sostituisci')) return;
       const gh = S.settings.gh; // collegamento e token restano quelli di questo dispositivo
-      S = migrate(obj); S.settings.gh = gh; calSel = calMonth = null; cloudLast = backupText(); save(); render(); toast('Backup ripristinato da GitHub.');
+      S = migrate(obj); S.settings.gh = gh; calSel = calMonth = null; gh.sig = cloudSig(); save(); render(); toast('Backup ripristinato da GitHub.');
     } catch (e) { console.warn('[backup] ripristino fallito', e); toast('Ripristino non riuscito: ' + (e instanceof TypeError ? 'rete non disponibile' : e.message) + '.'); }
   }
   const maxes = () => C.latestMaxes(S.tests);
@@ -1847,6 +1858,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
   });
   wirePlayer();
   render();
+  cloudRetry();
   window.__app = { get state() { return S; }, render, cloudBackup }; // utile per debug dalla console
 })();
 </script>

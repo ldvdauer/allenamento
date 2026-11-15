@@ -222,11 +222,19 @@ await pg.evaluate(async () => { __ghStatus.GET = 200; __gh.length = 0; await __a
 ok(await pg.evaluate(() => JSON.parse(__gh.find(x => x.m === 'PUT').body).sha === 'abc'), 'backup successivi: aggiornano il file esistente');
 await pg.evaluate(async () => { __ghStatus.GET = 401; __app.state.settings.prep = 11; await __app.cloudBackup(false); });
 await go('home'); ok((await txt('#view')).includes('Backup automatico non riuscito: token non valido o scaduto'), 'errore del backup automatico segnalato in Home, senza perdere dati');
+// Offline: la registrazione resta sul dispositivo, il backup fallisce senza danni e riparte da solo quando torna la rete
+await pg.evaluate(async () => { window.__okFetch = window.fetch; window.fetch = async () => { throw new TypeError('Failed to fetch'); }; __ghStatus.GET = 200;
+  __app.state.logs.push({ id: 'off', date: '2026-11-25', title: 'Fatta offline', minutes: 30, type: 'wall' }); localStorage.setItem('allenamento.v1', JSON.stringify(__app.state)); await __app.cloudBackup(false); });
+ok(await pg.evaluate(() => __app.state.settings.gh.error === 'rete non disponibile' && JSON.parse(localStorage.getItem('allenamento.v1')).logs.some(l => l.id === 'off')), 'offline: la registrazione è salvata sul dispositivo, il backup resta in sospeso');
+await pg.evaluate(() => { window.fetch = window.__okFetch; __gh.length = 0; window.dispatchEvent(new Event('online')); }); await sleep(3600);
+ok(await pg.evaluate(() => { const put = __gh.find(x => x.m === 'PUT'); if (!put) return false; const d = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(JSON.parse(put.body).content), c => c.charCodeAt(0)))); return d.logs.some(l => l.id === 'off') && __app.state.settings.gh.error === null; }), 'al ritorno della rete il backup parte da solo e include ciò che è stato fatto offline');
+await pg.evaluate(() => { __gh.length = 0; window.dispatchEvent(new Event('online')); }); await sleep(3600);
+ok(await pg.evaluate(() => __gh.length === 0), 'senza modifiche nuove non viene caricato nulla');
 await pg.evaluate(() => { __app.state.settings.gh = null; });
 
 // Persistenza e migrazione di un backup v2 con due sessioni nello stesso giorno
 await pg.reload();
-ok(await pg.evaluate(() => __app.state.logs.length === 2 && __app.state.extras.length === 1 && __app.state.v === 5), 'i dati sopravvivono al ricaricamento');
+ok(await pg.evaluate(() => __app.state.logs.length === 3 && __app.state.extras.length === 1 && __app.state.v === 5), 'i dati sopravvivono al ricaricamento');
 const mig = await pg.evaluate(async () => {
   const mk = (id, ex) => ({ id, type: 'wall', period: 'base', blocks: [{ id: id + 'b', exId: ex, minutes: 5 }] });
   const old = { v: 2, plans: [{ id: 'p', title: 'Vecchio', startDate: '2026-11-23', weeks: [[{ sessions: [mk('s1', 'e1'), mk('s2', 'e2')] }, ...Array.from({ length: 6 }, () => ({ sessions: [] }))]] }],
