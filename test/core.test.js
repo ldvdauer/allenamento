@@ -246,3 +246,34 @@ test('test: modelli con parametri propri, senza "zavorra max" nel nome', () => {
   assert.equal(C.testLabel(C.TEST_TEMPLATES.find(t => t.key === 'onearm')), '22 mm · una mano');
   assert.equal(C.testLabel({ name: 'x', unit: 'kg' }), '');
 });
+
+test('progressione e serie per esercizio standard: hang a due mani, lift per lato', () => {
+  const rule = { step: 2.5, rpe: 8 };
+  assert.deepEqual(C.nextLoad(10, 7, rule, 'hang', 70), { kg: 12, dir: 1 }); // (70+10)×1,025−70 = 12
+  assert.deepEqual(C.nextLoad(10, 8.5, rule, 'hang', 70), { kg: 10, dir: 0 });
+  assert.deepEqual(C.nextLoad(10, 9.5, rule, 'hang', 70), { kg: 8, dir: -1 });
+  assert.deepEqual(C.nextLoad(40, 8, rule, 'lift', 70), { kg: 41, dir: 1 }); // sollevamento: % sul carico, il peso corporeo non c'entra
+  assert.deepEqual(C.nextLoad(40, null, rule, 'lift'), { kg: 40, dir: 0 });
+  assert.deepEqual(C.nextLoad(10, 7, rule, 'hang', null), { kg: 10.5, dir: 1 }); // senza peso corporeo: % sulla sola zavorra
+  assert.equal(C.nextLoad(null, 7, rule, 'lift'), null);
+  assert.deepEqual(C.refKeys('lift'), ['liftL', 'liftR']);
+  assert.deepEqual(C.refKeys('oh'), ['oh']);
+  assert.equal(C.loadKey({ ref: 'lift' }, 'DX · 90%'), 'liftR');
+  assert.equal(C.loadKey({ ref: 'lift' }, 'SX'), 'liftL');
+  assert.equal(C.loadKg({ ref: 'lift', mode: 'lift', pct: 90 }, 'DX', { liftL: 40, liftR: 50 }), 45);
+  assert.equal(C.matchStd('Max lift 20 mm'), 'block-lift');
+  assert.deepEqual(C.inferLoad('Max lift 20 mm', '3 × 7" · 90% max'), { ref: 'lift', mode: 'lift', pct: 90, test: false });
+  assert.equal(C.STD['max-hang'].interval.cues.length, 0); // sospensioni: due mani, nessun lato
+  assert.deepEqual(C.STD['block-lift'].interval.cues, ['SX', 'DX']);
+  const logs = [
+    { date: '2026-11-16', blocks: [{ name: 'Half-crimp 85%', key: 'max-hang|hc', label: 'Max hang · Half-crimp', kgs: [{ side: null, kg: 10 }], rpe: 7, mode: 'hang' },
+      { name: 'Lift', key: 'block-lift|lift', label: 'Max lift', kgs: [{ side: 'SX', kg: 38 }, { side: 'DX', kg: 42 }], rpe: 8, mode: 'lift' }, { name: 'Riscaldamento', minutes: 20 }] },
+    { date: '2026-11-23', blocks: [{ name: 'Half-crimp 90%', key: 'max-hang|hc', label: 'Max hang · Half-crimp', kgs: [{ side: null, kg: 12 }], rpe: 9, mode: 'hang' }] },
+    { date: '2026-11-20', loads: [{ name: 'Open hand 20 mm 7"', kg: '+8 kg' }] },
+  ];
+  const ls = C.loadSeries(logs, '2026-11-01', '2026-11-30');
+  assert.deepEqual(ls.map(x => [x.name, x.points.map(p => p.kg)]), [['Max hang · Half-crimp', [10, 12]], ['Max lift DX', [42]], ['Max lift SX', [38]], ['Open hand 20 mm 7"', [8]]]);
+  assert.deepEqual([C.lastRecord(logs, 'max-hang|hc').date, C.lastRecord(logs, 'max-hang|hc').rpe], ['2026-11-23', 9]);
+  assert.equal(C.lastRecord(logs, 'max-hang|oh').kgs[0].kg, 8); // log vecchio ricondotto allo standard dal nome
+  assert.equal(C.lastRecord(logs, 'nessuno'), null);
+});

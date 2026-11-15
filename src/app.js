@@ -18,14 +18,15 @@
   const fresh = () => migrate({ v: 4, plans: [], activePlan: null, exercises: {}, logs: [], tests: [] });
   /** I test da cui dipendono i kg degli esercizi (e il peso corporeo) devono esistere nella sezione Test. */
   function ensureTests(s) {
-    const need = new Set(['bw'].concat(Object.values(s.exercises).filter(e => e.load).flatMap(e => (e.load.ref === 'pinch' ? ['pinchL', 'pinchR'] : [e.load.ref]))));
+    const need = new Set(['bw'].concat(Object.values(s.exercises).filter(e => e.load).flatMap(e => C.refKeys(e.load.ref))));
     for (const t of C.TEST_TEMPLATES) if (need.has(t.key) && !s.testDefs.some(d => d.key === t.key)) s.testDefs.push({ ...t });
     s.testDefs.sort((a, b) => (b.key === 'bw') - (a.key === 'bw'));
   }
   function migrate(s) { // completa i campi mancanti di backup vecchi o parziali
     s.extras = Array.isArray(s.extras) ? s.extras : [];
     s.surfaces = Array.isArray(s.surfaces) && s.surfaces.length ? s.surfaces : C.DEFAULT_SURFACES.map(x => ({ ...x }));
-    s.settings = Object.assign({ prep: 10, sound: true, gradeScale: 'font' }, s.settings);
+    s.settings = Object.assign({ prep: 10, sound: true, gradeScale: 'font', lastBackup: null }, s.settings);
+    s.settings.prog = Object.assign({ on: true, step: 2.5, rpe: 8 }, s.settings.prog);
     if (!s.plans.some(p => p.id === s.activePlan)) s.activePlan = s.plans[0] ? s.plans[0].id : null;
     for (const p of s.plans) for (const w of p.weeks) for (const d of w) for (const x of d.sessions) if (!x.id) x.id = C.uid();
     for (const e of Object.values(s.exercises)) if (e.surface === undefined) e.surface = C.inferSurface(e.name);
@@ -50,7 +51,7 @@
     // v4: esercizi collegati alla libreria standard; test con parametri propri e senza elenco fisso
     for (const e of Object.values(s.exercises)) if (e.std === undefined) e.std = C.matchStd(e.name);
     if (!Array.isArray(s.testDefs)) s.testDefs = [];
-    const refd = new Set(Object.values(s.exercises).filter(e => e.load).flatMap(e => (e.load.ref === 'pinch' ? ['pinchL', 'pinchR'] : [e.load.ref])));
+    const refd = new Set(Object.values(s.exercises).filter(e => e.load).flatMap(e => C.refKeys(e.load.ref)));
     s.testDefs = s.testDefs.filter(d => d.mode !== undefined || d.key === 'bw' || refd.has(d.key) || s.tests.some(t => t.key === d.key)); // dei vecchi predefiniti restano solo quelli in uso
     for (const d of s.testDefs) if (d.mode === undefined) Object.assign(d, C.TEST_TEMPLATES.find(t => t.key === d.key) || { mode: 'value' });
     ensureTests(s);
@@ -171,6 +172,27 @@
   }
 
   /* ---------- Elementi condivisi ---------- */
+  // Coppie di test per lato (pinch, max lift) presenti nella sezione Test: negli elenchi compaiono come una voce sola.
+  const pairsPresent = () => Object.keys(C.PAIRS).filter(k => C.refKeys(k).every(x => S.testDefs.some(t => t.key === x)));
+  const inPair = (key, pairs) => pairs.some(k => C.refKeys(k).includes(key));
+  /* Progressione: la proposta nasce dallo storico dell'esercizio (standard + test di riferimento), non dal programma. */
+  const exKey = e => (e.std || e.name) + '|' + (e.load ? e.load.ref : '');
+  function exLabel(e) {
+    const base = e.std && C.STD[e.std] ? C.STD[e.std].name : e.name, d = e.load && !C.PAIRS[e.load.ref] ? S.testDefs.find(t => t.key === e.load.ref) : null;
+    return d ? `${base} · ${d.name}` : base;
+  }
+  const kgText = (kg, mode) => (mode === 'hang' ? C.fmtKg(kg) : dec(kg) + ' kg');
+  /** { text, why } con il carico proposto per la prossima volta, oppure null se non c'è storico o la progressione è spenta. */
+  function proposal(ex) {
+    const rule = S.settings.prog;
+    if (!rule.on || (ex.load && ex.load.test)) return null;
+    const last = C.lastRecord(S.logs, exKey(ex));
+    if (!last) return null;
+    const nx = last.kgs.map(k => ({ side: k.side, ...C.nextLoad(k.kg, last.rpe, rule, last.mode, maxes().bw) }));
+    const fmt = a => a.map(k => (k.side ? k.side + ' ' : '') + kgText(k.kg, last.mode)).join(' · ');
+    return { text: fmt(nx), why: `ultima volta ${fmt(last.kgs)}${last.rpe == null ? ', senza RPE' : ', RPE ' + dec(last.rpe)}` };
+  }
+  const propLine = ex => { const p = proposal(ex); return p ? h('div', { class: 'p' }, `Proposto: ${p.text} (${p.why})`) : null; };
   function loadHint(ex) {
     if (!ex.load || ex.load.pct == null) return '';
     const cues = ex.interval && ex.interval.cues.length ? ex.interval.cues : [''];
@@ -178,7 +200,7 @@
     for (const c of cues) {
       const kg = C.loadKg(ex.load, c, m);
       if (kg == null) return 'kg: mancano i massimali';
-      const side = ex.load.ref === 'pinch' ? (/^\s*DX/i.test(c) ? 'DX ' : 'SX ') : '';
+      const side = C.PAIRS[ex.load.ref] ? (/^\s*DX/i.test(c) ? 'DX ' : 'SX ') : '';
       const s = side + (ex.load.mode === 'hang' ? C.fmtKg(kg) : dec(kg) + ' kg');
       if (!out.includes(s)) out.push(s);
     }
@@ -193,7 +215,7 @@
     if (!ex) return h('div', { class: 'blk', 'data-id': b.id }, grip, h('span', { class: 'p' }, 'Esercizio rimosso'));
     const hint = loadHint(ex);
     return h('div', { class: 'blk', 'data-id': b.id, onclick, style: onclick ? 'cursor:pointer' : null }, grip,
-      h('div', { class: 'grow' }, h('div', { class: 'n' }, ex.name), h('div', { class: 'p' }, exLine(ex)), hint ? h('div', { class: 'kg' }, hint) : null),
+      h('div', { class: 'grow' }, h('div', { class: 'n' }, ex.name), h('div', { class: 'p' }, exLine(ex)), hint ? h('div', { class: 'kg' }, hint) : null, propLine(ex)),
       h('div', { class: 'm' }, b.minutes + ' min'));
   }
   /** Riordino per trascinamento dalla maniglia: la riga segue il dito, l'ordine si salva al rilascio. */
@@ -223,17 +245,17 @@
   function testExercise(ref) {
     const hit = Object.values(S.exercises).find(x => x.std === 'test' && x.base && x.load && x.load.ref === ref);
     if (hit) return hit.id;
-    const two = ref === 'pinch', d = S.testDefs.find(t => t.key === (two ? 'pinchL' : ref));
+    const two = !!C.PAIRS[ref], d = S.testDefs.find(t => t.key === (two ? ref + 'L' : ref));
     const interval = C.normInterval({ rounds: two ? 8 : 4, workSeconds: d.seconds || 45, restSeconds: two ? 90 : 180, selfPaced: !d.seconds, reps: d.reps || 0,
       cues: two ? ['SX · carico crescente', 'DX · carico crescente'] : [d.mode === 'value' ? 'Al massimo' : 'Carico crescente'] });
-    const e = { id: C.uid(), std: 'test', base: true, name: 'Test: ' + (two ? 'Pinch block' : d.name), prescription: C.testLabel(d), slot: 'strength', location: 'off_wall', domain: 'finger_strength',
+    const e = { id: C.uid(), std: 'test', base: true, name: 'Test: ' + (two ? C.PAIRS[ref] : d.name), prescription: C.testLabel(d), slot: 'strength', location: 'off_wall', domain: 'finger_strength',
       intensity: 'max', risk: 'moderate', equipment: [], interval, load: { ref, mode: d.mode === 'lift' ? 'lift' : 'hang', pct: null, test: true }, surface: '' };
     S.exercises[e.id] = e;
     return e.id;
   }
   function pickTest(cb) {
-    const both = ['pinchL', 'pinchR'].every(k => S.testDefs.some(t => t.key === k));
-    const items = S.testDefs.filter(t => t.key !== 'bw' && !(both && /^pinch[LR]$/.test(t.key))).map(t => [t.key, t.name, C.testLabel(t)]).concat(both ? [['pinch', 'Pinch block', 'SX e DX']] : []);
+    const pairs = pairsPresent();
+    const items = S.testDefs.filter(t => t.key !== 'bw' && !inPair(t.key, pairs)).map(t => [t.key, t.name, C.testLabel(t)]).concat(pairs.map(k => [k, C.PAIRS[k], 'SX e DX']));
     if (!items.length) return toast('Crea prima un test in Analisi → Test e massimali.');
     const ov = openSheet('Aggiungi un test', [h('p', { class: 'sub' }, 'A fine esercizio registri il risultato, che aggiorna il massimale nella sezione Test.'),
       items.map(([k, name, sub]) => h('div', { class: 'blk', style: 'cursor:pointer', onclick: () => { ov.remove(); cb(testExercise(k)); } }, h('div', { class: 'grow' }, h('div', { class: 'n' }, name), h('div', { class: 'p' }, sub))))]);
@@ -269,6 +291,9 @@
         h('div', { class: 'btns' }, btn('Riprendi', () => startSession(lr), 'pri'), btn('Scarta', () => { S.live = null; save(); render(); }))));
       else S.live = null;
     }
+    const since = S.settings.lastBackup ? C.diffDays(t, S.settings.lastBackup) : null;
+    if (S.logs.length && (since == null || since >= 7))
+      out.push(h('div', { class: 'card row' }, h('div', { class: 'grow sub' }, since == null ? 'I tuoi dati non hanno ancora un backup.' : `Ultimo backup ${since} giorni fa.`), btn('Salva backup', doBackup, 'sm')));
     refs.forEach(r => out.push(sessionCard(r, false)));
     if (!refs.length) out.push(h('div', { class: 'card' }, h('div', { class: 'big' }, 'Rest day'), h('p', { class: 'sub', style: 'margin-bottom:0' }, 'Nessuna sessione in programma oggi.')));
     out.push(h('div', { class: 'btns' }, btn('Crea sessione', () => newSessionSheet(t), 'pri'), btn('Registra sessione', () => logSheet(null))));
@@ -444,8 +469,8 @@
     const reps = numInp(iv.reps), perSet = numInp(iv.roundsPerSet), setRest = numInp(iv.setRestSeconds);
     const cues = h('textarea', { placeholder: 'Un cue per riga, ripetuti a rotazione\nSX · 75% max\nDX · 75% max' }); cues.value = (iv.cues || []).join('\n');
     const std = opts([['', 'Nessuno (personalizzato)']].concat(C.LIBRARY.map(x => [x.key, x.name]), [['test', 'Test']]), e.std || '');
-    const bothPinch = ['pinchL', 'pinchR'].every(k => S.testDefs.some(t => t.key === k));
-    const refs = [['', 'Nessuno']].concat(S.testDefs.filter(t => t.key !== 'bw' && !(bothPinch && /^pinch[LR]$/.test(t.key))).map(t => [t.key, t.name]), bothPinch ? [['pinch', 'Pinch block (SX/DX dal cue)']] : []);
+    const pairs = pairsPresent();
+    const refs = [['', 'Nessuno']].concat(S.testDefs.filter(t => t.key !== 'bw' && !inPair(t.key, pairs)).map(t => [t.key, t.name]), pairs.map(k => [k, C.PAIRS[k] + ' (SX/DX dal cue)']));
     const ref = opts(refs, ld.ref || ''), pct = numInp(ld.pct);
     const lmode = opts({ hang: 'Zavorra su peso corporeo', lift: 'Carico sollevato' }, ld.mode || 'hang'), isTest = h('input', { type: 'checkbox', checked: ld.test });
     const timer = h('div', {}, h('div', { class: 'cols3' }, field('Round', rounds), field('Lavoro (s)', work), field('Recupero (s)', rest)),
@@ -601,7 +626,7 @@
     }
 
     const loads = C.loadSeries(S.logs, from, to);
-    if (loads.length) out.push(chartCard('Carichi usati', 'Dai carichi registrati a fine sessione. Tocca una riga per il grafico completo.',
+    if (loads.length) out.push(chartCard('Carichi per esercizio', 'Un grafico per esercizio standard e test: le sospensioni a due mani in una serie, i sollevamenti divisi per lato SX/DX. Tocca una riga per il dettaglio.',
       loads.map(s => {
         const v = s.points.map(p => p.kg), last = v[v.length - 1];
         return h('div', { class: 'blk', style: 'cursor:pointer;align-items:center', onclick: () => openSheet(s.name, Charts.line({ labels: s.points.map(p => fmtDate(p.date)), values: v, name: 'Carico', unit: 'kg', colLabel: 'Data', aria: `Carico usato per ${s.name}` })) },
@@ -612,7 +637,7 @@
   }
 
   const MODES = [['hang', 'Zavorra aggiunta al peso corporeo'], ['lift', 'Carico sollevato'], ['value', 'Valore libero (secondi, kg…)']];
-  const testUsed = key => Object.values(S.exercises).some(e => e.load && (e.load.ref === key || (e.load.ref === 'pinch' && /^pinch[LR]$/.test(key))));
+  const testUsed = key => Object.values(S.exercises).some(e => e.load && C.refKeys(e.load.ref).includes(key));
   function testDefSheet(def) {
     const isNew = !def; def = def || { key: 'c-' + C.uid().slice(0, 8), name: '', unit: 'kg', mode: 'hang', hands: 2 };
     const name = h('input', { value: def.name, placeholder: 'Half-crimp' }), unit = h('input', { value: def.unit }), mode = opts(MODES, def.mode || 'value');
@@ -670,7 +695,21 @@
         if (await confirmDlg(`Eliminare la superficie "${x.name}"?`, 'Elimina')) { S.surfaces = S.surfaces.filter(s => s !== x); save(); ov.remove(); render(); }
       }, 'danger block')]);
   }
+  /** Backup su file: con il menu di condivisione di iOS finisce in File/iCloud Drive; dove non c'è, download o copia. */
+  async function doBackup() {
+    const name = `allenamento-backup-${C.todayISO()}.json`, mark = () => { S.settings.lastBackup = C.todayISO(); save(); render(); };
+    const text = JSON.stringify({ ...S, settings: { ...S.settings, lastBackup: C.todayISO() } });
+    try {
+      const file = new File([text], name, { type: 'application/json' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: 'Backup Allenamento' }); mark(); return toast('Backup salvato.'); }
+    } catch (e) {
+      if (e && e.name === 'AbortError') return; // l'utente ha chiuso il menu: nessun backup fatto
+      console.warn('[backup] condivisione non riuscita, ripiego sul file', e);
+    }
+    exportSheet('Backup', name, text); mark();
+  }
   function viewMore() {
+    const pr = S.settings.prog, progOn = h('input', { type: 'checkbox', checked: pr.on }), progStep = numInp(pr.step), progRpe = numInp(pr.rpe);
     const prep = numInp(S.settings.prep), sound = h('input', { type: 'checkbox', checked: S.settings.sound, onchange: () => { S.settings.sound = sound.checked; save(); } });
     const sfNew = h('input', { class: 'inp', style: 'margin:0', placeholder: 'Nuova superficie' });
     return [h('h1', {}, 'Altro'),
@@ -685,8 +724,11 @@
         h('p', { class: 'sub', style: 'margin-bottom:0' }, `Scala dei gradi: ${C.GRADE_SCALES[S.settings.gradeScale] || 'Font'}. La scelta di altre scale arriverà qui.`)),
       h('h2', {}, 'Timer'), h('div', { class: 'card' }, h('div', { class: 'cols' }, field('Preparazione prima di un hang (s)', prep), h('label', { class: 'f' }, 'Segnali acustici', h('div', { style: 'margin-top:12px' }, sound, ' attivi'))),
         btn('Salva', () => { S.settings.prep = Math.min(60, Math.max(0, Math.round(val(prep) || 0))); save(); toast('Salvato.'); }, 'sm')),
-      h('h2', {}, 'Dati'), h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin-top:0' }, 'I dati restano solo su questo dispositivo. Fai un backup ogni tanto.'),
-        h('div', { class: 'btns' }, btn('Backup completo', () => exportSheet('Backup', `allenamento-backup-${C.todayISO()}.json`, JSON.stringify(S)), 'sm pri'), fileBtn('Ripristina / importa file'),
+      h('h2', {}, 'Progressione dei carichi'), h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin-top:0' }, 'A fine esercizio registri carico e RPE. La volta dopo l\'app propone il carico: più alto se l\'RPE era entro la soglia, più basso se era molto sopra, uguale negli altri casi.'),
+        h('div', { class: 'cols3' }, h('label', { class: 'f' }, 'Proposte', h('div', { style: 'margin-top:12px' }, progOn, ' attive')), field('Aumento (%)', progStep), field('Soglia RPE', progRpe)),
+        btn('Salva', () => { Object.assign(S.settings.prog, { on: progOn.checked, step: Math.min(20, Math.max(0.5, val(progStep) || 2.5)), rpe: Math.min(10, Math.max(1, val(progRpe) || 8)) }); save(); toast('Salvato.'); render(); }, 'sm')),
+      h('h2', {}, 'Dati'), h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin-top:0' }, 'I dati restano solo su questo dispositivo. "Salva backup" apre il menu di condivisione: scegli "Salva su File" per metterlo in iCloud Drive.' + (S.settings.lastBackup ? ` Ultimo backup: ${fmtDate(S.settings.lastBackup)}.` : ' Nessun backup finora.')),
+        h('div', { class: 'btns' }, btn('Salva backup', doBackup, 'sm pri'), fileBtn('Ripristina / importa file'),
           btn('Azzera tutto', async () => { if (await confirmDlg('Cancellare programmi, sessioni, esercizi, registrazioni e test? L\'operazione non si può annullare: fai prima un backup.', 'Azzera')) { S = fresh(); calSel = calMonth = null; save(); render(); } }, 'sm danger')))];
   }
 
@@ -724,7 +766,7 @@
       const ex = S.exercises[b.exId], d = done[b.id], hint = ex ? loadHint(ex) : '';
       return h('div', { class: 'run-r' + (d ? ' done' : '') }, h('div', { class: 'st' }, d ? '✓' : i + 1),
         h('div', { class: 'grow' }, h('div', { class: 'n', style: 'font-weight:600' }, ex ? ex.name : 'Esercizio rimosso'), ex ? h('div', { class: 'sub' }, exLine(ex)) : null,
-          hint && !d ? h('div', { style: 'color:var(--ac);font-size:13px;font-weight:600' }, hint) : null, d && d.minutes ? h('div', { class: 'sub' }, `fatto · ${d.minutes} min`) : null),
+          hint && !d ? h('div', { style: 'color:var(--ac);font-size:13px;font-weight:600' }, hint) : null, ex && !d ? propLine(ex) : null, d && d.minutes ? h('div', { class: 'sub' }, `fatto · ${d.minutes} min`) : null),
         ex ? btn(d ? 'Rifai' : 'Avvia', () => startBlock(b), 'sm' + (b === nextB ? ' pri' : '')) : null);
     };
     const quit = () => {
@@ -807,8 +849,11 @@
   function recordSheet(b, ms) {
     const ex = S.exercises[b.exId], m = maxes(), isClimb = ex.slot === 'wall' || !!ex.surface;
     const min = numInp(Math.round(ms / 60000)), note = h('input', { placeholder: 'Facoltativa' });
-    const load = ex.load && !ex.load.test ? h('input', { value: loadHint(ex).replace('kg: mancano i massimali', '') }) : null;
-    const tests = ex.load && ex.load.test ? (ex.load.ref === 'pinch' ? ['pinchL', 'pinchR'] : [ex.load.ref]).map(k => S.testDefs.find(t => t.key === k)).filter(Boolean)
+    const isTest = !!(ex.load && ex.load.test), prop = proposal(ex), planned = loadHint(ex).replace('kg: mancano i massimali', '');
+    // Carico e RPE per ogni esercizio di forza: sono lo storico da cui nasce la proposta della volta dopo.
+    const load = !isTest && (ex.load || ex.slot === 'strength') ? h('input', { value: planned || (prop ? prop.text : ''), placeholder: 'es. 20 kg oppure SX 18 kg · DX 20 kg' }) : null;
+    const rpe = load ? numInp(null, { placeholder: '1-10' }) : null;
+    const tests = ex.load && ex.load.test ? C.refKeys(ex.load.ref).map(k => S.testDefs.find(t => t.key === k)).filter(Boolean)
       .map(def => ({ def, inp: numInp(null, { placeholder: m[def.key] == null ? '' : 'precedente: ' + dec(m[def.key]) }) })) : [];
     const sf = isClimb ? opts(surfOpts(), ex.surface || '') : null, gr = isClimb ? opts(gradeOpts(), '') : null, sends = isClimb ? numInp(null) : null;
     const put = rec => {
@@ -820,10 +865,12 @@
     const ov = openSheet(ex.name, [h('p', { class: 'sub' }, 'Esercizio completato: registra com\'è andato.'),
       field('Minuti', min),
       tests.length ? [tests.map(x => field(`Risultato: ${x.def.name} (${x.def.unit})`, x.inp)), h('p', { class: 'sub' }, 'Salvando, il risultato aggiorna subito il massimale nella sezione Test.')] : null,
-      load ? field('Carico usato', load) : null,
+      load ? h('div', { class: 'cols' }, field('Carico usato', load), field('RPE dell\'esercizio', rpe)) : null,
+      load && prop && planned ? h('p', { class: 'sub' }, `Proposto: ${prop.text} (${prop.why}).`) : null,
       isClimb ? [h('div', { class: 'cols' }, field('Superficie', sf), field('Grado max chiuso', gr)), field('Blocchi chiusi', sends)] : null,
       field('Nota', note),
       btn('Salva', () => put({ name: ex.name, minutes: Math.max(0, Math.round(val(min) || 0)), note: note.value.trim().slice(0, 200), load: load ? load.value.trim() : '',
+        key: exKey(ex), label: exLabel(ex), kgs: load ? C.parseLoads(load.value) : [], rpe: rpe ? val(rpe) : null, mode: ex.load ? ex.load.mode : 'lift',
         tests: tests.map(x => ({ key: x.def.key, value: val(x.inp) })).filter(x => x.value != null),
         climb: isClimb && sf.value ? { name: ex.name, surface: sf.value, top: gr.value || null, sends: val(sends) == null ? null : Math.max(0, Math.round(val(sends))), minutes: Math.max(0, Math.round(val(min) || 0)) } : null }), 'pri block'),
       btn('Fatto, senza registrare', () => put({ name: ex.name, minutes: Math.round(ms / 60000) }), 'block'),
@@ -840,7 +887,7 @@
         const date = C.todayISO();
         S.logs.push({ id: C.uid(), date, sid: s.id, type: s.type || 'wall', title: autoTitle(s), minutes: Math.max(0, Math.round(val(min) || 0)), rpe: val(rpe), feel: feel.value ? +feel.value : null, notes: notes.value.trim(),
           loads: recs.filter(x => x.load).map(x => ({ name: x.name, kg: x.load })), climbs: recs.map(x => x.climb).filter(Boolean),
-          blocks: recs.map(x => ({ name: x.name, minutes: x.minutes || 0, note: x.note || '' })) });
+          blocks: recs.map(x => ({ name: x.name, minutes: x.minutes || 0, note: x.note || '', key: x.key, label: x.label, kgs: x.kgs && x.kgs.length ? x.kgs : undefined, rpe: x.rpe == null ? undefined : x.rpe, mode: x.mode })) });
         log('sessione', 'registrata', { esercizi: recs.length });
         end();
       }, 'pri block'), btn('Chiudi senza salvare', end, 'block')]);

@@ -20,6 +20,8 @@
     { key: 'sl', name: 'Sloper', unit: 'kg', mode: 'hang', seconds: 7, hands: 2 },
     { key: 'pinchL', name: 'Pinch block SX', unit: 'kg', mode: 'lift', seconds: 7, hands: 1 },
     { key: 'pinchR', name: 'Pinch block DX', unit: 'kg', mode: 'lift', seconds: 7, hands: 1 },
+    { key: 'liftL', name: 'Max lift SX', unit: 'kg', mode: 'lift', edge: 20, seconds: 7, hands: 1 },
+    { key: 'liftR', name: 'Max lift DX', unit: 'kg', mode: 'lift', edge: 20, seconds: 7, hands: 1 },
     { key: 'wrist', name: 'Flessione polso', unit: 'kg', mode: 'lift', reps: 6 },
     { key: 'pull', name: 'Trazione zavorrata', unit: 'kg', mode: 'hang', reps: 2 },
     { key: 'onearm', name: 'Sospensione a un braccio', unit: 's', mode: 'value', edge: 22, hands: 1 },
@@ -42,7 +44,7 @@ min-edge|fingers|Tacca minima|13|t:4/7/180
 one-arm-hang|fingers|Sospensione a un braccio|14|t:6/7/120=SX~DX
 sloper-hang|fingers|Sospensione su sloper|13|t:4/7/180
 pinch-lift|fingers|Pinch block|8|t:6/7/75=SX~DX
-block-lift|fingers|Lift da terra su tacca|13|t:6/7/120=SX~DX
+block-lift|fingers|Max lift|13|t:6/7/120=SX~DX
 density-hang|fingers|Sospensioni lunghe|9|t:4/30/120
 wrist-curl|fingers|Flessione polso|7|r:3/6/120
 finger-ext|fingers|Estensori delle dita|4|r:2/15/45
@@ -105,7 +107,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
   // Riconduce un nome libero (es. da un programma importato) all'esercizio standard. L'ordine conta: le regole più specifiche prima.
   const STD_RULES = [[/^test\b/i, 'test'], [/limit|progett/i, 'limit'], [/flash/i, 'flash'], [/pallof/i, 'pallof'], [/tallone|ristabilimento|compressione su|tecnic|movimento isolato/i, 'technique'],
     [/a bleau|roccia|outdoor/i, 'outdoor'], [/attivazione/i, 'activation'], [/riscaldamento|warm.?up/i, 'warmup-wall'], [/open hand|half.?crimp|max hang/i, 'max-hang'], [/repeater/i, 'repeaters'],
-    [/sloper/i, 'sloper-hang'], [/pinch/i, 'pinch-lift'], [/polso/i, 'wrist-curl'], [/trazion\w* zavorr|weighted pull/i, 'weighted-pullup'], [/trazion|pull.?up/i, 'pullup'], [/bloccagg|lock.?off/i, 'lockoff'],
+    [/sloper/i, 'sloper-hang'], [/pinch/i, 'pinch-lift'], [/\blift\b/i, 'block-lift'], [/polso/i, 'wrist-curl'], [/trazion\w* zavorr|weighted pull/i, 'weighted-pullup'], [/trazion|pull.?up/i, 'pullup'], [/bloccagg|lock.?off/i, 'lockoff'],
     [/campus/i, 'campus'], [/\bpress\b/i, 'press'], [/extrarot/i, 'ext-rot'], [/croci isometr/i, 'iso-fly'], [/croci/i, 'fly'], [/nordic/i, 'nordic'], [/hollow/i, 'hollow'], [/ab wheel/i, 'ab-wheel'],
     [/pallof/i, 'pallof'], [/push.?up|\bdip/i, 'pushup'], [/plank/i, 'plank'], [/front lever/i, 'front-lever'], [/mobilit.* anche/i, 'hips'], [/mobilit.* spall/i, 'shoulders'], [/mobilit|stretch/i, 'stretch'],
     [/board|benchmark/i, 'board'], [/volume/i, 'volume'], [/4 ?x ?4/i, 'four-by-four'], [/circuit/i, 'circuit']];
@@ -159,16 +161,20 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
     else if (/half.?crimp/i.test(n)) ref = 'hc';
     else if (/sloper bm/i.test(n)) ref = 'sl';
     else if (/pinch/i.test(n)) { ref = 'pinch'; mode = 'lift'; }
+    else if (/\blift\b/i.test(n)) { ref = 'lift'; mode = 'lift'; }
     else if (/polso/i.test(n)) { ref = 'wrist'; mode = 'lift'; }
     if (!ref) return null;
     const m = /(\d+(?:[.,]\d+)?)\s*%/.exec(prescription || '');
     return { ref, mode, pct: m ? num(m[1]) : null, test: /^TEST/i.test(n) };
   }
-  /** Chiave del massimale per un cue (il pinch dipende dal lato SX/DX). */
+  // Riferimenti "a coppia": un test per mano (SX/DX). Le sospensioni alla trave sono a due mani, i sollevamenti da terra per lato.
+  const PAIRS = { pinch: 'Pinch block', lift: 'Max lift' };
+  const refKeys = ref => (PAIRS[ref] ? [ref + 'L', ref + 'R'] : [ref]);
+  /** Chiave del massimale per un cue (per le coppie dipende dal lato SX/DX). */
   function loadKey(load, cue) {
     if (!load) return null;
-    if (load.ref !== 'pinch') return load.ref;
-    return /^\s*DX/i.test(cue || '') ? 'pinchR' : 'pinchL';
+    if (!PAIRS[load.ref]) return load.ref;
+    return load.ref + (/^\s*DX/i.test(cue || '') ? 'R' : 'L');
   }
   /** Carico in kg arrotondato a 0,5: zavorra (può essere negativa = scarico) o carico sollevato. */
   function loadKg(load, cue, maxes) {
@@ -405,18 +411,41 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
     }
     return out;
   }
-  /** Carichi registrati nel diario: una serie per esercizio (e per lato), in ordine di data. */
+  const byDate = (a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
+  /** Esercizi registrati in un log con carichi numerici: { key, label, kgs:[{side,kg}], rpe, mode }.
+      `key` identifica esercizio standard + test di riferimento, così versioni diverse dello stesso esercizio stanno insieme.
+      I log vecchi (solo testo) vengono ricondotti allo standard dal nome. */
+  function recordsOf(l) {
+    if ((l.blocks || []).some(b => b.kgs)) return l.blocks.filter(b => b.kgs && b.kgs.length).map(b => ({ key: b.key || b.name, label: b.label || b.name, kgs: b.kgs, rpe: b.rpe == null ? null : b.rpe, mode: b.mode || 'lift' }));
+    return (l.loads || []).map(x => { const ld = inferLoad(x.name, ''); return { key: (matchStd(x.name) || x.name) + '|' + (ld ? ld.ref : ''), label: x.name, kgs: parseLoads(x.kg), rpe: null, mode: ld ? ld.mode : 'lift' }; }).filter(r => r.kgs.length);
+  }
+  /** Carichi registrati: una serie per esercizio standard + test (e per lato SX/DX nei sollevamenti). */
   function loadSeries(logs, from, to) {
     const m = new Map();
-    for (const l of [...(logs || [])].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))) {
+    for (const l of [...(logs || [])].sort(byDate)) {
       if (l.date < from || l.date > to) continue;
-      for (const x of l.loads || []) for (const p of parseLoads(x.kg)) {
-        const name = x.name + (p.side ? ' ' + p.side : '');
-        if (!m.has(name)) m.set(name, []);
-        m.get(name).push({ date: l.date, kg: p.kg });
+      for (const r of recordsOf(l)) for (const p of r.kgs) {
+        const k = r.key + '|' + (p.side || '');
+        if (!m.has(k)) m.set(k, { name: '', points: [] });
+        const o = m.get(k); o.name = r.label + (p.side ? ' ' + p.side : ''); o.points.push({ date: l.date, kg: p.kg });
       }
     }
-    return [...m.entries()].map(([name, points]) => ({ name, points })).sort((a, b) => a.name.localeCompare(b.name));
+    return [...m.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }
+  /** Ultima registrazione di un esercizio (per chiave), o null. */
+  function lastRecord(logs, key) {
+    let best = null;
+    for (const l of logs || []) for (const r of recordsOf(l)) if (r.key === key && (!best || l.date >= best.date)) best = { ...r, date: l.date };
+    return best;
+  }
+  /** Progressione: dal carico e dall'RPE dell'ultima volta propone il prossimo, arrotondato a 0,5 kg.
+      RPE ≤ soglia → +step %; RPE ≥ soglia + 1,5 → −step %; altrimenti (o senza RPE) stesso carico.
+      Per la zavorra la percentuale si applica al carico totale (peso corporeo + zavorra). */
+  function nextLoad(kg, rpe, rule, mode, bw) {
+    if (kg == null || isNaN(kg)) return null;
+    const dir = rpe == null ? 0 : rpe <= rule.rpe ? 1 : rpe >= rule.rpe + 1.5 ? -1 : 0;
+    const base = mode === 'hang' && bw != null && !isNaN(bw) ? bw : 0;
+    return { kg: Math.round(((base + kg) * (1 + dir * rule.step / 100) - base) * 2) / 2, dir };
   }
   /** Per superficie: minuti, sessioni, blocchi chiusi e grado massimo chiuso nel periodo. */
   function surfaceStats(logs, from, to) {
@@ -453,7 +482,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
   }
 
   return {
-    TEST_TEMPLATES, testLabel, SECTIONS, LIBRARY, STD, stdVariant, matchStd,
+    PAIRS, refKeys, recordsOf, lastRecord, nextLoad, TEST_TEMPLATES, testLabel, SECTIONS, LIBRARY, STD, stdVariant, matchStd,
     DAY_TYPES, PERIODS, SLOTS, GRADES, GRADE_SCALES, gradeIdx, fmtGrade, DEFAULT_SURFACES, inferSurface, validISO, uid, toISO, fromISO, todayISO, addDays, diffDays, appleToISO, isoToApple, mondayOf,
     inferLoad, loadKey, loadKg, latestMaxes, fmtKg, cycle, cueAt, intervalMinutes, buildSteps, normInterval,
     importBlokplan, exportBlokplan, locate, dateOf, sessionMinutes, cloneSession, cloneDay, emptyWeek, usage, validState,

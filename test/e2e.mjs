@@ -104,7 +104,8 @@ ok((await txt('#p-ph')) === 'RECUPERO', 'hang finito → recupero');
 const c0 = await txt('#p-clock'); await pg.click('#p-plus'); ok((await txt('#p-clock')) !== c0, '+30 s sul recupero');
 await pg.click('#p-pause'); const c1 = await txt('#p-clock'); await adv(60000); ok((await txt('#p-clock')) === c1, 'pausa: il tempo non scorre'); await pg.click('#p-pause');
 for (let i = 0; i < 20 && !(await pg.$eval('#player', e => e.hidden)); i++) await pg.click('#p-done');
-ok((await txt('.sheet')).includes('Carico usato') && (await pg.$eval('.sheet label:nth-of-type(2) input', e => e.value)) === '+4,5 kg', 'fine esercizio: carico precompilato');
+ok((await txt('.sheet')).includes('Carico usato') && (await pg.$eval('.sheet .cols label:nth-child(1) input', e => e.value)) === '+4,5 kg', 'fine esercizio: carico precompilato');
+await pg.type('.sheet .cols label:nth-child(2) input', '7');
 await clickText('Salva', '.sheet');
 
 // Aggiungere un esercizio durante la sessione
@@ -139,6 +140,13 @@ let diary = await txt('#view');
 ok(diary.includes('Prova automatica') && diary.includes('MoonBoard 7A+ · 3 blocchi') && diary.includes('Sloper BM2000 7": +4,5 kg') && diary.includes('buone sensazioni'), 'registrazione nel calendario: carico, superficie, grado e nota dei singoli esercizi');
 await shot('7-diario');
 await go('home'); ok((await txt('#view')).includes('Fatta'), 'Home: sessione segnata come fatta');
+ok((await txt('#view')).includes('non hanno ancora un backup') && (await txt('#view')).includes('Salva backup'), 'Home: promemoria backup quando ci sono dati non salvati');
+// Progressione: RPE 7 ≤ soglia 8 → la volta dopo +2,5% sul carico totale: (70 + 4,5) × 1,025 − 70 = 6,4 → 6,5 kg
+await go('calendario-2026-12-02');
+ok((await txt('#view')).includes('Proposto: +6,5 kg (ultima volta +4,5 kg, RPE 7)'), 'progressione: proposta dal carico e dall\'RPE dell\'ultima volta');
+await go('altro'); await pg.evaluate(() => { const c = [...document.querySelectorAll('#view input[type=checkbox]')].find(x => x.closest('label').innerText.includes('Proposte')); c.click(); [...c.closest('.card').querySelectorAll('button')].find(b => b.innerText === 'Salva').click(); }); await sleep(80);
+await go('calendario-2026-12-02'); ok(!(await txt('#view')).includes('Proposto:'), 'progressione disattivabile dalle impostazioni');
+await pg.evaluate(() => { __app.state.settings.prog.on = true; });
 
 // Crea sessione da Home su un giorno qualsiasi, aggiunge esercizi dal calendario
 await clickText('Crea sessione', '#view');
