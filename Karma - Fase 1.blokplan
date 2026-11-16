@@ -1,0 +1,4274 @@
+{
+ "title": "Karma - Fase 1",
+ "isForSelf": true,
+ "athleteName": "Climber",
+ "weeks": [
+  [
+   {
+    "type": "rest"
+   },
+   {
+    "type": "wall",
+    "period": "strength",
+    "plannedBlocks": [
+     {
+      "id": "E08D34A5-AF8B-4DD3-BAD2-2EEF4E823C89",
+      "block": {
+       "id": "custom-D224C78A-F9C6-4C8F-982F-0D5BBD615E4A",
+       "sourceName": "Climber",
+       "name": "Riscaldamento",
+       "slot": "warmup",
+       "location": "wall",
+       "domain": "mobility",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        20
+       ],
+       "defaultMinutes": 20,
+       "intensity": "low",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "Mobilità · arrampicata progressiva · sospensioni fino all'80-90%",
+       "prescription": "Mobilità · arrampicata progressiva · sospensioni fino all'80-90%",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 20
+     },
+     {
+      "id": "7B9AE4F3-AF27-4AD6-AC5B-3F0BF73C1287",
+      "block": {
+       "id": "custom-2115052E-83E2-4F56-9F88-051E84FAA594",
+       "sourceName": "Climber",
+       "name": "TEST open hand 20 mm 7\"",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 4,
+        "workSeconds": 7,
+        "restSeconds": 180,
+        "cues": [
+         "Carico crescente",
+         "Carico crescente",
+         "Carico crescente",
+         "Carico crescente"
+        ]
+       },
+       "domain": "finger_strength",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        10
+       ],
+       "defaultMinutes": 10,
+       "intensity": "max",
+       "risk": "moderate",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "TEST · 7\" · carico crescente · rec. 3'",
+       "prescription": "TEST · 7\" · carico crescente · rec. 3'",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 10
+     },
+     {
+      "id": "641F64D5-5CC2-4374-A641-6ED58F20144C",
+      "block": {
+       "id": "custom-354ED45F-6D09-4EFB-8069-8C8514392390",
+       "sourceName": "Climber",
+       "name": "TEST half-crimp 20 mm 7\"",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 4,
+        "workSeconds": 7,
+        "restSeconds": 180,
+        "cues": [
+         "Carico crescente",
+         "Carico crescente",
+         "Carico crescente",
+         "Carico crescente"
+        ]
+       },
+       "domain": "finger_strength",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        10
+       ],
+       "defaultMinutes": 10,
+       "intensity": "max",
+       "risk": "moderate",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "TEST · 7\" · carico crescente · rec. 3'",
+       "prescription": "TEST · 7\" · carico crescente · rec. 3'",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 10
+     },
+     {
+      "id": "613C4CBD-6DD3-42A9-9301-8B96E5A0B6F5",
+      "block": {
+       "id": "custom-73408F15-B55D-4012-802E-D09C32B00F5C",
+       "sourceName": "Climber",
+       "name": "Limit MoonBoard",
+       "slot": "wall",
+       "location": "wall",
+       "domain": "power",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        30
+       ],
+       "defaultMinutes": 30,
+       "intensity": "high",
+       "risk": "moderate",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "≥ 3 tentativi per problema · stop quando cala la qualità",
+       "prescription": "≥ 3 tentativi per problema · stop quando cala la qualità",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 30
+     },
+     {
+      "id": "CAEFEA49-9F66-4986-8BCD-6531CCDF3593",
+      "block": {
+       "id": "custom-14B84D63-3682-43E2-9CDA-6CAD109DFBC2",
+       "sourceName": "Climber",
+       "name": "KB press 1 braccio",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 3,
+        "workSeconds": 45,
+        "restSeconds": 120,
+        "selfPaced": true,
+        "reps": 6,
+        "cues": [
+         "6-8 rip. per braccio",
+         "6-8 rip. per braccio",
+         "6-8 rip. per braccio"
+        ]
+       },
+       "domain": "general_strength",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        7
+       ],
+       "defaultMinutes": 7,
+       "intensity": "moderate",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "3 × 6-8 per braccio · rec. 2'",
+       "prescription": "3 × 6-8 per braccio · rec. 2'",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 7
+     },
+     {
+      "id": "005A3E60-2026-4340-8031-27AFF37B4186",
+      "block": {
+       "id": "custom-875B0D3E-71BD-4DB4-84B6-315A62E613CF",
+       "sourceName": "Climber",
+       "name": "Extrarotazioni",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 2,
+        "workSeconds": 45,
+        "restSeconds": 60,
+        "selfPaced": true,
+        "reps": 12,
+        "cues": [
+         "12-15 rip. per lato",
+         "12-15 rip. per lato"
+        ]
+       },
+       "domain": "general_strength",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        3
+       ],
+       "defaultMinutes": 3,
+       "intensity": "moderate",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "2 × 12-15 per lato · rec. 1'",
+       "prescription": "2 × 12-15 per lato · rec. 1'",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 3
+     }
+    ]
+   },
+   {
+    "type": "strength",
+    "period": "strength",
+    "plannedBlocks": [
+     {
+      "id": "62CBA5E9-1682-4A9F-8312-BACA33E62C7B",
+      "block": {
+       "id": "custom-EF46A378-F4C1-409D-A802-AB5606AA006A",
+       "sourceName": "Climber",
+       "name": "Nordic curl",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 3,
+        "workSeconds": 45,
+        "restSeconds": 120,
+        "selfPaced": true,
+        "reps": 4,
+        "cues": [
+         "4-6 rip.",
+         "4-6 rip.",
+         "4-6 rip."
+        ]
+       },
+       "domain": "general_strength",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        7
+       ],
+       "defaultMinutes": 7,
+       "intensity": "moderate",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "3 × 4-6 · rec. 2'",
+       "prescription": "3 × 4-6 · rec. 2'",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 7
+     },
+     {
+      "id": "B028C4A1-EF32-4D62-8FC6-1D134D1F1A5D",
+      "block": {
+       "id": "custom-BDDDFA60-5C77-459D-AC8E-00C660EE27C6",
+       "sourceName": "Climber",
+       "name": "Hollow body hold",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 3,
+        "workSeconds": 25,
+        "restSeconds": 60,
+        "cues": []
+       },
+       "domain": "stability",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        4
+       ],
+       "defaultMinutes": 4,
+       "intensity": "moderate",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "3 × 25\" · rec. 1'",
+       "prescription": "3 × 25\" · rec. 1'",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 4
+     }
+    ]
+   },
+   {
+    "type": "wall",
+    "period": "strength",
+    "plannedBlocks": [
+     {
+      "id": "54FAA1E7-A1ED-446D-8FEE-90C6D164E3D5",
+      "block": {
+       "id": "custom-D224C78A-F9C6-4C8F-982F-0D5BBD615E4A",
+       "sourceName": "Climber",
+       "name": "Riscaldamento",
+       "slot": "warmup",
+       "location": "wall",
+       "domain": "mobility",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        20
+       ],
+       "defaultMinutes": 20,
+       "intensity": "low",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "Mobilità · arrampicata progressiva · sospensioni fino all'80-90%",
+       "prescription": "Mobilità · arrampicata progressiva · sospensioni fino all'80-90%",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 20
+     },
+     {
+      "id": "9B0F397C-9954-4B3B-A34C-CBBF6ED9D031",
+      "block": {
+       "id": "custom-636960FC-561F-4B92-BDE3-C83934F1B0A9",
+       "sourceName": "Climber",
+       "name": "TEST sloper BM2000 7\"",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 4,
+        "workSeconds": 7,
+        "restSeconds": 180,
+        "cues": [
+         "Carico crescente",
+         "Carico crescente",
+         "Carico crescente",
+         "Carico crescente"
+        ]
+       },
+       "domain": "finger_strength",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        10
+       ],
+       "defaultMinutes": 10,
+       "intensity": "max",
+       "risk": "moderate",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "TEST · rec. 3' · sloper più inclinato che tieni ≥ 10\" a peso corporeo",
+       "prescription": "TEST · rec. 3' · sloper più inclinato che tieni ≥ 10\" a peso corporeo",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 10
+     },
+     {
+      "id": "3BF1D079-7EAB-4E13-A8A4-BA57419AC1BE",
+      "block": {
+       "id": "custom-01E2769B-65A4-4CD5-8E9E-F45113330F70",
+       "sourceName": "Climber",
+       "name": "TEST pinch block 7\"",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 8,
+        "workSeconds": 7,
+        "restSeconds": 90,
+        "cues": [
+         "SX · carico crescente",
+         "DX · carico crescente",
+         "SX · carico crescente",
+         "DX · carico crescente",
+         "SX · carico crescente",
+         "DX · carico crescente",
+         "SX · carico crescente",
+         "DX · carico crescente"
+        ]
+       },
+       "domain": "finger_strength",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        12
+       ],
+       "defaultMinutes": 12,
+       "intensity": "max",
+       "risk": "moderate",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "TEST · 7\" per mano · carico crescente · rec. 1'30\"",
+       "prescription": "TEST · 7\" per mano · carico crescente · rec. 1'30\"",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 12
+     },
+     {
+      "id": "8A45DC78-3DDF-4908-9235-3580965F792E",
+      "block": {
+       "id": "custom-BB949C64-9164-4C77-A8F6-1A76FD07E07F",
+       "sourceName": "Climber",
+       "name": "TEST flessione polso 6RM",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 4,
+        "workSeconds": 45,
+        "restSeconds": 180,
+        "selfPaced": true,
+        "reps": 6,
+        "cues": [
+         "6 rip. · carico crescente",
+         "6 rip. · carico crescente",
+         "6 rip. · carico crescente",
+         "6 rip. · carico crescente"
+        ]
+       },
+       "domain": "finger_strength",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        12
+       ],
+       "defaultMinutes": 12,
+       "intensity": "max",
+       "risk": "moderate",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "TEST · 6RM · carico crescente · rec. 3'",
+       "prescription": "TEST · 6RM · carico crescente · rec. 3'",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 12
+     },
+     {
+      "id": "CC24DAC4-614A-4887-A356-A04DD04A34E2",
+      "block": {
+       "id": "custom-762CE2FF-E6F8-4F26-86EC-0A0E176E3B8B",
+       "sourceName": "Climber",
+       "name": "Limit sloper/compressione",
+       "slot": "wall",
+       "location": "wall",
+       "domain": "power",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        30
+       ],
+       "defaultMinutes": 30,
+       "intensity": "high",
+       "risk": "moderate",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "Blocchi di qualità al muro commerciale",
+       "prescription": "Blocchi di qualità al muro commerciale",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 30
+     },
+     {
+      "id": "0EF178AC-101F-4C18-AFDB-65709E455136",
+      "block": {
+       "id": "custom-28D9C189-19BB-41DC-A69C-16DD27BEEFFC",
+       "sourceName": "Climber",
+       "name": "Trazioni zavorrate",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 3,
+        "workSeconds": 45,
+        "restSeconds": 180,
+        "selfPaced": true,
+        "reps": 4,
+        "cues": [
+         "4-5 rip.",
+         "4-5 rip.",
+         "4-5 rip."
+        ]
+       },
+       "domain": "pulling_strength",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        9
+       ],
+       "defaultMinutes": 9,
+       "intensity": "moderate",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "3 × 4-5 · rec. 3'",
+       "prescription": "3 × 4-5 · rec. 3'",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 9
+     },
+     {
+      "id": "B5C27D90-6D75-41C2-9B8C-32AFEA2B4E35",
+      "block": {
+       "id": "custom-87C63C6A-3C34-41D0-9745-84F3FD2D854A",
+       "sourceName": "Climber",
+       "name": "Croci agli anelli",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 3,
+        "workSeconds": 45,
+        "restSeconds": 90,
+        "selfPaced": true,
+        "reps": 6,
+        "cues": [
+         "6-8 rip.",
+         "6-8 rip.",
+         "6-8 rip."
+        ]
+       },
+       "domain": "general_strength",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        6
+       ],
+       "defaultMinutes": 6,
+       "intensity": "moderate",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "3 × 6-8 · rec. 1'30\"",
+       "prescription": "3 × 6-8 · rec. 1'30\"",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 6
+     },
+     {
+      "id": "2D11A987-7DD2-4F53-A01F-5C7CC1907BA7",
+      "block": {
+       "id": "custom-217CF1C6-2F3F-4A8F-B247-83FDAF8481A6",
+       "sourceName": "Climber",
+       "name": "Leg raise alla sbarra",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 3,
+        "workSeconds": 45,
+        "restSeconds": 90,
+        "selfPaced": true,
+        "reps": 6,
+        "cues": [
+         "6-8 rip.",
+         "6-8 rip.",
+         "6-8 rip."
+        ]
+       },
+       "domain": "stability",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        6
+       ],
+       "defaultMinutes": 6,
+       "intensity": "moderate",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "3 × 6-8 · rec. 1'30\"",
+       "prescription": "3 × 6-8 · rec. 1'30\"",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 6
+     }
+    ]
+   },
+   {
+    "type": "activeRest",
+    "period": "strength",
+    "plannedBlocks": [
+     {
+      "id": "621B930C-3026-4EE1-BF10-117A95800346",
+      "block": {
+       "id": "custom-FD710992-1923-49F1-96B5-87132E0F1B33",
+       "sourceName": "Climber",
+       "name": "Mobilità anche",
+       "slot": "mobility",
+       "location": "off_wall",
+       "domain": "mobility",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        10
+       ],
+       "defaultMinutes": 10,
+       "intensity": "low",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "90/90 · rotazioni",
+       "prescription": "90/90 · rotazioni",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 10
+     },
+     {
+      "id": "5E6EBBB3-70A7-4BBB-9044-1F886A417C99",
+      "block": {
+       "id": "custom-5EACE6E7-FAA4-4DA7-998D-A498B8DCAB9E",
+       "sourceName": "Climber",
+       "name": "Pallof press",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 6,
+        "workSeconds": 45,
+        "restSeconds": 45,
+        "selfPaced": true,
+        "reps": 10,
+        "cues": [
+         "Lato SX",
+         "Lato DX",
+         "Lato SX",
+         "Lato DX",
+         "Lato SX",
+         "Lato DX"
+        ]
+       },
+       "domain": "stability",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        9
+       ],
+       "defaultMinutes": 9,
+       "intensity": "low",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "3 × 10 per lato · rec. 45\"",
+       "prescription": "3 × 10 per lato · rec. 45\"",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 9
+     }
+    ]
+   },
+   {
+    "type": "wall",
+    "period": "strength",
+    "plannedBlocks": [
+     {
+      "id": "B64EC939-0193-45B2-B0CB-900E9D07A336",
+      "block": {
+       "id": "custom-D224C78A-F9C6-4C8F-982F-0D5BBD615E4A",
+       "sourceName": "Climber",
+       "name": "Riscaldamento",
+       "slot": "warmup",
+       "location": "wall",
+       "domain": "mobility",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        20
+       ],
+       "defaultMinutes": 20,
+       "intensity": "low",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "Mobilità · arrampicata progressiva · sospensioni fino all'80-90%",
+       "prescription": "Mobilità · arrampicata progressiva · sospensioni fino all'80-90%",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 20
+     },
+     {
+      "id": "75EF12C4-EE48-4E8D-8B7E-7E0D76D039F1",
+      "block": {
+       "id": "custom-53E3D837-C164-40C5-9F80-108DB64502C7",
+       "sourceName": "Climber",
+       "name": "Limit Karma",
+       "slot": "wall",
+       "location": "wall",
+       "domain": "power",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        60
+       ],
+       "defaultMinutes": 60,
+       "intensity": "max",
+       "risk": "moderate",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "Qualità/pattern 70/30 · P1 posizione 5\" · rec. 4-5'",
+       "prescription": "Qualità/pattern 70/30 · P1 posizione 5\" · rec. 4-5'",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 60
+     },
+     {
+      "id": "B9E7B5D2-9DE9-45F7-85F1-4851499ECD58",
+      "block": {
+       "id": "custom-EF085351-A0D7-4C31-AC07-44F033662922",
+       "sourceName": "Climber",
+       "name": "Croci isometriche",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 3,
+        "workSeconds": 10,
+        "restSeconds": 60,
+        "cues": []
+       },
+       "domain": "stability",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        3
+       ],
+       "defaultMinutes": 3,
+       "intensity": "moderate",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "3 × 10\" · rec. 1'",
+       "prescription": "3 × 10\" · rec. 1'",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 3
+     },
+     {
+      "id": "F22E8665-9523-4A2C-B33A-DF1E793F1EEC",
+      "block": {
+       "id": "custom-7AA722FD-7003-413D-BE71-A2DBA82C4790",
+       "sourceName": "Climber",
+       "name": "Push-up zavorrati o dip",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 3,
+        "workSeconds": 45,
+        "restSeconds": 120,
+        "selfPaced": true,
+        "reps": 6,
+        "cues": [
+         "6-8 rip.",
+         "6-8 rip.",
+         "6-8 rip."
+        ]
+       },
+       "domain": "general_strength",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        7
+       ],
+       "defaultMinutes": 7,
+       "intensity": "moderate",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "3 × 6-8 · rec. 2'",
+       "prescription": "3 × 6-8 · rec. 2'",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 7
+     }
+    ]
+   },
+   {
+    "type": "rest"
+   }
+  ],
+  [
+   {
+    "type": "wall",
+    "period": "strength",
+    "plannedBlocks": [
+     {
+      "id": "A2FA078F-8098-47F4-82D9-48AFC8AB981E",
+      "block": {
+       "id": "custom-D224C78A-F9C6-4C8F-982F-0D5BBD615E4A",
+       "sourceName": "Climber",
+       "name": "Riscaldamento",
+       "slot": "warmup",
+       "location": "wall",
+       "domain": "mobility",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        20
+       ],
+       "defaultMinutes": 20,
+       "intensity": "low",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "Mobilità · arrampicata progressiva · sospensioni fino all'80-90%",
+       "prescription": "Mobilità · arrampicata progressiva · sospensioni fino all'80-90%",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 20
+     },
+     {
+      "id": "A5611DDC-E0E0-45B1-A9D8-FD01A53934F7",
+      "block": {
+       "id": "custom-D94C0B05-7896-4AFD-8483-87D5EE4D9663",
+       "sourceName": "Climber",
+       "name": "Open hand 20 mm 7\"",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 4,
+        "workSeconds": 7,
+        "restSeconds": 180,
+        "cues": []
+       },
+       "domain": "finger_strength",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        10
+       ],
+       "defaultMinutes": 10,
+       "intensity": "max",
+       "risk": "moderate",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "4 × 7\" · rec. 3' · 85% max · margine 2-3\"",
+       "prescription": "4 × 7\" · rec. 3' · 85% max · margine 2-3\"",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 10
+     },
+     {
+      "id": "5EE07114-BD76-4A93-868B-193DAC7E1BF8",
+      "block": {
+       "id": "custom-904A86EF-6418-4AE9-95CF-EA6512E30974",
+       "sourceName": "Climber",
+       "name": "Half-crimp 20 mm 7\"",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 2,
+        "workSeconds": 7,
+        "restSeconds": 180,
+        "cues": []
+       },
+       "domain": "finger_strength",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        4
+       ],
+       "defaultMinutes": 4,
+       "intensity": "max",
+       "risk": "moderate",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "2 × 7\" · rec. 3' · 85% max · margine 2-3\"",
+       "prescription": "2 × 7\" · rec. 3' · 85% max · margine 2-3\"",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 4
+     },
+     {
+      "id": "CC706E02-79DF-49A5-B427-32348BD3BD0F",
+      "block": {
+       "id": "custom-BBDAE032-4FAC-42AC-A251-FC28E450A424",
+       "sourceName": "Climber",
+       "name": "Limit MoonBoard",
+       "slot": "wall",
+       "location": "wall",
+       "domain": "power",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        35
+       ],
+       "defaultMinutes": 35,
+       "intensity": "high",
+       "risk": "moderate",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "≥ 3 tentativi per problema · stop quando cala la qualità",
+       "prescription": "≥ 3 tentativi per problema · stop quando cala la qualità",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 35
+     },
+     {
+      "id": "5CECE738-E732-4724-AD9D-4154A1A1C804",
+      "block": {
+       "id": "custom-14B84D63-3682-43E2-9CDA-6CAD109DFBC2",
+       "sourceName": "Climber",
+       "name": "KB press 1 braccio",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 3,
+        "workSeconds": 45,
+        "restSeconds": 120,
+        "selfPaced": true,
+        "reps": 6,
+        "cues": [
+         "6-8 rip. per braccio",
+         "6-8 rip. per braccio",
+         "6-8 rip. per braccio"
+        ]
+       },
+       "domain": "general_strength",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        7
+       ],
+       "defaultMinutes": 7,
+       "intensity": "moderate",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "3 × 6-8 per braccio · rec. 2'",
+       "prescription": "3 × 6-8 per braccio · rec. 2'",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 7
+     },
+     {
+      "id": "4CDC6770-425C-4059-A4E1-B683569209D3",
+      "block": {
+       "id": "custom-875B0D3E-71BD-4DB4-84B6-315A62E613CF",
+       "sourceName": "Climber",
+       "name": "Extrarotazioni",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 2,
+        "workSeconds": 45,
+        "restSeconds": 60,
+        "selfPaced": true,
+        "reps": 12,
+        "cues": [
+         "12-15 rip. per lato",
+         "12-15 rip. per lato"
+        ]
+       },
+       "domain": "general_strength",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        3
+       ],
+       "defaultMinutes": 3,
+       "intensity": "moderate",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "2 × 12-15 per lato · rec. 1'",
+       "prescription": "2 × 12-15 per lato · rec. 1'",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 3
+     }
+    ]
+   },
+   {
+    "type": "strength",
+    "period": "strength",
+    "plannedBlocks": [
+     {
+      "id": "201E3351-8D71-402C-AF92-A2DEB3AF719C",
+      "block": {
+       "id": "custom-EF46A378-F4C1-409D-A802-AB5606AA006A",
+       "sourceName": "Climber",
+       "name": "Nordic curl",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 3,
+        "workSeconds": 45,
+        "restSeconds": 120,
+        "selfPaced": true,
+        "reps": 4,
+        "cues": [
+         "4-6 rip.",
+         "4-6 rip.",
+         "4-6 rip."
+        ]
+       },
+       "domain": "general_strength",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        7
+       ],
+       "defaultMinutes": 7,
+       "intensity": "moderate",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "3 × 4-6 · rec. 2'",
+       "prescription": "3 × 4-6 · rec. 2'",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 7
+     },
+     {
+      "id": "8C287104-024B-47C0-9A94-DF91A0B68016",
+      "block": {
+       "id": "custom-BDDDFA60-5C77-459D-AC8E-00C660EE27C6",
+       "sourceName": "Climber",
+       "name": "Hollow body hold",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 3,
+        "workSeconds": 25,
+        "restSeconds": 60,
+        "cues": []
+       },
+       "domain": "stability",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        4
+       ],
+       "defaultMinutes": 4,
+       "intensity": "moderate",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "3 × 25\" · rec. 1'",
+       "prescription": "3 × 25\" · rec. 1'",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 4
+     }
+    ]
+   },
+   {
+    "type": "wall",
+    "period": "strength",
+    "plannedBlocks": [
+     {
+      "id": "EDD0D481-D170-4300-B0C5-51E76CAAB692",
+      "block": {
+       "id": "custom-D224C78A-F9C6-4C8F-982F-0D5BBD615E4A",
+       "sourceName": "Climber",
+       "name": "Riscaldamento",
+       "slot": "warmup",
+       "location": "wall",
+       "domain": "mobility",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        20
+       ],
+       "defaultMinutes": 20,
+       "intensity": "low",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "Mobilità · arrampicata progressiva · sospensioni fino all'80-90%",
+       "prescription": "Mobilità · arrampicata progressiva · sospensioni fino all'80-90%",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 20
+     },
+     {
+      "id": "3A7764BA-AC36-4582-8506-09426F400AD5",
+      "block": {
+       "id": "custom-FE3D503D-1F4B-4313-AAB1-59255A91DE27",
+       "sourceName": "Climber",
+       "name": "Sloper BM2000 7\"",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 4,
+        "workSeconds": 7,
+        "restSeconds": 180,
+        "cues": []
+       },
+       "domain": "finger_strength",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        10
+       ],
+       "defaultMinutes": 10,
+       "intensity": "max",
+       "risk": "moderate",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "4 × 7\" · rec. 3' · 82,5% max · margine 2-3\" · stesso sloper del test",
+       "prescription": "4 × 7\" · rec. 3' · 82,5% max · margine 2-3\" · stesso sloper del test",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 10
+     },
+     {
+      "id": "F0AAD75A-8D4D-476B-9E61-2C88E8BB0C44",
+      "block": {
+       "id": "custom-21FB91BD-836B-4C02-8166-82726DB5D1AC",
+       "sourceName": "Climber",
+       "name": "Pinch block 7\"",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 6,
+        "workSeconds": 7,
+        "restSeconds": 75,
+        "cues": [
+         "SX",
+         "DX",
+         "SX",
+         "DX",
+         "SX",
+         "DX"
+        ]
+       },
+       "domain": "finger_strength",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        7
+       ],
+       "defaultMinutes": 7,
+       "intensity": "high",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "3 × 7\" per mano · rec. 1'15\" · 75% max",
+       "prescription": "3 × 7\" per mano · rec. 1'15\" · 75% max",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 7
+     },
+     {
+      "id": "B086B1BF-99DB-4C52-ACDD-3B2153D3B5E7",
+      "block": {
+       "id": "custom-C739E2EF-CA83-43E4-B77A-305922D39139",
+       "sourceName": "Climber",
+       "name": "Flessione polso",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 3,
+        "workSeconds": 45,
+        "restSeconds": 120,
+        "selfPaced": true,
+        "reps": 6,
+        "cues": [
+         "6-8 rip.",
+         "6-8 rip.",
+         "6-8 rip."
+        ]
+       },
+       "domain": "general_strength",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        7
+       ],
+       "defaultMinutes": 7,
+       "intensity": "moderate",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "3 × 6-8 · rec. 2' · 90% 6RM",
+       "prescription": "3 × 6-8 · rec. 2' · 90% 6RM",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 7
+     },
+     {
+      "id": "70FCB6FB-C0D0-4627-B091-E57E37525EE2",
+      "block": {
+       "id": "custom-762CE2FF-E6F8-4F26-86EC-0A0E176E3B8B",
+       "sourceName": "Climber",
+       "name": "Limit sloper/compressione",
+       "slot": "wall",
+       "location": "wall",
+       "domain": "power",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        30
+       ],
+       "defaultMinutes": 30,
+       "intensity": "high",
+       "risk": "moderate",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "Blocchi di qualità al muro commerciale",
+       "prescription": "Blocchi di qualità al muro commerciale",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 30
+     },
+     {
+      "id": "5364FC74-410F-40FE-BAA1-BE59CD228F83",
+      "block": {
+       "id": "custom-28D9C189-19BB-41DC-A69C-16DD27BEEFFC",
+       "sourceName": "Climber",
+       "name": "Trazioni zavorrate",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 3,
+        "workSeconds": 45,
+        "restSeconds": 180,
+        "selfPaced": true,
+        "reps": 4,
+        "cues": [
+         "4-5 rip.",
+         "4-5 rip.",
+         "4-5 rip."
+        ]
+       },
+       "domain": "pulling_strength",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        9
+       ],
+       "defaultMinutes": 9,
+       "intensity": "moderate",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "3 × 4-5 · rec. 3'",
+       "prescription": "3 × 4-5 · rec. 3'",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 9
+     },
+     {
+      "id": "E7316B1B-EDEC-4095-BF8E-4794B4260E73",
+      "block": {
+       "id": "custom-87C63C6A-3C34-41D0-9745-84F3FD2D854A",
+       "sourceName": "Climber",
+       "name": "Croci agli anelli",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 3,
+        "workSeconds": 45,
+        "restSeconds": 90,
+        "selfPaced": true,
+        "reps": 6,
+        "cues": [
+         "6-8 rip.",
+         "6-8 rip.",
+         "6-8 rip."
+        ]
+       },
+       "domain": "general_strength",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        6
+       ],
+       "defaultMinutes": 6,
+       "intensity": "moderate",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "3 × 6-8 · rec. 1'30\"",
+       "prescription": "3 × 6-8 · rec. 1'30\"",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 6
+     },
+     {
+      "id": "F3EBE531-DD95-4B64-98EA-CB3600DEF0CC",
+      "block": {
+       "id": "custom-217CF1C6-2F3F-4A8F-B247-83FDAF8481A6",
+       "sourceName": "Climber",
+       "name": "Leg raise alla sbarra",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 3,
+        "workSeconds": 45,
+        "restSeconds": 90,
+        "selfPaced": true,
+        "reps": 6,
+        "cues": [
+         "6-8 rip.",
+         "6-8 rip.",
+         "6-8 rip."
+        ]
+       },
+       "domain": "stability",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        6
+       ],
+       "defaultMinutes": 6,
+       "intensity": "moderate",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "3 × 6-8 · rec. 1'30\"",
+       "prescription": "3 × 6-8 · rec. 1'30\"",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 6
+     }
+    ]
+   },
+   {
+    "type": "skills",
+    "period": "strength",
+    "plannedBlocks": [
+     {
+      "id": "0E2F40C3-D6DD-453B-BB44-DD30E1547B33",
+      "block": {
+       "id": "custom-930FE284-6BD4-401B-A7BD-C4F51C3F43F0",
+       "sourceName": "Climber",
+       "name": "Riscaldamento",
+       "slot": "warmup",
+       "location": "wall",
+       "domain": "mobility",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        15
+       ],
+       "defaultMinutes": 15,
+       "intensity": "low",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "Generale · attivazione leggera di core e dita",
+       "prescription": "Generale · attivazione leggera di core e dita",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 15
+     },
+     {
+      "id": "22653A94-7F21-4AC8-81E9-5184E2A636E6",
+      "block": {
+       "id": "custom-2B0B8AD1-77BC-465E-A7C1-37DF17D6263A",
+       "sourceName": "Climber",
+       "name": "Technical Triples",
+       "slot": "wall",
+       "location": "wall",
+       "interval": {
+        "rounds": 18,
+        "workSeconds": 60,
+        "restSeconds": 120,
+        "selfPaced": true,
+        "roundsPerSet": 3,
+        "setRestSeconds": 300,
+        "cues": [
+         "Lettura (flash)",
+         "Piedi e tecnica",
+         "Lentezza e controllo",
+         "Lettura (flash)",
+         "Piedi e tecnica",
+         "Lentezza e controllo",
+         "Lettura (flash)",
+         "Piedi e tecnica",
+         "Lentezza e controllo",
+         "Lettura (flash)",
+         "Piedi e tecnica",
+         "Lentezza e controllo",
+         "Lettura (flash)",
+         "Piedi e tecnica",
+         "Lentezza e controllo",
+         "Lettura (flash)",
+         "Piedi e tecnica",
+         "Lentezza e controllo"
+        ]
+       },
+       "domain": "technique",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        67
+       ],
+       "defaultMinutes": 67,
+       "intensity": "moderate",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "6 blocchi × 3 rip. · rec. 2' / 5' tra i blocchi",
+       "prescription": "6 blocchi × 3 rip. · rec. 2' / 5' tra i blocchi",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 67
+     },
+     {
+      "id": "A0D6C01F-D7D1-4994-AE2E-ACEEF0718352",
+      "block": {
+       "id": "custom-9E10B460-BD04-487B-A5EE-A6A41333CF8D",
+       "sourceName": "Climber",
+       "name": "Tallone su strapiombo",
+       "slot": "wall",
+       "location": "wall",
+       "interval": {
+        "rounds": 10,
+        "workSeconds": 45,
+        "restSeconds": 60,
+        "selfPaced": true,
+        "reps": 1,
+        "cues": [
+         "Lato Karma",
+         "Lato opposto",
+         "Lato Karma",
+         "Lato opposto",
+         "Lato Karma",
+         "Lato opposto",
+         "Lato Karma",
+         "Lato opposto",
+         "Lato Karma",
+         "Lato opposto"
+        ]
+       },
+       "domain": "technique",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        17
+       ],
+       "defaultMinutes": 17,
+       "intensity": "moderate",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "5 serie per lato · rec. 1' · singolo movimento",
+       "prescription": "5 serie per lato · rec. 1' · singolo movimento",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 17
+     },
+     {
+      "id": "301E8862-04CE-4485-90E4-FD9D9DA0D7DE",
+      "block": {
+       "id": "custom-E410CCD8-FBFB-4F55-9D06-D56FC6BD5B75",
+       "sourceName": "Climber",
+       "name": "Compressione su sloper",
+       "slot": "wall",
+       "location": "wall",
+       "interval": {
+        "rounds": 10,
+        "workSeconds": 45,
+        "restSeconds": 60,
+        "selfPaced": true,
+        "reps": 1,
+        "cues": [
+         "Lato Karma",
+         "Lato opposto",
+         "Lato Karma",
+         "Lato opposto",
+         "Lato Karma",
+         "Lato opposto",
+         "Lato Karma",
+         "Lato opposto",
+         "Lato Karma",
+         "Lato opposto"
+        ]
+       },
+       "domain": "technique",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        17
+       ],
+       "defaultMinutes": 17,
+       "intensity": "moderate",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "5 serie per lato · rec. 1' · singolo movimento",
+       "prescription": "5 serie per lato · rec. 1' · singolo movimento",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 17
+     }
+    ]
+   },
+   {
+    "type": "activeRest",
+    "period": "strength",
+    "plannedBlocks": [
+     {
+      "id": "880E0FDA-74EA-4548-9C07-E89DFA0D821B",
+      "block": {
+       "id": "custom-FD710992-1923-49F1-96B5-87132E0F1B33",
+       "sourceName": "Climber",
+       "name": "Mobilità anche",
+       "slot": "mobility",
+       "location": "off_wall",
+       "domain": "mobility",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        10
+       ],
+       "defaultMinutes": 10,
+       "intensity": "low",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "90/90 · rotazioni",
+       "prescription": "90/90 · rotazioni",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 10
+     },
+     {
+      "id": "D973B417-CD86-405B-93AD-222A877A60C6",
+      "block": {
+       "id": "custom-5EACE6E7-FAA4-4DA7-998D-A498B8DCAB9E",
+       "sourceName": "Climber",
+       "name": "Pallof press",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 6,
+        "workSeconds": 45,
+        "restSeconds": 45,
+        "selfPaced": true,
+        "reps": 10,
+        "cues": [
+         "Lato SX",
+         "Lato DX",
+         "Lato SX",
+         "Lato DX",
+         "Lato SX",
+         "Lato DX"
+        ]
+       },
+       "domain": "stability",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        9
+       ],
+       "defaultMinutes": 9,
+       "intensity": "low",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "3 × 10 per lato · rec. 45\"",
+       "prescription": "3 × 10 per lato · rec. 45\"",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 9
+     }
+    ]
+   },
+   {
+    "type": "wall",
+    "period": "strength",
+    "plannedBlocks": [
+     {
+      "id": "62FD71DC-A4AB-4908-A600-D2D964A7E9CD",
+      "block": {
+       "id": "custom-D224C78A-F9C6-4C8F-982F-0D5BBD615E4A",
+       "sourceName": "Climber",
+       "name": "Riscaldamento",
+       "slot": "warmup",
+       "location": "wall",
+       "domain": "mobility",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        20
+       ],
+       "defaultMinutes": 20,
+       "intensity": "low",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "Mobilità · arrampicata progressiva · sospensioni fino all'80-90%",
+       "prescription": "Mobilità · arrampicata progressiva · sospensioni fino all'80-90%",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 20
+     },
+     {
+      "id": "2604883A-D1D4-4458-A65F-13F3AB729375",
+      "block": {
+       "id": "custom-53E3D837-C164-40C5-9F80-108DB64502C7",
+       "sourceName": "Climber",
+       "name": "Limit Karma",
+       "slot": "wall",
+       "location": "wall",
+       "domain": "power",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        60
+       ],
+       "defaultMinutes": 60,
+       "intensity": "max",
+       "risk": "moderate",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "Qualità/pattern 70/30 · P1 posizione 5\" · rec. 4-5'",
+       "prescription": "Qualità/pattern 70/30 · P1 posizione 5\" · rec. 4-5'",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 60
+     },
+     {
+      "id": "4A3200A6-31F6-4FDD-8295-21543858C541",
+      "block": {
+       "id": "custom-EF085351-A0D7-4C31-AC07-44F033662922",
+       "sourceName": "Climber",
+       "name": "Croci isometriche",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 3,
+        "workSeconds": 10,
+        "restSeconds": 60,
+        "cues": []
+       },
+       "domain": "stability",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        3
+       ],
+       "defaultMinutes": 3,
+       "intensity": "moderate",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "3 × 10\" · rec. 1'",
+       "prescription": "3 × 10\" · rec. 1'",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 3
+     },
+     {
+      "id": "0D3377B8-F904-4344-AC61-B94A03A38D92",
+      "block": {
+       "id": "custom-7AA722FD-7003-413D-BE71-A2DBA82C4790",
+       "sourceName": "Climber",
+       "name": "Push-up zavorrati o dip",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 3,
+        "workSeconds": 45,
+        "restSeconds": 120,
+        "selfPaced": true,
+        "reps": 6,
+        "cues": [
+         "6-8 rip.",
+         "6-8 rip.",
+         "6-8 rip."
+        ]
+       },
+       "domain": "general_strength",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        7
+       ],
+       "defaultMinutes": 7,
+       "intensity": "moderate",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "3 × 6-8 · rec. 2'",
+       "prescription": "3 × 6-8 · rec. 2'",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 7
+     }
+    ]
+   },
+   {
+    "type": "rest"
+   }
+  ],
+  [
+   {
+    "type": "wall",
+    "period": "strength",
+    "plannedBlocks": [
+     {
+      "id": "A9765EF6-44E3-4B1E-92D4-446EABAB449A",
+      "block": {
+       "id": "custom-D224C78A-F9C6-4C8F-982F-0D5BBD615E4A",
+       "sourceName": "Climber",
+       "name": "Riscaldamento",
+       "slot": "warmup",
+       "location": "wall",
+       "domain": "mobility",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        20
+       ],
+       "defaultMinutes": 20,
+       "intensity": "low",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "Mobilità · arrampicata progressiva · sospensioni fino all'80-90%",
+       "prescription": "Mobilità · arrampicata progressiva · sospensioni fino all'80-90%",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 20
+     },
+     {
+      "id": "3093154B-BE41-4619-88EB-DF478E91AB9A",
+      "block": {
+       "id": "custom-173DA62F-5024-4F40-A9F6-827413EA546B",
+       "sourceName": "Climber",
+       "name": "Open hand 20 mm 7\"",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 4,
+        "workSeconds": 7,
+        "restSeconds": 180,
+        "cues": []
+       },
+       "domain": "finger_strength",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        10
+       ],
+       "defaultMinutes": 10,
+       "intensity": "max",
+       "risk": "moderate",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "4 × 7\" · rec. 3' · 87,5% max · margine 2-3\"",
+       "prescription": "4 × 7\" · rec. 3' · 87,5% max · margine 2-3\"",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 10
+     },
+     {
+      "id": "48584BF0-59CB-45E5-882E-692DF1858A75",
+      "block": {
+       "id": "custom-2D836897-E36C-419B-A357-F934F653522C",
+       "sourceName": "Climber",
+       "name": "Half-crimp 20 mm 7\"",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 2,
+        "workSeconds": 7,
+        "restSeconds": 180,
+        "cues": []
+       },
+       "domain": "finger_strength",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        4
+       ],
+       "defaultMinutes": 4,
+       "intensity": "max",
+       "risk": "moderate",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "2 × 7\" · rec. 3' · 87,5% max · margine 2-3\"",
+       "prescription": "2 × 7\" · rec. 3' · 87,5% max · margine 2-3\"",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 4
+     },
+     {
+      "id": "A3F26B9D-9BB0-4948-80CE-B32FBED776C2",
+      "block": {
+       "id": "custom-BBDAE032-4FAC-42AC-A251-FC28E450A424",
+       "sourceName": "Climber",
+       "name": "Limit MoonBoard",
+       "slot": "wall",
+       "location": "wall",
+       "domain": "power",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        35
+       ],
+       "defaultMinutes": 35,
+       "intensity": "high",
+       "risk": "moderate",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "≥ 3 tentativi per problema · stop quando cala la qualità",
+       "prescription": "≥ 3 tentativi per problema · stop quando cala la qualità",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 35
+     },
+     {
+      "id": "757DFEC7-53B5-40A4-BCAF-2D4F85D863E1",
+      "block": {
+       "id": "custom-14B84D63-3682-43E2-9CDA-6CAD109DFBC2",
+       "sourceName": "Climber",
+       "name": "KB press 1 braccio",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 3,
+        "workSeconds": 45,
+        "restSeconds": 120,
+        "selfPaced": true,
+        "reps": 6,
+        "cues": [
+         "6-8 rip. per braccio",
+         "6-8 rip. per braccio",
+         "6-8 rip. per braccio"
+        ]
+       },
+       "domain": "general_strength",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        7
+       ],
+       "defaultMinutes": 7,
+       "intensity": "moderate",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "3 × 6-8 per braccio · rec. 2'",
+       "prescription": "3 × 6-8 per braccio · rec. 2'",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 7
+     },
+     {
+      "id": "8DFB0833-E990-41B1-A48A-C20EFCB2B78B",
+      "block": {
+       "id": "custom-875B0D3E-71BD-4DB4-84B6-315A62E613CF",
+       "sourceName": "Climber",
+       "name": "Extrarotazioni",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 2,
+        "workSeconds": 45,
+        "restSeconds": 60,
+        "selfPaced": true,
+        "reps": 12,
+        "cues": [
+         "12-15 rip. per lato",
+         "12-15 rip. per lato"
+        ]
+       },
+       "domain": "general_strength",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        3
+       ],
+       "defaultMinutes": 3,
+       "intensity": "moderate",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "2 × 12-15 per lato · rec. 1'",
+       "prescription": "2 × 12-15 per lato · rec. 1'",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 3
+     }
+    ]
+   },
+   {
+    "type": "strength",
+    "period": "strength",
+    "plannedBlocks": [
+     {
+      "id": "AA7E29E3-9919-4B43-B408-3E957F4789F1",
+      "block": {
+       "id": "custom-EF46A378-F4C1-409D-A802-AB5606AA006A",
+       "sourceName": "Climber",
+       "name": "Nordic curl",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 3,
+        "workSeconds": 45,
+        "restSeconds": 120,
+        "selfPaced": true,
+        "reps": 4,
+        "cues": [
+         "4-6 rip.",
+         "4-6 rip.",
+         "4-6 rip."
+        ]
+       },
+       "domain": "general_strength",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        7
+       ],
+       "defaultMinutes": 7,
+       "intensity": "moderate",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "3 × 4-6 · rec. 2'",
+       "prescription": "3 × 4-6 · rec. 2'",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 7
+     },
+     {
+      "id": "0EBB66F6-055D-4CC0-B03A-9562F8B064E9",
+      "block": {
+       "id": "custom-BDDDFA60-5C77-459D-AC8E-00C660EE27C6",
+       "sourceName": "Climber",
+       "name": "Hollow body hold",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 3,
+        "workSeconds": 25,
+        "restSeconds": 60,
+        "cues": []
+       },
+       "domain": "stability",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        4
+       ],
+       "defaultMinutes": 4,
+       "intensity": "moderate",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "3 × 25\" · rec. 1'",
+       "prescription": "3 × 25\" · rec. 1'",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 4
+     }
+    ]
+   },
+   {
+    "type": "wall",
+    "period": "strength",
+    "plannedBlocks": [
+     {
+      "id": "8E6AE0DD-E66D-405A-BD48-4E5ADABA5A95",
+      "block": {
+       "id": "custom-D224C78A-F9C6-4C8F-982F-0D5BBD615E4A",
+       "sourceName": "Climber",
+       "name": "Riscaldamento",
+       "slot": "warmup",
+       "location": "wall",
+       "domain": "mobility",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        20
+       ],
+       "defaultMinutes": 20,
+       "intensity": "low",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "Mobilità · arrampicata progressiva · sospensioni fino all'80-90%",
+       "prescription": "Mobilità · arrampicata progressiva · sospensioni fino all'80-90%",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 20
+     },
+     {
+      "id": "25C0B169-46A1-49C6-8D62-7C0743C74EEC",
+      "block": {
+       "id": "custom-5CD6FA5A-6E18-42AD-84CF-A06082E0E99F",
+       "sourceName": "Climber",
+       "name": "Sloper BM2000 7\"",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 4,
+        "workSeconds": 7,
+        "restSeconds": 180,
+        "cues": []
+       },
+       "domain": "finger_strength",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        10
+       ],
+       "defaultMinutes": 10,
+       "intensity": "max",
+       "risk": "moderate",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "4 × 7\" · rec. 3' · 85% max · margine 2-3\" · stesso sloper del test",
+       "prescription": "4 × 7\" · rec. 3' · 85% max · margine 2-3\" · stesso sloper del test",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 10
+     },
+     {
+      "id": "F93F73CF-5C8B-49CE-A751-62C04FE497D4",
+      "block": {
+       "id": "custom-088482EF-9FFD-4FDE-B08D-AFB7CE428C88",
+       "sourceName": "Climber",
+       "name": "Pinch block 7\"",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 6,
+        "workSeconds": 7,
+        "restSeconds": 75,
+        "cues": [
+         "SX",
+         "DX",
+         "SX",
+         "DX",
+         "SX",
+         "DX"
+        ]
+       },
+       "domain": "finger_strength",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        7
+       ],
+       "defaultMinutes": 7,
+       "intensity": "high",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "3 × 7\" per mano · rec. 1'15\" · 80% max",
+       "prescription": "3 × 7\" per mano · rec. 1'15\" · 80% max",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 7
+     },
+     {
+      "id": "C8DC2B7B-F604-4C8C-9DD5-8E6175D385A9",
+      "block": {
+       "id": "custom-A113F68F-97D7-4308-8CC4-85A52C089A00",
+       "sourceName": "Climber",
+       "name": "Flessione polso",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 3,
+        "workSeconds": 45,
+        "restSeconds": 120,
+        "selfPaced": true,
+        "reps": 6,
+        "cues": [
+         "6-8 rip.",
+         "6-8 rip.",
+         "6-8 rip."
+        ]
+       },
+       "domain": "general_strength",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        7
+       ],
+       "defaultMinutes": 7,
+       "intensity": "moderate",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "3 × 6-8 · rec. 2' · 92,5% 6RM",
+       "prescription": "3 × 6-8 · rec. 2' · 92,5% 6RM",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 7
+     },
+     {
+      "id": "C6315AB5-0C05-42BA-8695-BA00CA1846A9",
+      "block": {
+       "id": "custom-762CE2FF-E6F8-4F26-86EC-0A0E176E3B8B",
+       "sourceName": "Climber",
+       "name": "Limit sloper/compressione",
+       "slot": "wall",
+       "location": "wall",
+       "domain": "power",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        30
+       ],
+       "defaultMinutes": 30,
+       "intensity": "high",
+       "risk": "moderate",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "Blocchi di qualità al muro commerciale",
+       "prescription": "Blocchi di qualità al muro commerciale",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 30
+     },
+     {
+      "id": "C092E887-6973-42E5-9DA1-00D124F7EAF0",
+      "block": {
+       "id": "custom-28D9C189-19BB-41DC-A69C-16DD27BEEFFC",
+       "sourceName": "Climber",
+       "name": "Trazioni zavorrate",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 3,
+        "workSeconds": 45,
+        "restSeconds": 180,
+        "selfPaced": true,
+        "reps": 4,
+        "cues": [
+         "4-5 rip.",
+         "4-5 rip.",
+         "4-5 rip."
+        ]
+       },
+       "domain": "pulling_strength",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        9
+       ],
+       "defaultMinutes": 9,
+       "intensity": "moderate",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "3 × 4-5 · rec. 3'",
+       "prescription": "3 × 4-5 · rec. 3'",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 9
+     },
+     {
+      "id": "219B4BD1-EEF2-47DF-93D3-D7ABD9675DF3",
+      "block": {
+       "id": "custom-87C63C6A-3C34-41D0-9745-84F3FD2D854A",
+       "sourceName": "Climber",
+       "name": "Croci agli anelli",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 3,
+        "workSeconds": 45,
+        "restSeconds": 90,
+        "selfPaced": true,
+        "reps": 6,
+        "cues": [
+         "6-8 rip.",
+         "6-8 rip.",
+         "6-8 rip."
+        ]
+       },
+       "domain": "general_strength",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        6
+       ],
+       "defaultMinutes": 6,
+       "intensity": "moderate",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "3 × 6-8 · rec. 1'30\"",
+       "prescription": "3 × 6-8 · rec. 1'30\"",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 6
+     },
+     {
+      "id": "B0D2F45D-2E3A-45E5-9330-825CED52A9CB",
+      "block": {
+       "id": "custom-217CF1C6-2F3F-4A8F-B247-83FDAF8481A6",
+       "sourceName": "Climber",
+       "name": "Leg raise alla sbarra",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 3,
+        "workSeconds": 45,
+        "restSeconds": 90,
+        "selfPaced": true,
+        "reps": 6,
+        "cues": [
+         "6-8 rip.",
+         "6-8 rip.",
+         "6-8 rip."
+        ]
+       },
+       "domain": "stability",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        6
+       ],
+       "defaultMinutes": 6,
+       "intensity": "moderate",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "3 × 6-8 · rec. 1'30\"",
+       "prescription": "3 × 6-8 · rec. 1'30\"",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 6
+     }
+    ]
+   },
+   {
+    "type": "skills",
+    "period": "strength",
+    "plannedBlocks": [
+     {
+      "id": "36D4A908-1606-4761-B8F4-B4F155E76835",
+      "block": {
+       "id": "custom-930FE284-6BD4-401B-A7BD-C4F51C3F43F0",
+       "sourceName": "Climber",
+       "name": "Riscaldamento",
+       "slot": "warmup",
+       "location": "wall",
+       "domain": "mobility",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        15
+       ],
+       "defaultMinutes": 15,
+       "intensity": "low",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "Generale · attivazione leggera di core e dita",
+       "prescription": "Generale · attivazione leggera di core e dita",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 15
+     },
+     {
+      "id": "44F449BC-0C03-45AE-9759-CFB2D95ED5B8",
+      "block": {
+       "id": "custom-2B0B8AD1-77BC-465E-A7C1-37DF17D6263A",
+       "sourceName": "Climber",
+       "name": "Technical Triples",
+       "slot": "wall",
+       "location": "wall",
+       "interval": {
+        "rounds": 18,
+        "workSeconds": 60,
+        "restSeconds": 120,
+        "selfPaced": true,
+        "roundsPerSet": 3,
+        "setRestSeconds": 300,
+        "cues": [
+         "Lettura (flash)",
+         "Piedi e tecnica",
+         "Lentezza e controllo",
+         "Lettura (flash)",
+         "Piedi e tecnica",
+         "Lentezza e controllo",
+         "Lettura (flash)",
+         "Piedi e tecnica",
+         "Lentezza e controllo",
+         "Lettura (flash)",
+         "Piedi e tecnica",
+         "Lentezza e controllo",
+         "Lettura (flash)",
+         "Piedi e tecnica",
+         "Lentezza e controllo",
+         "Lettura (flash)",
+         "Piedi e tecnica",
+         "Lentezza e controllo"
+        ]
+       },
+       "domain": "technique",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        67
+       ],
+       "defaultMinutes": 67,
+       "intensity": "moderate",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "6 blocchi × 3 rip. · rec. 2' / 5' tra i blocchi",
+       "prescription": "6 blocchi × 3 rip. · rec. 2' / 5' tra i blocchi",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 67
+     },
+     {
+      "id": "323C0631-C392-4594-81C9-A5B31E069544",
+      "block": {
+       "id": "custom-9E10B460-BD04-487B-A5EE-A6A41333CF8D",
+       "sourceName": "Climber",
+       "name": "Tallone su strapiombo",
+       "slot": "wall",
+       "location": "wall",
+       "interval": {
+        "rounds": 10,
+        "workSeconds": 45,
+        "restSeconds": 60,
+        "selfPaced": true,
+        "reps": 1,
+        "cues": [
+         "Lato Karma",
+         "Lato opposto",
+         "Lato Karma",
+         "Lato opposto",
+         "Lato Karma",
+         "Lato opposto",
+         "Lato Karma",
+         "Lato opposto",
+         "Lato Karma",
+         "Lato opposto"
+        ]
+       },
+       "domain": "technique",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        17
+       ],
+       "defaultMinutes": 17,
+       "intensity": "moderate",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "5 serie per lato · rec. 1' · singolo movimento",
+       "prescription": "5 serie per lato · rec. 1' · singolo movimento",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 17
+     },
+     {
+      "id": "EB574F97-34E1-4332-A875-D938AFE26F63",
+      "block": {
+       "id": "custom-4828DF60-0B5A-4F6E-8892-C34F9166D70C",
+       "sourceName": "Climber",
+       "name": "Ristabilimento su forme tonde",
+       "slot": "wall",
+       "location": "wall",
+       "interval": {
+        "rounds": 10,
+        "workSeconds": 45,
+        "restSeconds": 60,
+        "selfPaced": true,
+        "reps": 1,
+        "cues": [
+         "Lato Karma",
+         "Lato opposto",
+         "Lato Karma",
+         "Lato opposto",
+         "Lato Karma",
+         "Lato opposto",
+         "Lato Karma",
+         "Lato opposto",
+         "Lato Karma",
+         "Lato opposto"
+        ]
+       },
+       "domain": "technique",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        17
+       ],
+       "defaultMinutes": 17,
+       "intensity": "moderate",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "5 serie per lato · rec. 1' · singolo movimento",
+       "prescription": "5 serie per lato · rec. 1' · singolo movimento",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 17
+     }
+    ]
+   },
+   {
+    "type": "activeRest",
+    "period": "strength",
+    "plannedBlocks": [
+     {
+      "id": "CC53F69E-2F31-4F3A-AF07-6DE7C5E4196D",
+      "block": {
+       "id": "custom-FD710992-1923-49F1-96B5-87132E0F1B33",
+       "sourceName": "Climber",
+       "name": "Mobilità anche",
+       "slot": "mobility",
+       "location": "off_wall",
+       "domain": "mobility",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        10
+       ],
+       "defaultMinutes": 10,
+       "intensity": "low",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "90/90 · rotazioni",
+       "prescription": "90/90 · rotazioni",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 10
+     },
+     {
+      "id": "AB5BA71C-4DD6-4452-B308-A3D5FDE8EBB4",
+      "block": {
+       "id": "custom-5EACE6E7-FAA4-4DA7-998D-A498B8DCAB9E",
+       "sourceName": "Climber",
+       "name": "Pallof press",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 6,
+        "workSeconds": 45,
+        "restSeconds": 45,
+        "selfPaced": true,
+        "reps": 10,
+        "cues": [
+         "Lato SX",
+         "Lato DX",
+         "Lato SX",
+         "Lato DX",
+         "Lato SX",
+         "Lato DX"
+        ]
+       },
+       "domain": "stability",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        9
+       ],
+       "defaultMinutes": 9,
+       "intensity": "low",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "3 × 10 per lato · rec. 45\"",
+       "prescription": "3 × 10 per lato · rec. 45\"",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 9
+     }
+    ]
+   },
+   {
+    "type": "wall",
+    "period": "strength",
+    "plannedBlocks": [
+     {
+      "id": "13C3D946-6287-4DF5-A0F0-6E6C97E54B3A",
+      "block": {
+       "id": "custom-D224C78A-F9C6-4C8F-982F-0D5BBD615E4A",
+       "sourceName": "Climber",
+       "name": "Riscaldamento",
+       "slot": "warmup",
+       "location": "wall",
+       "domain": "mobility",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        20
+       ],
+       "defaultMinutes": 20,
+       "intensity": "low",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "Mobilità · arrampicata progressiva · sospensioni fino all'80-90%",
+       "prescription": "Mobilità · arrampicata progressiva · sospensioni fino all'80-90%",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 20
+     },
+     {
+      "id": "027C7D27-B972-4201-B048-C25E32816228",
+      "block": {
+       "id": "custom-7C22EC4F-DFE6-4C38-952D-92C6F33A290D",
+       "sourceName": "Climber",
+       "name": "Limit Karma",
+       "slot": "wall",
+       "location": "wall",
+       "domain": "power",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        60
+       ],
+       "defaultMinutes": 60,
+       "intensity": "max",
+       "risk": "moderate",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "Qualità/pattern 70/30 · P1 → tocca la tacca · rec. 4-5'",
+       "prescription": "Qualità/pattern 70/30 · P1 → tocca la tacca · rec. 4-5'",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 60
+     },
+     {
+      "id": "4354409D-4966-4B47-8768-C72875AB5831",
+      "block": {
+       "id": "custom-EF085351-A0D7-4C31-AC07-44F033662922",
+       "sourceName": "Climber",
+       "name": "Croci isometriche",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 3,
+        "workSeconds": 10,
+        "restSeconds": 60,
+        "cues": []
+       },
+       "domain": "stability",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        3
+       ],
+       "defaultMinutes": 3,
+       "intensity": "moderate",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "3 × 10\" · rec. 1'",
+       "prescription": "3 × 10\" · rec. 1'",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 3
+     },
+     {
+      "id": "21BC79AD-5837-4110-B00B-AC43AED49DA7",
+      "block": {
+       "id": "custom-7AA722FD-7003-413D-BE71-A2DBA82C4790",
+       "sourceName": "Climber",
+       "name": "Push-up zavorrati o dip",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 3,
+        "workSeconds": 45,
+        "restSeconds": 120,
+        "selfPaced": true,
+        "reps": 6,
+        "cues": [
+         "6-8 rip.",
+         "6-8 rip.",
+         "6-8 rip."
+        ]
+       },
+       "domain": "general_strength",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        7
+       ],
+       "defaultMinutes": 7,
+       "intensity": "moderate",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "3 × 6-8 · rec. 2'",
+       "prescription": "3 × 6-8 · rec. 2'",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 7
+     }
+    ]
+   },
+   {
+    "type": "rest"
+   }
+  ],
+  [
+   {
+    "type": "wall",
+    "period": "deload",
+    "plannedBlocks": [
+     {
+      "id": "6283AB15-DFB0-4364-A7FA-1826A8D881A1",
+      "block": {
+       "id": "custom-D224C78A-F9C6-4C8F-982F-0D5BBD615E4A",
+       "sourceName": "Climber",
+       "name": "Riscaldamento",
+       "slot": "warmup",
+       "location": "wall",
+       "domain": "mobility",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        20
+       ],
+       "defaultMinutes": 20,
+       "intensity": "low",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "Mobilità · arrampicata progressiva · sospensioni fino all'80-90%",
+       "prescription": "Mobilità · arrampicata progressiva · sospensioni fino all'80-90%",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 20
+     },
+     {
+      "id": "69106D47-5F10-4D29-84E1-523561887019",
+      "block": {
+       "id": "custom-2FA8D8C9-7FB4-4E8F-91E9-7792BFAD30FC",
+       "sourceName": "Climber",
+       "name": "Open hand 20 mm 7\"",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 2,
+        "workSeconds": 7,
+        "restSeconds": 180,
+        "cues": []
+       },
+       "domain": "finger_strength",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        4
+       ],
+       "defaultMinutes": 4,
+       "intensity": "max",
+       "risk": "moderate",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "2 × 7\" · rec. 3' · 80% max · margine ampio",
+       "prescription": "2 × 7\" · rec. 3' · 80% max · margine ampio",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 4
+     },
+     {
+      "id": "9252D09C-2B48-47B7-90DD-C193BD77829D",
+      "block": {
+       "id": "custom-FFA599AC-08BC-4C5F-A6E2-A1C72AD53296",
+       "sourceName": "Climber",
+       "name": "Half-crimp 20 mm 7\"",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 1,
+        "workSeconds": 7,
+        "restSeconds": 180,
+        "cues": []
+       },
+       "domain": "finger_strength",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        1
+       ],
+       "defaultMinutes": 1,
+       "intensity": "max",
+       "risk": "moderate",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "1 × 7\" · rec. 3' · 80% max · margine ampio",
+       "prescription": "1 × 7\" · rec. 3' · 80% max · margine ampio",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 1
+     },
+     {
+      "id": "69D817C6-A671-49F6-BB47-19C909AD5BA7",
+      "block": {
+       "id": "custom-CDF0B53E-1920-4BF5-B9F8-0C84995F4B12",
+       "sourceName": "Climber",
+       "name": "Limit MoonBoard",
+       "slot": "wall",
+       "location": "wall",
+       "domain": "power",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        20
+       ],
+       "defaultMinutes": 20,
+       "intensity": "moderate",
+       "risk": "moderate",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "Facile",
+       "prescription": "Facile",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 20
+     },
+     {
+      "id": "DE764368-5B21-43AC-9E44-9146CE4F0449",
+      "block": {
+       "id": "custom-AEBF2D42-9D04-4F4A-9AD3-582C9464A507",
+       "sourceName": "Climber",
+       "name": "KB press 1 braccio",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 2,
+        "workSeconds": 45,
+        "restSeconds": 120,
+        "selfPaced": true,
+        "reps": 6,
+        "cues": [
+         "6-8 rip. per braccio",
+         "6-8 rip. per braccio"
+        ]
+       },
+       "domain": "general_strength",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        4
+       ],
+       "defaultMinutes": 4,
+       "intensity": "moderate",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "2 × 6-8 per braccio · rec. 2'",
+       "prescription": "2 × 6-8 per braccio · rec. 2'",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 4
+     },
+     {
+      "id": "8D2596AE-80BF-471A-8299-ADAAE930C56D",
+      "block": {
+       "id": "custom-875B0D3E-71BD-4DB4-84B6-315A62E613CF",
+       "sourceName": "Climber",
+       "name": "Extrarotazioni",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 2,
+        "workSeconds": 45,
+        "restSeconds": 60,
+        "selfPaced": true,
+        "reps": 12,
+        "cues": [
+         "12-15 rip. per lato",
+         "12-15 rip. per lato"
+        ]
+       },
+       "domain": "general_strength",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        3
+       ],
+       "defaultMinutes": 3,
+       "intensity": "moderate",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "2 × 12-15 per lato · rec. 1'",
+       "prescription": "2 × 12-15 per lato · rec. 1'",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 3
+     }
+    ]
+   },
+   {
+    "type": "strength",
+    "period": "deload",
+    "plannedBlocks": [
+     {
+      "id": "2A1DA877-83E7-40A4-82DD-F672EEA8A0A3",
+      "block": {
+       "id": "custom-ED5E3C01-D614-437E-889C-17594C044E21",
+       "sourceName": "Climber",
+       "name": "Nordic curl",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 2,
+        "workSeconds": 45,
+        "restSeconds": 120,
+        "selfPaced": true,
+        "reps": 4,
+        "cues": [
+         "4 rip.",
+         "4 rip."
+        ]
+       },
+       "domain": "general_strength",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        4
+       ],
+       "defaultMinutes": 4,
+       "intensity": "moderate",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "2 × 4 · rec. 2'",
+       "prescription": "2 × 4 · rec. 2'",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 4
+     },
+     {
+      "id": "2034CD06-A245-4775-963D-AC5ADAFCCE71",
+      "block": {
+       "id": "custom-B0239FC0-A68D-4B4C-9E1E-F1F24C26EC16",
+       "sourceName": "Climber",
+       "name": "Hollow body hold",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 2,
+        "workSeconds": 25,
+        "restSeconds": 60,
+        "cues": []
+       },
+       "domain": "stability",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        2
+       ],
+       "defaultMinutes": 2,
+       "intensity": "moderate",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "2 × 25\" · rec. 1'",
+       "prescription": "2 × 25\" · rec. 1'",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 2
+     }
+    ]
+   },
+   {
+    "type": "wall",
+    "period": "deload",
+    "plannedBlocks": [
+     {
+      "id": "C43AB88F-7C6F-43D4-92AC-90E46C19745D",
+      "block": {
+       "id": "custom-D224C78A-F9C6-4C8F-982F-0D5BBD615E4A",
+       "sourceName": "Climber",
+       "name": "Riscaldamento",
+       "slot": "warmup",
+       "location": "wall",
+       "domain": "mobility",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        20
+       ],
+       "defaultMinutes": 20,
+       "intensity": "low",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "Mobilità · arrampicata progressiva · sospensioni fino all'80-90%",
+       "prescription": "Mobilità · arrampicata progressiva · sospensioni fino all'80-90%",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 20
+     },
+     {
+      "id": "64404552-3582-4427-9845-A195AAB3DD5C",
+      "block": {
+       "id": "custom-13F9E3FE-BBE3-4C37-B69D-D6FA66E42FDB",
+       "sourceName": "Climber",
+       "name": "Sloper BM2000 7\"",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 2,
+        "workSeconds": 7,
+        "restSeconds": 180,
+        "cues": []
+       },
+       "domain": "finger_strength",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        4
+       ],
+       "defaultMinutes": 4,
+       "intensity": "max",
+       "risk": "moderate",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "2 × 7\" · rec. 3' · 75% max · margine ampio · stesso sloper del test",
+       "prescription": "2 × 7\" · rec. 3' · 75% max · margine ampio · stesso sloper del test",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 4
+     },
+     {
+      "id": "B4F48F90-630E-49AA-9496-219A22F80591",
+      "block": {
+       "id": "custom-099D12E6-5B38-4F80-A3EF-398EA77D70D2",
+       "sourceName": "Climber",
+       "name": "Pinch block 7\"",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 4,
+        "workSeconds": 7,
+        "restSeconds": 75,
+        "cues": [
+         "SX",
+         "DX",
+         "SX",
+         "DX"
+        ]
+       },
+       "domain": "finger_strength",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        5
+       ],
+       "defaultMinutes": 5,
+       "intensity": "high",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "2 × 7\" per mano · rec. 1'15\" · 70% max",
+       "prescription": "2 × 7\" per mano · rec. 1'15\" · 70% max",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 5
+     },
+     {
+      "id": "64469491-021A-4BAE-B3A7-F7515DF1E22B",
+      "block": {
+       "id": "custom-39628E00-9E09-4682-BE33-BC2A85A101CF",
+       "sourceName": "Climber",
+       "name": "Flessione polso",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 2,
+        "workSeconds": 45,
+        "restSeconds": 120,
+        "selfPaced": true,
+        "reps": 8,
+        "cues": [
+         "8 rip.",
+         "8 rip."
+        ]
+       },
+       "domain": "general_strength",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        4
+       ],
+       "defaultMinutes": 4,
+       "intensity": "moderate",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "2 × 8 · rec. 2' · 80% 6RM",
+       "prescription": "2 × 8 · rec. 2' · 80% 6RM",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 4
+     },
+     {
+      "id": "D2609158-40E0-4E15-95D5-B475ADEDF637",
+      "block": {
+       "id": "custom-AC58A671-00AE-4A75-AD2E-6B3C6E098E81",
+       "sourceName": "Climber",
+       "name": "Limit sloper/compressione",
+       "slot": "wall",
+       "location": "wall",
+       "domain": "power",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        15
+       ],
+       "defaultMinutes": 15,
+       "intensity": "moderate",
+       "risk": "moderate",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "Facile",
+       "prescription": "Facile",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 15
+     },
+     {
+      "id": "BCCDB476-7C40-4BEE-9484-561CF7029C78",
+      "block": {
+       "id": "custom-BC435622-6AF0-44F8-934C-F1037E4582EC",
+       "sourceName": "Climber",
+       "name": "Trazioni zavorrate",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 2,
+        "workSeconds": 45,
+        "restSeconds": 180,
+        "selfPaced": true,
+        "reps": 4,
+        "cues": [
+         "4-5 rip.",
+         "4-5 rip."
+        ]
+       },
+       "domain": "pulling_strength",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        5
+       ],
+       "defaultMinutes": 5,
+       "intensity": "moderate",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "2 × 4-5 · rec. 3'",
+       "prescription": "2 × 4-5 · rec. 3'",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 5
+     },
+     {
+      "id": "F4DE263E-8EB9-4DFA-A32B-CB8AB5263522",
+      "block": {
+       "id": "custom-8B309EE6-91A9-43CE-85E0-97CCD5EDF6CC",
+       "sourceName": "Climber",
+       "name": "Croci agli anelli",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 2,
+        "workSeconds": 45,
+        "restSeconds": 90,
+        "selfPaced": true,
+        "reps": 6,
+        "cues": [
+         "6-8 rip.",
+         "6-8 rip."
+        ]
+       },
+       "domain": "general_strength",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        3
+       ],
+       "defaultMinutes": 3,
+       "intensity": "moderate",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "2 × 6-8 · rec. 1'30\"",
+       "prescription": "2 × 6-8 · rec. 1'30\"",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 3
+     },
+     {
+      "id": "BFAEC7BC-0009-4BB6-A43B-F8176D631776",
+      "block": {
+       "id": "custom-3C199292-4397-4877-9C3C-71589ACAFE0F",
+       "sourceName": "Climber",
+       "name": "Leg raise alla sbarra",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 2,
+        "workSeconds": 45,
+        "restSeconds": 90,
+        "selfPaced": true,
+        "reps": 6,
+        "cues": [
+         "6-8 rip.",
+         "6-8 rip."
+        ]
+       },
+       "domain": "stability",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        3
+       ],
+       "defaultMinutes": 3,
+       "intensity": "moderate",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "2 × 6-8 · rec. 1'30\"",
+       "prescription": "2 × 6-8 · rec. 1'30\"",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 3
+     }
+    ]
+   },
+   {
+    "type": "skills",
+    "period": "deload",
+    "plannedBlocks": [
+     {
+      "id": "91C235A7-880F-4898-84E4-32398B40E574",
+      "block": {
+       "id": "custom-930FE284-6BD4-401B-A7BD-C4F51C3F43F0",
+       "sourceName": "Climber",
+       "name": "Riscaldamento",
+       "slot": "warmup",
+       "location": "wall",
+       "domain": "mobility",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        15
+       ],
+       "defaultMinutes": 15,
+       "intensity": "low",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "Generale · attivazione leggera di core e dita",
+       "prescription": "Generale · attivazione leggera di core e dita",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 15
+     },
+     {
+      "id": "F5115AF2-D6C6-485E-92C3-8A583683B552",
+      "block": {
+       "id": "custom-498EDE3A-7F18-42AA-BA28-6FE50331082E",
+       "sourceName": "Climber",
+       "name": "Technical Triples",
+       "slot": "wall",
+       "location": "wall",
+       "interval": {
+        "rounds": 12,
+        "workSeconds": 60,
+        "restSeconds": 120,
+        "selfPaced": true,
+        "roundsPerSet": 3,
+        "setRestSeconds": 300,
+        "cues": [
+         "Lettura (flash)",
+         "Piedi e tecnica",
+         "Lentezza e controllo",
+         "Lettura (flash)",
+         "Piedi e tecnica",
+         "Lentezza e controllo",
+         "Lettura (flash)",
+         "Piedi e tecnica",
+         "Lentezza e controllo",
+         "Lettura (flash)",
+         "Piedi e tecnica",
+         "Lentezza e controllo"
+        ]
+       },
+       "domain": "technique",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        43
+       ],
+       "defaultMinutes": 43,
+       "intensity": "moderate",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "4 blocchi × 3 rip. · rec. 2' / 5' tra i blocchi",
+       "prescription": "4 blocchi × 3 rip. · rec. 2' / 5' tra i blocchi",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 43
+     },
+     {
+      "id": "39B55874-E3D6-4BA0-9ACC-0C6022A96DBB",
+      "block": {
+       "id": "custom-33356C56-C978-4AF9-B24F-F613338F9BA8",
+       "sourceName": "Climber",
+       "name": "Tallone su strapiombo",
+       "slot": "wall",
+       "location": "wall",
+       "interval": {
+        "rounds": 6,
+        "workSeconds": 45,
+        "restSeconds": 60,
+        "selfPaced": true,
+        "reps": 1,
+        "cues": [
+         "Lato Karma",
+         "Lato opposto",
+         "Lato Karma",
+         "Lato opposto",
+         "Lato Karma",
+         "Lato opposto"
+        ]
+       },
+       "domain": "technique",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        10
+       ],
+       "defaultMinutes": 10,
+       "intensity": "moderate",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "3 serie per lato · rec. 1' · singolo movimento",
+       "prescription": "3 serie per lato · rec. 1' · singolo movimento",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 10
+     },
+     {
+      "id": "F62CAE27-FA44-4B82-9858-3ADE00C07878",
+      "block": {
+       "id": "custom-F3EAA883-5BEF-46AF-9624-6EA87D80573D",
+       "sourceName": "Climber",
+       "name": "Compressione su sloper",
+       "slot": "wall",
+       "location": "wall",
+       "interval": {
+        "rounds": 6,
+        "workSeconds": 45,
+        "restSeconds": 60,
+        "selfPaced": true,
+        "reps": 1,
+        "cues": [
+         "Lato Karma",
+         "Lato opposto",
+         "Lato Karma",
+         "Lato opposto",
+         "Lato Karma",
+         "Lato opposto"
+        ]
+       },
+       "domain": "technique",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        10
+       ],
+       "defaultMinutes": 10,
+       "intensity": "moderate",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "3 serie per lato · rec. 1' · singolo movimento",
+       "prescription": "3 serie per lato · rec. 1' · singolo movimento",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 10
+     }
+    ]
+   },
+   {
+    "type": "activeRest",
+    "period": "deload",
+    "plannedBlocks": [
+     {
+      "id": "F79F4344-3ECA-491C-A8AA-1D22A40FEC9D",
+      "block": {
+       "id": "custom-FD710992-1923-49F1-96B5-87132E0F1B33",
+       "sourceName": "Climber",
+       "name": "Mobilità anche",
+       "slot": "mobility",
+       "location": "off_wall",
+       "domain": "mobility",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        10
+       ],
+       "defaultMinutes": 10,
+       "intensity": "low",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "90/90 · rotazioni",
+       "prescription": "90/90 · rotazioni",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 10
+     },
+     {
+      "id": "E4C749C6-109A-489D-8909-F9F54D426B01",
+      "block": {
+       "id": "custom-5EACE6E7-FAA4-4DA7-998D-A498B8DCAB9E",
+       "sourceName": "Climber",
+       "name": "Pallof press",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 6,
+        "workSeconds": 45,
+        "restSeconds": 45,
+        "selfPaced": true,
+        "reps": 10,
+        "cues": [
+         "Lato SX",
+         "Lato DX",
+         "Lato SX",
+         "Lato DX",
+         "Lato SX",
+         "Lato DX"
+        ]
+       },
+       "domain": "stability",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        9
+       ],
+       "defaultMinutes": 9,
+       "intensity": "low",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "3 × 10 per lato · rec. 45\"",
+       "prescription": "3 × 10 per lato · rec. 45\"",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 9
+     }
+    ]
+   },
+   {
+    "type": "wall",
+    "period": "deload",
+    "plannedBlocks": [
+     {
+      "id": "87AD8D07-FFEE-43A4-AA60-6E1A19362A61",
+      "block": {
+       "id": "custom-D224C78A-F9C6-4C8F-982F-0D5BBD615E4A",
+       "sourceName": "Climber",
+       "name": "Riscaldamento",
+       "slot": "warmup",
+       "location": "wall",
+       "domain": "mobility",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        20
+       ],
+       "defaultMinutes": 20,
+       "intensity": "low",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "Mobilità · arrampicata progressiva · sospensioni fino all'80-90%",
+       "prescription": "Mobilità · arrampicata progressiva · sospensioni fino all'80-90%",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 20
+     },
+     {
+      "id": "41AA9B44-99E0-4746-9DC1-16B0D2AA1728",
+      "block": {
+       "id": "custom-2FAB1CE6-99BA-43CB-9401-B6298B96F5A3",
+       "sourceName": "Climber",
+       "name": "Limit Karma",
+       "slot": "wall",
+       "location": "wall",
+       "domain": "power",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        30
+       ],
+       "defaultMinutes": 30,
+       "intensity": "moderate",
+       "risk": "moderate",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "Solo posizioni · P1 posizione",
+       "prescription": "Solo posizioni · P1 posizione",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 30
+     },
+     {
+      "id": "039F88B4-5AFE-43D9-A7E1-4A53F47AAAE5",
+      "block": {
+       "id": "custom-491DE75F-FDA0-4511-821C-15153214E681",
+       "sourceName": "Climber",
+       "name": "Croci isometriche",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 2,
+        "workSeconds": 10,
+        "restSeconds": 60,
+        "cues": []
+       },
+       "domain": "stability",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        2
+       ],
+       "defaultMinutes": 2,
+       "intensity": "moderate",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "2 × 10\" · rec. 1'",
+       "prescription": "2 × 10\" · rec. 1'",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 2
+     },
+     {
+      "id": "221AF268-9EEE-4CCB-B1A0-1C2F2A59D4DD",
+      "block": {
+       "id": "custom-BEA4706F-CDEB-436A-A640-AAC5F319EFD6",
+       "sourceName": "Climber",
+       "name": "Push-up zavorrati o dip",
+       "slot": "strength",
+       "location": "off_wall",
+       "interval": {
+        "rounds": 2,
+        "workSeconds": 45,
+        "restSeconds": 120,
+        "selfPaced": true,
+        "reps": 6,
+        "cues": [
+         "6-8 rip.",
+         "6-8 rip."
+        ]
+       },
+       "domain": "general_strength",
+       "goals": [],
+       "equipment": [],
+       "durations": [
+        4
+       ],
+       "defaultMinutes": 4,
+       "intensity": "moderate",
+       "risk": "low",
+       "periodTags": [
+        "base",
+        "strength",
+        "power",
+        "powerEndurance",
+        "endurance",
+        "performance",
+        "deload"
+       ],
+       "summary": "2 × 6-8 · rec. 2'",
+       "prescription": "2 × 6-8 · rec. 2'",
+       "source": "Custom",
+       "reviewNeeded": false
+      },
+      "selectedDurationMinutes": 4
+     }
+    ]
+   },
+   {
+    "type": "rest"
+   }
+  ]
+ ],
+ "startDate": 816519600
+}

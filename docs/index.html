@@ -248,10 +248,10 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
       equipment: [], interval: d.interval ? JSON.parse(JSON.stringify(d.interval)) : null, load: null, surface: '', minutes: d.minutes };
   }
   // Riconduce un nome libero (es. da un programma importato) all'esercizio standard. L'ordine conta: le regole più specifiche prima.
-  const STD_RULES = [[/^test\b/i, 'test'], [/limit|progett/i, 'limit'], [/flash/i, 'flash'], [/pallof/i, 'pallof'], [/tallone|ristabilimento|compressione su|tecnic|movimento isolato/i, 'technique'],
+  const STD_RULES = [[/^test\b/i, 'test'], [/limit|progett/i, 'limit'], [/flash|\btriples?\b|triplett/i, 'flash'], [/pallof/i, 'pallof'], [/tallone|ristabilimento|compressione su|tecnic|movimento isolato/i, 'technique'],
     [/a bleau|roccia|outdoor/i, 'outdoor'], [/attivazione/i, 'activation'], [/riscaldamento|warm.?up/i, 'warmup-wall'], [/open hand|half.?crimp|max hang/i, 'max-hang'], [/repeater/i, 'repeaters'],
     [/sloper/i, 'sloper-hang'], [/pinch/i, 'pinch-lift'], [/\blift\b/i, 'block-lift'], [/polso/i, 'wrist-curl'], [/trazion\w* zavorr|weighted pull/i, 'weighted-pullup'], [/trazion|pull.?up/i, 'pullup'], [/bloccagg|lock.?off/i, 'lockoff'],
-    [/campus/i, 'campus'], [/\bpress\b/i, 'press'], [/extrarot/i, 'ext-rot'], [/croci isometr/i, 'iso-fly'], [/croci/i, 'fly'], [/nordic/i, 'nordic'], [/hollow/i, 'hollow'], [/ab wheel/i, 'ab-wheel'],
+    [/campus/i, 'campus'], [/\bpress\b/i, 'press'], [/extrarot/i, 'ext-rot'], [/croci isometr/i, 'iso-fly'], [/croci/i, 'fly'], [/nordic/i, 'nordic'], [/hollow/i, 'hollow'], [/ab wheel/i, 'ab-wheel'], [/leg.?raise/i, 'leg-raise'],
     [/pallof/i, 'pallof'], [/push.?up|\bdip/i, 'pushup'], [/plank/i, 'plank'], [/front lever/i, 'front-lever'], [/mobilit.* anche/i, 'hips'], [/mobilit.* spall/i, 'shoulders'], [/mobilit|stretch/i, 'stretch'],
     [/board|benchmark/i, 'board'], [/volume/i, 'volume'], [/4 ?x ?4/i, 'four-by-four'], [/circuit/i, 'circuit']];
   const matchStd = name => { const r = STD_RULES.find(([re]) => re.test(name || '')); return r ? r[1] : null; };
