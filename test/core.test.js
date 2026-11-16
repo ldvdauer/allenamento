@@ -65,7 +65,7 @@ test('carichi: formula del foglio Google', () => {
   const low = C.loadKg({ ref: 'oh', mode: 'hang', pct: 60 }, '', maxes);
   assert.equal(low, -10); // sotto il peso corporeo: scarico
   assert.equal(C.fmtKg(low), '-10 kg');
-  assert.equal(C.fmtKg(12.5), '+12,5 kg');
+  assert.equal(C.fmtKg(12.5), '+12.5 kg');
   assert.equal(C.inferLoad('TEST open hand 20 mm 7"', 'TEST · Carico crescente').test, true);
   assert.equal(C.inferLoad('Nordic curl', '2 × 4'), null);
   assert.equal(C.loadKg(oh, '', { oh: 30 }), null); // senza peso corporeo
@@ -79,7 +79,7 @@ test('massimali: vale l\'ultimo test per data', () => {
 test('player: passi per hang a tempo, ripetizioni e serie raggruppate', () => {
   const ex = {
     hang: { id: 'hang', name: 'Hang', interval: { rounds: 3, workSeconds: 7, restSeconds: 180, cues: ['85% max'] } },
-    reps: { id: 'reps', name: 'Press', interval: { rounds: 2, workSeconds: 45, restSeconds: 120, selfPaced: true, reps: 6, cues: ['SX', 'DX'] } },
+    reps: { id: 'reps', name: 'Press', interval: { rounds: 2, workSeconds: 45, restSeconds: 120, selfPaced: true, reps: 6, cues: ['L', 'R'] } },
     free: { id: 'free', name: 'Limit', prescription: 'qualità', interval: null },
     sets: { id: 'sets', name: 'Set', interval: { rounds: 6, workSeconds: 60, restSeconds: 120, selfPaced: true, roundsPerSet: 3, setRestSeconds: 300, cues: ['a', 'b', 'c'] } },
   };
@@ -88,8 +88,8 @@ test('player: passi per hang a tempo, ripetizioni e serie raggruppate', () => {
   assert.equal(s[0].seconds, 1200);
   assert.equal(s[1].seconds, 10);
   assert.equal(s[7].afterBlock, true); // recupero prima dell'esercizio successivo
-  assert.equal(s[8].cue, 'SX');
-  assert.equal(s[10].cue, 'DX');
+  assert.equal(s[8].cue, 'L');
+  assert.equal(s[10].cue, 'R');
   assert.equal(s[10].selfPaced, true);
   // l'ultimo passo della sessione non è un recupero
   assert.equal(s[s.length - 1].kind, 'work');
@@ -163,7 +163,8 @@ test('analisi: settimane, carico sRPE e aderenza al piano', () => {
 });
 
 test('analisi: carichi per esercizio e lato', () => {
-  assert.deepEqual(C.parseLoads('SX 15 kg · DX 18,5 kg'), [{ side: 'SX', kg: 15 }, { side: 'DX', kg: 18.5 }]);
+  assert.deepEqual(C.parseLoads('SX 15 kg · DX 18,5 kg'), [{ side: 'L', kg: 15 }, { side: 'R', kg: 18.5 }]);
+  assert.deepEqual(C.parseLoads('L 15 kg · R 18.5 kg'), [{ side: 'L', kg: 15 }, { side: 'R', kg: 18.5 }]);
   assert.deepEqual(C.parseLoads('-10 kg'), [{ side: null, kg: -10 }]);
   assert.deepEqual(C.parseLoads('a sensazione'), []);
   assert.deepEqual(C.parseLoads(null), []);
@@ -175,8 +176,8 @@ test('analisi: carichi per esercizio e lato', () => {
   ];
   assert.deepEqual(C.loadSeries(logs, '2026-11-16', '2026-11-29'), [
     { name: 'Open hand', points: [{ date: '2026-11-16', kg: 4.5 }] },
-    { name: 'Pinch DX', points: [{ date: '2026-11-16', kg: 17.5 }, { date: '2026-11-23', kg: 18 }] },
-    { name: 'Pinch SX', points: [{ date: '2026-11-16', kg: 14 }, { date: '2026-11-23', kg: 15 }] },
+    { name: 'Pinch L', points: [{ date: '2026-11-16', kg: 14 }, { date: '2026-11-23', kg: 15 }] },
+    { name: 'Pinch R', points: [{ date: '2026-11-16', kg: 17.5 }, { date: '2026-11-23', kg: 18 }] },
   ]);
 });
 
@@ -235,8 +236,8 @@ test('libreria standard: voci valide, versioni e abbinamento dei nomi', () => {
 test('test: modelli con parametri propri, senza "zavorra max" nel nome', () => {
   assert.equal(new Set(C.TEST_TEMPLATES.map(t => t.key)).size, C.TEST_TEMPLATES.length);
   for (const t of C.TEST_TEMPLATES) assert.ok(!/zavorra max|· max|\d"/.test(t.name), t.name);
-  assert.equal(C.testLabel(C.TEST_TEMPLATES.find(t => t.key === 'oh')), '20 mm · 7" · zavorra');
-  assert.equal(C.testLabel(C.TEST_TEMPLATES.find(t => t.key === 'onearm')), '22 mm · una mano');
+  assert.equal(C.testLabel(C.TEST_TEMPLATES.find(t => t.key === 'oh')), '20 mm · 7" · added weight');
+  assert.equal(C.testLabel(C.TEST_TEMPLATES.find(t => t.key === 'onearm')), '22 mm · one hand');
   assert.equal(C.testLabel({ name: 'x', unit: 'kg' }), '');
 });
 
@@ -253,32 +254,35 @@ test('progressione e serie per esercizio standard: hang a due mani, lift per lat
   assert.deepEqual(C.refKeys('oh'), ['oh']);
   assert.equal(C.loadKey({ ref: 'lift' }, 'DX · 90%'), 'liftR');
   assert.equal(C.loadKey({ ref: 'lift' }, 'SX'), 'liftL');
+  assert.equal(C.loadKey({ ref: 'lift' }, 'R · 90%'), 'liftR');
+  assert.equal(C.loadKey({ ref: 'lift' }, 'L'), 'liftL');
   assert.equal(C.loadKg({ ref: 'lift', mode: 'lift', pct: 90 }, 'DX', { liftL: 40, liftR: 50 }), 45);
   assert.equal(C.matchStd('Max lift 20 mm'), 'block-lift');
   assert.deepEqual(C.inferLoad('Max lift 20 mm', '3 × 7" · 90% max'), { ref: 'lift', mode: 'lift', pct: 90, test: false });
   assert.equal(C.STD['max-hang'].interval.cues.length, 0); // sospensioni: due mani, nessun lato
-  assert.deepEqual(C.STD['block-lift'].interval.cues, ['SX', 'DX']);
+  assert.deepEqual(C.STD['block-lift'].interval.cues, ['L', 'R']);
   const logs = [
     { date: '2026-11-16', blocks: [{ name: 'Half-crimp 85%', key: 'max-hang|hc', label: 'Max hang · Half-crimp', kgs: [{ side: null, kg: 10 }], rpe: 7, mode: 'hang' },
-      { name: 'Lift', key: 'block-lift|lift', label: 'Max lift', kgs: [{ side: 'SX', kg: 38 }, { side: 'DX', kg: 42 }], rpe: 8, mode: 'lift' }, { name: 'Riscaldamento', minutes: 20 }] },
+      { name: 'Lift', key: 'block-lift|lift', label: 'Max lift', kgs: [{ side: 'L', kg: 38 }, { side: 'R', kg: 42 }], rpe: 8, mode: 'lift' }, { name: 'Riscaldamento', minutes: 20 }] },
     { date: '2026-11-23', blocks: [{ name: 'Half-crimp 90%', key: 'max-hang|hc', label: 'Max hang · Half-crimp', kgs: [{ side: null, kg: 12 }], rpe: 9, mode: 'hang' }] },
     { date: '2026-11-20', loads: [{ name: 'Open hand 20 mm 7"', kg: '+8 kg' }] },
   ];
   const ls = C.loadSeries(logs, '2026-11-01', '2026-11-30');
-  assert.deepEqual(ls.map(x => [x.name, x.points.map(p => p.kg)]), [['Max hang · Half-crimp', [10, 12]], ['Max lift DX', [42]], ['Max lift SX', [38]], ['Open hand 20 mm 7"', [8]]]);
+  assert.deepEqual(ls.map(x => [x.name, x.points.map(p => p.kg)]), [['Max hang · Half-crimp', [10, 12]], ['Max lift L', [38]], ['Max lift R', [42]], ['Open hand 20 mm 7"', [8]]]);
   assert.deepEqual([C.lastRecord(logs, 'max-hang|hc').date, C.lastRecord(logs, 'max-hang|hc').rpe], ['2026-11-23', 9]);
   assert.equal(C.lastRecord(logs, 'max-hang|oh').kgs[0].kg, 8); // log vecchio ricondotto allo standard dal nome
   assert.equal(C.lastRecord(logs, 'nessuno'), null);
 });
 
 test('parametri → riga descrittiva; dalle prescrizioni importate resta solo la nota', () => {
-  assert.equal(C.describe({ interval: { rounds: 4, workSeconds: 7, restSeconds: 180, cues: [] }, load: { ref: 'hc', pct: 87.5 } }), '4 × 7" · rec. 3\' · 87,5%');
-  assert.equal(C.describe({ interval: { rounds: 3, workSeconds: 45, restSeconds: 90, selfPaced: true, reps: 8, cues: [] } }), '3 × 8 rip. · rec. 1\'30"');
-  assert.equal(C.describe({ interval: { rounds: 18, workSeconds: 60, restSeconds: 120, selfPaced: true, roundsPerSet: 3, setRestSeconds: 300, cues: [] } }), '6 serie × 3 · rec. 2\' / 5\' tra le serie');
-  assert.equal(C.describe({ interval: { rounds: 2, workSeconds: 30, restSeconds: 45, selfPaced: true, cues: [] } }), '2 round · rec. 45"');
+  assert.equal(C.describe({ interval: { rounds: 4, workSeconds: 7, restSeconds: 180, cues: [] }, load: { ref: 'hc', pct: 87.5 } }), '4 × 7" · rest 3\' · 87.5%');
+  assert.equal(C.describe({ interval: { rounds: 3, workSeconds: 45, restSeconds: 90, selfPaced: true, reps: 8, cues: [] } }), '3 × 8 reps · rest 1\'30"');
+  assert.equal(C.describe({ interval: { rounds: 18, workSeconds: 60, restSeconds: 120, selfPaced: true, roundsPerSet: 3, setRestSeconds: 300, cues: [] } }), '6 sets × 3 · rest 2\' / 5\' between sets');
+  assert.equal(C.describe({ interval: { rounds: 2, workSeconds: 30, restSeconds: 45, selfPaced: true, cues: [] } }), '2 round · rest 45"');
   assert.equal(C.describe({ interval: null, load: null }), '');
   assert.equal(C.leftoverNote('4 × 7" · 85% max · margine 2-3"'), 'margine 2-3"');
   assert.equal(C.leftoverNote('2 × 6-8 · rec. 2\''), '');
+  assert.equal(C.leftoverNote('6 sets × 3 · rest 2\' / 5\' between sets · slow feet'), 'slow feet');
   assert.equal(C.leftoverNote('3 × 7" per mano · 75% max'), '');
   assert.equal(C.leftoverNote('6 blocchi × 3 rip. · rec. 2\' / 5\' tra blocchi'), '');
   assert.equal(C.leftoverNote('3 serie per lato · singolo movimento'), 'singolo movimento');
@@ -288,13 +292,15 @@ test('parametri → riga descrittiva; dalle prescrizioni importate resta solo la
   // export: senza testo libero la riga del file nasce dai parametri e dalla nota del blocco
   const ex = { e1: { id: 'e1', name: 'Max hang', slot: 'strength', location: 'off_wall', domain: 'x', intensity: 'max', risk: 'low', interval: { rounds: 4, workSeconds: 7, restSeconds: 180, cues: [] }, load: { ref: 'hc', pct: 85 } } };
   const plan = { title: 'P', startDate: '2026-11-16', weeks: [[{ sessions: [{ id: 's', type: 'wall', period: 'base', blocks: [{ id: 'b', exId: 'e1', minutes: 10, note: 'margine 2"' }] }] }, ...Array.from({ length: 6 }, () => ({ sessions: [] }))]] };
-  assert.equal(C.exportBlokplan(plan, ex).weeks[0][0].plannedBlocks[0].block.prescription, '4 × 7" · rec. 3\' · 85% · margine 2"');
+  assert.equal(C.exportBlokplan(plan, ex).weeks[0][0].plannedBlocks[0].block.prescription, '4 × 7" · rest 3\' · 85% · margine 2"');
 });
 
 test('cue importati → interruttore SX/DX + nota', () => {
   assert.deepEqual(C.splitCues(['SX · 75% max', 'DX · 75% max']), { sided: true, note: '' });
   assert.deepEqual(C.splitCues(['SX · carico crescente', 'DX · carico crescente']), { sided: true, note: 'carico crescente' });
   assert.deepEqual(C.splitCues(['Lato SX', 'Lato DX']), { sided: true, note: '' });
+  assert.deepEqual(C.splitCues(['L · 75% max', 'R · 75% max']), { sided: true, note: '' });
+  assert.deepEqual(C.splitCues(['Left', 'Right']), { sided: true, note: '' });
   assert.deepEqual(C.splitCues(['Lato Karma', 'Lato opposto']), { sided: true, note: 'Lato Karma → Lato opposto' });
   assert.deepEqual(C.splitCues(['85% max']), { sided: false, note: '' });
   assert.deepEqual(C.splitCues(['6-8 rip. per braccio']), { sided: false, note: '6-8 rip. per braccio' });
@@ -320,4 +326,16 @@ test('tempo per categoria: sezioni, quota di arrampicata, gruppi settimanali', (
   assert.deepEqual(C.weeklyGroups(logs, '2026-11-16', '2026-11-29'), [
     { week: '2026-11-16', wall: 50, strength: 15, other: 20, unclassified: 75 },
     { week: '2026-11-23', wall: 30, strength: 10, other: 0, unclassified: 0 }]); // se gli esercizi superano il totale, il non classificato resta 0
+});
+
+test('nomi: la libreria è in inglese, i nomi italiani delle versioni precedenti restano riconosciuti', () => {
+  assert.equal(C.STD['wrist-curl'].name, 'Wrist curl');
+  assert.equal(C.LEGACY_NAMES['Flessione polso'], 'Wrist curl');
+  assert.equal(C.matchStd('Flessione polso'), 'wrist-curl');
+  assert.equal(C.matchStd('Finger activation'), 'warmup-fingers'); // nome esatto prima delle regole
+  assert.equal(C.matchStd('Attivazione dita'), 'warmup-fingers');
+  for (const x of C.LIBRARY) assert.equal(C.matchStd(x.name), x.key, x.name);
+  for (const [old, now] of Object.entries(C.LEGACY_NAMES)) assert.notEqual(old, now);
+  assert.equal(C.normSide('DX'), 'R');
+  assert.equal(C.normSide('sx'), 'L');
 });

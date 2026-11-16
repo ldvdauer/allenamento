@@ -1,2 +1,2 @@
-{"name":"Allenamento","short_name":"Allenamento","start_url":"./","scope":"./","display":"standalone","background_color":"#0e1012","theme_color":"#0e1012","lang":"it",
+{"name":"Allenamento","short_name":"Allenamento","start_url":"./","scope":"./","display":"standalone","background_color":"#0e1012","theme_color":"#0e1012","lang":"en",
  "icons":[{"src":"icon.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}]}

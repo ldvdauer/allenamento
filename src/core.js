@@ -6,84 +6,84 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  const DAY_TYPES = { wall: 'Muro', strength: 'Fuori muro', skills: 'Tecnica', activeRest: 'Riposo attivo', setting: 'Tracciatura', rest: 'Recupero' };
-  const PERIODS = { base: 'Base', strength: 'Forza', power: 'Potenza', powerEndurance: 'Resistenza alla potenza', endurance: 'Resistenza', performance: 'Prestazione', deload: 'Scarico' };
-  const SLOTS = { warmup: 'Riscaldamento', strength: 'Forza', wall: 'Sul muro', mobility: 'Mobilità' };
+  const DAY_TYPES = { wall: 'Wall', strength: 'Off the wall', skills: 'Technique', activeRest: 'Active rest', setting: 'Setting', rest: 'Rest' };
+  const PERIODS = { base: 'Base', strength: 'Strength', power: 'Power', powerEndurance: 'Power endurance', endurance: 'Endurance', performance: 'Performance', deload: 'Deload' };
+  const SLOTS = { warmup: 'Warm-up', strength: 'Strength', wall: 'On the wall', mobility: 'Mobility' };
   const APPLE_EPOCH_MS = Date.UTC(2001, 0, 1);
   // Massimali/test predefiniti. `mode: hang` = zavorra aggiunta al peso corporeo, `lift` = carico sollevato.
   /* Test: ogni test ha i suoi parametri. `mode`: hang = zavorra aggiunta al peso corporeo, lift = carico sollevato,
      value = valore libero (secondi, kg di peso corporeo…). L'ultimo risultato è il massimale usato per calcolare i kg. */
   const TEST_TEMPLATES = [
-    { key: 'bw', name: 'Peso corporeo', unit: 'kg', mode: 'value' },
+    { key: 'bw', name: 'Body weight', unit: 'kg', mode: 'value' },
     { key: 'oh', name: 'Open hand', unit: 'kg', mode: 'hang', edge: 20, seconds: 7, hands: 2 },
     { key: 'hc', name: 'Half-crimp', unit: 'kg', mode: 'hang', edge: 20, seconds: 7, hands: 2 },
     { key: 'sl', name: 'Sloper', unit: 'kg', mode: 'hang', seconds: 7, hands: 2 },
-    { key: 'pinchL', name: 'Pinch block SX', unit: 'kg', mode: 'lift', seconds: 7, hands: 1 },
-    { key: 'pinchR', name: 'Pinch block DX', unit: 'kg', mode: 'lift', seconds: 7, hands: 1 },
-    { key: 'liftL', name: 'Max lift SX', unit: 'kg', mode: 'lift', edge: 20, seconds: 7, hands: 1 },
-    { key: 'liftR', name: 'Max lift DX', unit: 'kg', mode: 'lift', edge: 20, seconds: 7, hands: 1 },
-    { key: 'wrist', name: 'Flessione polso', unit: 'kg', mode: 'lift', reps: 6 },
-    { key: 'pull', name: 'Trazione zavorrata', unit: 'kg', mode: 'hang', reps: 2 },
-    { key: 'onearm', name: 'Sospensione a un braccio', unit: 's', mode: 'value', edge: 22, hands: 1 },
+    { key: 'pinchL', name: 'Pinch block L', unit: 'kg', mode: 'lift', seconds: 7, hands: 1 },
+    { key: 'pinchR', name: 'Pinch block R', unit: 'kg', mode: 'lift', seconds: 7, hands: 1 },
+    { key: 'liftL', name: 'Max lift L', unit: 'kg', mode: 'lift', edge: 20, seconds: 7, hands: 1 },
+    { key: 'liftR', name: 'Max lift R', unit: 'kg', mode: 'lift', edge: 20, seconds: 7, hands: 1 },
+    { key: 'wrist', name: 'Wrist curl', unit: 'kg', mode: 'lift', reps: 6 },
+    { key: 'pull', name: 'Weighted pull-up', unit: 'kg', mode: 'hang', reps: 2 },
+    { key: 'onearm', name: 'One-arm hang', unit: 's', mode: 'value', edge: 22, hands: 1 },
   ];
   /** Parametri di un test in una riga: "20 mm · 7" · zavorra". */
-  const testLabel = d => [d.edge ? d.edge + ' mm' : '', d.seconds ? d.seconds + '"' : '', d.reps ? d.reps + 'RM' : '', d.hands === 1 ? 'una mano' : '',
-    d.mode === 'hang' ? 'zavorra' : d.mode === 'lift' ? 'carico sollevato' : ''].filter(Boolean).join(' · ');
+  const testLabel = d => [d.edge ? d.edge + ' mm' : '', d.seconds ? d.seconds + '"' : '', d.reps ? d.reps + 'RM' : '', d.hands === 1 ? 'one hand' : '',
+    d.mode === 'hang' ? 'added weight' : d.mode === 'lift' ? 'load lifted' : ''].filter(Boolean).join(' · ');
 
   /* Libreria standard: ogni esercizio del calendario è una versione personalizzata di uno di questi.
      Riga: chiave | sezione | nome | minuti | timer. Timer: "t:round/lavoro/recupero" a tempo, "r:round/rip/recupero" a ripetizioni,
      "+serie/recuperoSerie" per le serie raggruppate, "=cue~cue" per i cue a rotazione; vuoto = solo durata. */
-  const SECTIONS = { warmup: 'Riscaldamento', fingers: 'Dita', pull: 'Trazione', strength: 'Forza generale e antagonisti', core: 'Core', wall: 'Sul muro', mobility: 'Mobilità e recupero', mental: 'Mentale' };
-  const LIBRARY = `warmup-general|warmup|Riscaldamento generale|15|
-warmup-wall|warmup|Riscaldamento sul muro|20|
-warmup-fingers|warmup|Attivazione dita|6|t:5/7/60
-warmup-shoulders|warmup|Attivazione spalle con elastico|5|r:2/15/45
+  const SECTIONS = { warmup: 'Warm-up', fingers: 'Fingers', pull: 'Pulling', strength: 'General strength and antagonists', core: 'Core', wall: 'On the wall', mobility: 'Mobility and recovery', mental: 'Mental' };
+  const LIBRARY = `warmup-general|warmup|General warm-up|15|
+warmup-wall|warmup|Wall warm-up|20|
+warmup-fingers|warmup|Finger activation|6|t:5/7/60
+warmup-shoulders|warmup|Shoulder activation with band|5|r:2/15/45
 max-hang|fingers|Max hang|13|t:4/7/180
 repeaters|fingers|Repeaters 7/3|14|t:24/7/3+6/180
-min-edge|fingers|Tacca minima|13|t:4/7/180
-one-arm-hang|fingers|Sospensione a un braccio|14|t:6/7/120=SX~DX
-sloper-hang|fingers|Sospensione su sloper|13|t:4/7/180
-pinch-lift|fingers|Pinch block|8|t:6/7/75=SX~DX
-block-lift|fingers|Max lift|13|t:6/7/120=SX~DX
-density-hang|fingers|Sospensioni lunghe|9|t:4/30/120
-wrist-curl|fingers|Flessione polso|7|r:3/6/120
-finger-ext|fingers|Estensori delle dita|4|r:2/15/45
-weighted-pullup|pull|Trazioni zavorrate|9|r:3/4/180
-pullup|pull|Trazioni|7|r:3/6/120
-one-arm-pull|pull|Trazione a un braccio (progressione)|14|r:6/2/150=SX~DX
-lockoff|pull|Bloccaggi|9|t:6/7/90=SX~DX
-row|pull|Rematore|6|r:3/8/90
+min-edge|fingers|Minimum edge|13|t:4/7/180
+one-arm-hang|fingers|One-arm hang|14|t:6/7/120=L~R
+sloper-hang|fingers|Sloper hang|13|t:4/7/180
+pinch-lift|fingers|Pinch block|8|t:6/7/75=L~R
+block-lift|fingers|Max lift|13|t:6/7/120=L~R
+density-hang|fingers|Long hangs|9|t:4/30/120
+wrist-curl|fingers|Wrist curl|7|r:3/6/120
+finger-ext|fingers|Finger extensors|4|r:2/15/45
+weighted-pullup|pull|Weighted pull-ups|9|r:3/4/180
+pullup|pull|Pull-ups|7|r:3/6/120
+one-arm-pull|pull|One-arm pull-up (progression)|14|r:6/2/150=L~R
+lockoff|pull|Lock-offs|9|t:6/7/90=L~R
+row|pull|Rows|6|r:3/8/90
 campus|pull|Campus board|12|r:5/1/150
-pushup|strength|Push-up o dip|7|r:3/8/120
-press|strength|Press sopra la testa|7|r:3/6/120=SX~DX
-ext-rot|strength|Extrarotazioni|4|r:2/12/60
-fly|strength|Croci (compressione)|6|r:3/8/90
-iso-fly|strength|Croci isometriche|4|t:3/10/60
+pushup|strength|Push-ups or dips|7|r:3/8/120
+press|strength|Overhead press|7|r:3/6/120=L~R
+ext-rot|strength|External rotations|4|r:2/12/60
+fly|strength|Flys (compression)|6|r:3/8/90
+iso-fly|strength|Isometric flys|4|t:3/10/60
 nordic|strength|Nordic curl|7|r:3/5/120
-deadlift|strength|Stacco|10|r:3/5/180
-squat|strength|Squat o pistol|7|r:3/6/120
+deadlift|strength|Deadlift|10|r:3/5/180
+squat|strength|Squat or pistol|7|r:3/6/120
 hollow|core|Hollow body hold|4|t:3/25/60
 ab-wheel|core|Ab wheel|6|r:3/6/90
-pallof|core|Pallof press|7|r:6/10/45=SX~DX
-leg-raise|core|Leg raise alla sbarra|6|r:3/8/90
-front-lever|core|Front lever (progressione)|9|t:4/6/120
+pallof|core|Pallof press|7|r:6/10/45=L~R
+leg-raise|core|Hanging leg raise|6|r:3/8/90
+front-lever|core|Front lever (progression)|9|t:4/6/120
 plank|core|Plank|5|t:3/40/60
 limit|wall|Limit bouldering|40|
-project|wall|Progetto|45|
+project|wall|Project|45|
 board|wall|Board benchmark|40|
-flash|wall|Set al flash|60|r:18/0/120+3/300
+flash|wall|Flash set|60|r:18/0/120+3/300
 volume|wall|Volume|40|
-technique|wall|Tecnica: movimento isolato|8|r:6/1/60=SX~DX
+technique|wall|Technique: isolated move|8|r:6/1/60=L~R
 four-by-four|wall|4x4|25|r:16/1/30+4/240
-circuit|wall|Circuiti di resistenza|30|
-outdoor|wall|Roccia|120|
-activation|wall|Sessione di attivazione|30|
-hips|mobility|Mobilità anche|10|
-shoulders|mobility|Mobilità spalle|8|
-stretch|mobility|Stretching generale|10|
-cooldown|mobility|Defaticamento|10|
-visualize|mental|Visualizzazione del progetto|5|
-review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
+circuit|wall|Endurance circuits|30|
+outdoor|wall|Rock|120|
+activation|wall|Activation session|30|
+hips|mobility|Hip mobility|10|
+shoulders|mobility|Shoulder mobility|8|
+stretch|mobility|General stretching|10|
+cooldown|mobility|Cool-down|10|
+visualize|mental|Project visualisation|5|
+review|mental|Attempt review|10|`.split('\n').map(line => {
     const [key, section, name, minutes, timer] = line.split('|');
     let interval = null;
     if (timer) {
@@ -105,13 +105,18 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
       equipment: [], interval: d.interval ? JSON.parse(JSON.stringify(d.interval)) : null, load: null, surface: '', minutes: d.minutes };
   }
   // Riconduce un nome libero (es. da un programma importato) all'esercizio standard. L'ordine conta: le regole più specifiche prima.
-  const STD_RULES = [[/^test\b/i, 'test'], [/limit|progett/i, 'limit'], [/flash|\btriples?\b|triplett/i, 'flash'], [/pallof/i, 'pallof'], [/tallone|ristabilimento|compressione su|tecnic|movimento isolato/i, 'technique'],
-    [/a bleau|roccia|outdoor/i, 'outdoor'], [/attivazione/i, 'activation'], [/riscaldamento|warm.?up/i, 'warmup-wall'], [/open hand|half.?crimp|max hang/i, 'max-hang'], [/repeater/i, 'repeaters'],
-    [/sloper/i, 'sloper-hang'], [/pinch/i, 'pinch-lift'], [/\blift\b/i, 'block-lift'], [/polso/i, 'wrist-curl'], [/trazion\w* zavorr|weighted pull/i, 'weighted-pullup'], [/trazion|pull.?up/i, 'pullup'], [/bloccagg|lock.?off/i, 'lockoff'],
-    [/campus/i, 'campus'], [/\bpress\b/i, 'press'], [/extrarot/i, 'ext-rot'], [/croci isometr/i, 'iso-fly'], [/croci/i, 'fly'], [/nordic/i, 'nordic'], [/hollow/i, 'hollow'], [/ab wheel/i, 'ab-wheel'], [/leg.?raise/i, 'leg-raise'],
-    [/pallof/i, 'pallof'], [/push.?up|\bdip/i, 'pushup'], [/plank/i, 'plank'], [/front lever/i, 'front-lever'], [/mobilit.* anche/i, 'hips'], [/mobilit.* spall/i, 'shoulders'], [/mobilit|stretch/i, 'stretch'],
+  const STD_RULES = [[/^test\b/i, 'test'], [/limit|progett|\bproject/i, 'limit'], [/flash|\btriples?\b|triplett/i, 'flash'], [/pallof/i, 'pallof'], [/tallone|ristabilimento|compressione su|tecnic|movimento isolato|techni|isolated move|heel hook|mantle/i, 'technique'],
+    [/a bleau|roccia|outdoor|\brock\b/i, 'outdoor'], [/attivazione|activation/i, 'activation'], [/riscaldamento|warm.?up/i, 'warmup-wall'], [/open hand|half.?crimp|max hang/i, 'max-hang'], [/repeater/i, 'repeaters'],
+    [/sloper/i, 'sloper-hang'], [/pinch/i, 'pinch-lift'], [/\blift\b/i, 'block-lift'], [/polso|wrist/i, 'wrist-curl'], [/trazion\w* zavorr|weighted pull/i, 'weighted-pullup'], [/trazion|pull.?up/i, 'pullup'], [/bloccagg|lock.?off/i, 'lockoff'],
+    [/campus/i, 'campus'], [/\bpress\b/i, 'press'], [/extrarot|external rot/i, 'ext-rot'], [/croci isometr|isometric fl/i, 'iso-fly'], [/croci|\bfl(y|ys|ies)\b/i, 'fly'], [/nordic/i, 'nordic'], [/hollow/i, 'hollow'], [/ab wheel/i, 'ab-wheel'], [/leg.?raise/i, 'leg-raise'],
+    [/pallof/i, 'pallof'], [/push.?up|\bdip/i, 'pushup'], [/plank/i, 'plank'], [/front lever/i, 'front-lever'], [/mobilit.* anche|hip mobility/i, 'hips'], [/mobilit.* spall|shoulder mobility/i, 'shoulders'], [/mobilit|stretch/i, 'stretch'],
     [/board|benchmark/i, 'board'], [/volume/i, 'volume'], [/4 ?x ?4/i, 'four-by-four'], [/circuit/i, 'circuit']];
-  const matchStd = name => { const r = STD_RULES.find(([re]) => re.test(name || '')); return r ? r[1] : null; };
+  /* Nomi italiani delle versioni precedenti → nome attuale: servono per aggiornare i dati salvati e per riconoscere i programmi scritti in italiano. */
+  const LEGACY_NAMES = {"Peso corporeo": "Body weight", "Pinch block SX": "Pinch block L", "Pinch block DX": "Pinch block R", "Max lift SX": "Max lift L", "Max lift DX": "Max lift R", "Trazione zavorrata": "Weighted pull-up", "Indoor (palestra)": "Indoor (gym)", "Outdoor (roccia)": "Outdoor (rock)", "Riscaldamento generale": "General warm-up", "Riscaldamento sul muro": "Wall warm-up", "Attivazione dita": "Finger activation", "Attivazione spalle con elastico": "Shoulder activation with band", "Tacca minima": "Minimum edge", "Sospensione a un braccio": "One-arm hang", "Sospensione su sloper": "Sloper hang", "Sospensioni lunghe": "Long hangs", "Flessione polso": "Wrist curl", "Estensori delle dita": "Finger extensors", "Trazioni zavorrate": "Weighted pull-ups", "Trazioni": "Pull-ups", "Trazione a un braccio (progressione)": "One-arm pull-up (progression)", "Bloccaggi": "Lock-offs", "Rematore": "Rows", "Push-up o dip": "Push-ups or dips", "Press sopra la testa": "Overhead press", "Extrarotazioni": "External rotations", "Croci (compressione)": "Flys (compression)", "Croci isometriche": "Isometric flys", "Stacco": "Deadlift", "Squat o pistol": "Squat or pistol", "Leg raise alla sbarra": "Hanging leg raise", "Front lever (progressione)": "Front lever (progression)", "Progetto": "Project", "Set al flash": "Flash set", "Tecnica: movimento isolato": "Technique: isolated move", "Circuiti di resistenza": "Endurance circuits", "Roccia": "Rock", "Sessione di attivazione": "Activation session", "Mobilità anche": "Hip mobility", "Mobilità spalle": "Shoulder mobility", "Stretching generale": "General stretching", "Defaticamento": "Cool-down", "Visualizzazione del progetto": "Project visualisation", "Analisi dei tentativi": "Attempt review"};
+  const EXACT = Object.fromEntries(LIBRARY.map(x => [x.name.toLowerCase(), x.key]));
+  for (const [old, now] of Object.entries(LEGACY_NAMES)) if (EXACT[now.toLowerCase()]) EXACT[old.toLowerCase()] = EXACT[now.toLowerCase()];
+  /** Prima il nome esatto di un esercizio standard (anche nella vecchia versione italiana), poi le regole. */
+  const matchStd = name => { const n = String(name || '').trim(); if (EXACT[n.toLowerCase()]) return EXACT[n.toLowerCase()]; const r = STD_RULES.find(([re]) => re.test(n)); return r ? r[1] : null; };
 
   // Scala dei gradi boulder. I dati salvano l'etichetta Font; `fmtGrade` è l'unico punto in cui si sceglie la scala mostrata.
   const GRADES = ['4', '4+', '5', '5+', '6A', '6A+', '6B', '6B+', '6C', '6C+', '7A', '7A+', '7B', '7B+', '7C', '7C+', '8A', '8A+', '8B', '8B+', '8C', '8C+', '9A'];
@@ -121,7 +126,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
   // Superfici di arrampicata predefinite; l'utente può aggiungerne altre.
   const DEFAULT_SURFACES = [
     { key: 'moonboard', name: 'MoonBoard' }, { key: 'kilter', name: 'Kilter Board' }, { key: 'tension', name: 'Tension Board' },
-    { key: 'gym', name: 'Indoor (palestra)' }, { key: 'outdoor', name: 'Outdoor (roccia)' },
+    { key: 'gym', name: 'Indoor (gym)' }, { key: 'outdoor', name: 'Outdoor (rock)' },
   ];
   /** Superficie deducibile dal nome dell'esercizio (solo i casi ovvi), altrimenti stringa vuota. */
   function inferSurface(name) {
@@ -129,7 +134,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
     if (/moon\s?board/i.test(n)) return 'moonboard';
     if (/kilter/i.test(n)) return 'kilter';
     if (/tension/i.test(n)) return 'tension';
-    if (/outdoor|roccia|falesia/i.test(n)) return 'outdoor';
+    if (/outdoor|roccia|falesia|\brock\b|\bcrag\b/i.test(n)) return 'outdoor';
     return '';
   }
 
@@ -162,7 +167,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
     else if (/sloper bm/i.test(n)) ref = 'sl';
     else if (/pinch/i.test(n)) { ref = 'pinch'; mode = 'lift'; }
     else if (/\blift\b/i.test(n)) { ref = 'lift'; mode = 'lift'; }
-    else if (/polso/i.test(n)) { ref = 'wrist'; mode = 'lift'; }
+    else if (/polso|wrist/i.test(n)) { ref = 'wrist'; mode = 'lift'; }
     if (!ref) return null;
     const m = /(\d+(?:[.,]\d+)?)\s*%/.exec(prescription || '');
     return { ref, mode, pct: m ? num(m[1]) : null, test: /^TEST/i.test(n) };
@@ -174,7 +179,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
   function loadKey(load, cue) {
     if (!load) return null;
     if (!PAIRS[load.ref]) return load.ref;
-    return load.ref + (/^\s*DX/i.test(cue || '') ? 'R' : 'L');
+    return load.ref + (/^\s*(DX|R\b|right)/i.test(cue || '') ? 'R' : 'L');
   }
   /** Carico in kg arrotondato a 0,5: zavorra (può essere negativa = scarico) o carico sollevato. */
   function loadKg(load, cue, maxes) {
@@ -193,7 +198,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
     }
     return out;
   }
-  const fmtKg = kg => (kg > 0 ? '+' : '') + String(kg).replace('.', ',') + ' kg';
+  const fmtKg = kg => (kg > 0 ? '+' : '') + kg + ' kg';
 
   /* ---- Timer ---- */
   const cycle = a => { // periodo minimo di un array ripetuto
@@ -244,24 +249,24 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
     const iv = e.interval, out = [];
     if (iv && iv.rounds) {
       const sets = iv.roundsPerSet && iv.rounds % iv.roundsPerSet === 0 ? iv.rounds / iv.roundsPerSet : 0;
-      const unit = iv.selfPaced ? (iv.reps ? iv.reps + ' rip.' : '') : iv.workSeconds + '"';
-      const count = sets ? `${sets} serie × ${iv.roundsPerSet}` : String(iv.rounds);
+      const unit = iv.selfPaced ? (iv.reps ? iv.reps + ' reps' : '') : iv.workSeconds + '"';
+      const count = sets ? `${sets} sets × ${iv.roundsPerSet}` : String(iv.rounds);
       out.push(unit ? `${count} × ${unit}` : sets ? count : `${count} round`);
-      if (iv.restSeconds) out.push('rec. ' + fmtRest(iv.restSeconds) + (sets && iv.setRestSeconds ? ' / ' + fmtRest(iv.setRestSeconds) + ' tra le serie' : ''));
+      if (iv.restSeconds) out.push('rest ' + fmtRest(iv.restSeconds) + (sets && iv.setRestSeconds ? ' / ' + fmtRest(iv.setRestSeconds) + ' between sets' : ''));
     }
-    if (e.load && e.load.pct != null) out.push(String(e.load.pct).replace('.', ',') + '%');
+    if (e.load && e.load.pct != null) out.push(e.load.pct + '%');
     return out.join(' · ');
   }
   /** Di una prescrizione testuale importata tiene solo ciò che non è un parametro (serie, recuperi, %): diventa la nota del blocco. */
   const leftoverNote = text => String(text || '').split(' · ').map(x => x.trim())
-    .filter(x => x && !/^\d+\s*(×|x|blocchi|serie)\b/i.test(x) && !/^\d+ (×|x) /i.test(x) && !/\brec\./i.test(x) && !/\d\s*%/.test(x) && !/^test$/i.test(x)).join(' · ');
+    .filter(x => x && !/^\d+\s*(×|x|blocchi|serie|problems|sets)\b/i.test(x) && !/^\d+ (×|x) /i.test(x) && !/\brec\.|^rest \d/i.test(x) && !/\d\s*%/.test(x) && !/^test$/i.test(x)).join(' · ');
 
   /** Dai cue per round (formato Blok) ricava le due cose che servono: se l'esercizio alterna SX/DX, e il testo
       che non è un parametro, da mettere nella nota. I cue liberi non esistono più come campo a parte. */
   function splitCues(cues) {
     const list = (cues || []).map(c => String(c).trim()).filter(Boolean);
-    const sided = list.length > 0 && list.length % 2 === 0 && list.every((c, i) => (i % 2 ? /^(DX|lato dx|lato opposto|lato b)\b/i : /^(SX|lato sx|lato karma|lato a)\b/i).test(c) || /^lato\b/i.test(c));
-    const rest = [...new Set(list.map(c => leftoverNote(c.replace(/^(SX|DX)\b\s*·?\s*/i, '').replace(/^lato (sx|dx|a|b)$/i, ''))).filter(Boolean))];
+    const sided = list.length > 0 && list.length % 2 === 0 && list.every((c, i) => (i % 2 ? /^(DX|R|right|lato dx|lato opposto|lato b|side b)\b/i : /^(SX|L|left|lato sx|lato karma|lato a|side a)\b/i).test(c) || /^(lato|side)\b/i.test(c));
+    const rest = [...new Set(list.map(c => leftoverNote(c.replace(/^(SX|DX|L|R|left|right)\b\s*·?\s*/i, '').replace(/^(lato|side) (sx|dx|a|b)$/i, ''))).filter(Boolean))];
     return { sided, note: rest.join(' → ') };
   }
 
@@ -278,7 +283,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
     return out;
   }
   function normExercise(b) {
-    const name = str(b.name, 'Esercizio');
+    const name = str(b.name, 'Exercise');
     const prescription = str(b.prescription, str(b.summary, ''));
     return {
       name, prescription,
@@ -295,7 +300,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
   /** Converte un .blokplan in { plan, exercises }. Lancia Error se il file non è valido.
       Gli esercizi identici vengono deduplicati; `existing` (id → esercizio) permette di riusare la libreria. */
   function importBlokplan(obj, existing) {
-    if (!obj || typeof obj !== 'object' || !Array.isArray(obj.weeks) || !obj.weeks.length) throw new Error('Il file non è un piano Blok Sessions valido.');
+    if (!obj || typeof obj !== 'object' || !Array.isArray(obj.weeks) || !obj.weeks.length) throw new Error('The file is not a valid Blok Sessions plan.');
     const byKey = new Map(), exercises = [];
     const keyOf = e => JSON.stringify([e.name, e.prescription, e.slot, e.location, e.interval]);
     for (const e of Object.values(existing || {})) byKey.set(keyOf(e), e.id);
@@ -305,7 +310,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
       return { id: uid(), exId: byKey.get(k), minutes: int(pb.selectedDurationMinutes || pb.block.defaultMinutes) };
     });
     const weeks = obj.weeks.map(w => {
-      if (!Array.isArray(w)) throw new Error('Settimana non valida nel file.');
+      if (!Array.isArray(w)) throw new Error('Invalid week in the file.');
       const days = w.slice(0, 7).map(d => {
         const sessions = [];
         if (d && DAY_TYPES[d.type] && d.type !== 'rest')
@@ -319,7 +324,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
       return days;
     });
     const startDate = Number.isFinite(obj.startDate) ? mondayOf(appleToISO(obj.startDate)) : mondayOf(todayISO());
-    return { plan: { id: uid(), title: str(obj.title, 'Piano importato'), startDate, weeks }, exercises };
+    return { plan: { id: uid(), title: str(obj.title, 'Imported programme'), startDate, weeks }, exercises };
   }
   function exportBlokplan(plan, exMap) {
     const allPeriods = Object.keys(PERIODS);
@@ -414,13 +419,14 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
       due: due.length, dueDone: due.filter(s => done.has(s.sid)).length };
   }
   /** "SX 15 kg · DX 18 kg" → [{side:'SX',kg:15},{side:'DX',kg:18}]; "+4,5 kg" → [{side:null,kg:4.5}]. */
+  const normSide = x => (/^(DX|R)$/i.test(x) ? 'R' : 'L'); // i dati vecchi usavano SX/DX
   function parseLoads(text) {
     const out = [];
     for (const part of String(text == null ? '' : text).split(/[·;/]/)) {
       const m = /[+-]?\d+(?:[.,]\d+)?/.exec(part);
       if (!m) continue;
-      const side = /\b(SX|DX)\b/i.exec(part);
-      out.push({ side: side ? side[1].toUpperCase() : null, kg: num(m[0]) });
+      const side = /\b(SX|DX|L|R)\b/i.exec(part);
+      out.push({ side: side ? normSide(side[1]) : null, kg: num(m[0]) });
     }
     return out;
   }
@@ -461,7 +467,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
     return { kg: Math.round(((base + kg) * (1 + dir * rule.step / 100) - base) * 2) / 2, dir };
   }
   /* Tempo per categoria: le categorie sono le sezioni della libreria; i gruppi servono al grafico nel tempo. */
-  const GROUPS = { wall: 'Sul muro', strength: 'Forza', other: 'Mobilità e altro' };
+  const GROUPS = { wall: 'On the wall', strength: 'Strength', other: 'Mobility and other' };
   const SECTION_GROUP = { wall: 'wall', fingers: 'strength', pull: 'strength', strength: 'strength', core: 'strength', warmup: 'other', mobility: 'other', mental: 'other', other: 'other' };
   /** Sezione di un esercizio registrato: quella salvata, altrimenti ricavata dallo standard o dal nome. */
   function blockSection(b) {
@@ -537,7 +543,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
   }
 
   return {
-    GROUPS, SECTION_GROUP, blockSection, timeBySection, weeklyGroups, describe, leftoverNote, splitCues, fmtRest, PAIRS, refKeys, recordsOf, lastRecord, nextLoad, TEST_TEMPLATES, testLabel, SECTIONS, LIBRARY, STD, stdVariant, matchStd,
+    GROUPS, SECTION_GROUP, blockSection, timeBySection, weeklyGroups, describe, leftoverNote, splitCues, fmtRest, PAIRS, refKeys, LEGACY_NAMES, normSide, recordsOf, lastRecord, nextLoad, TEST_TEMPLATES, testLabel, SECTIONS, LIBRARY, STD, stdVariant, matchStd,
     DAY_TYPES, PERIODS, SLOTS, GRADES, GRADE_SCALES, gradeIdx, fmtGrade, DEFAULT_SURFACES, inferSurface, validISO, uid, toISO, fromISO, todayISO, addDays, diffDays, appleToISO, isoToApple, mondayOf,
     inferLoad, loadKey, loadKg, latestMaxes, fmtKg, cycle, cueAt, intervalMinutes, buildSteps, normInterval,
     importBlokplan, exportBlokplan, locate, dateOf, sessionMinutes, cloneSession, validState,

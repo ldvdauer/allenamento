@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
@@ -128,10 +128,10 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
 <main id="view"></main>
 <nav id="tabs">
   <a href="#home"><svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v9h-5v-6h-6v6H4z"/></svg>Home</a>
-  <a href="#calendario"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Calendario</a>
-  <a href="#analisi"><svg viewBox="0 0 24 24"><path d="M3 20h18M7 20v-7M12 20V5M17 20v-10"/></svg>Analisi</a>
-  <a href="#altro"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>Altro</a>
-  <a href="#" id="tab-note" role="button"><svg viewBox="0 0 24 24"><path d="M5 4h10l4 4v12H5zM9 12h6M9 16h4"/></svg>Nota</a>
+  <a href="#calendar"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Calendar</a>
+  <a href="#analytics"><svg viewBox="0 0 24 24"><path d="M3 20h18M7 20v-7M12 20V5M17 20v-10"/></svg>Analytics</a>
+  <a href="#more"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>More</a>
+  <a href="#" id="tab-note" role="button"><svg viewBox="0 0 24 24"><path d="M5 4h10l4 4v12H5zM9 12h6M9 16h4"/></svg>Note</a>
 </nav>
 <section id="runner" hidden></section>
 <section id="player" hidden>
@@ -144,13 +144,13 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
   <div class="kg" id="p-kg"></div>
   <div class="nx" id="p-next"></div>
   <div class="ctl">
-    <button class="btn" id="p-back" type="button">‹ Indietro</button>
-    <button class="btn" id="p-pause" type="button">Pausa</button>
-    <button class="btn" id="p-done" type="button">Fatto</button>
+    <button class="btn" id="p-back" type="button">‹ Back</button>
+    <button class="btn" id="p-pause" type="button">Pause</button>
+    <button class="btn" id="p-done" type="button">Done</button>
   </div>
   <div class="ctl2">
     <button class="btn" id="p-plus" type="button">+30 s</button>
-    <button class="btn" id="p-quit" type="button">Termina esercizio</button>
+    <button class="btn" id="p-quit" type="button">End exercise</button>
   </div>
 </section>
 <div id="toast" hidden></div>
@@ -162,84 +162,84 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  const DAY_TYPES = { wall: 'Muro', strength: 'Fuori muro', skills: 'Tecnica', activeRest: 'Riposo attivo', setting: 'Tracciatura', rest: 'Recupero' };
-  const PERIODS = { base: 'Base', strength: 'Forza', power: 'Potenza', powerEndurance: 'Resistenza alla potenza', endurance: 'Resistenza', performance: 'Prestazione', deload: 'Scarico' };
-  const SLOTS = { warmup: 'Riscaldamento', strength: 'Forza', wall: 'Sul muro', mobility: 'Mobilità' };
+  const DAY_TYPES = { wall: 'Wall', strength: 'Off the wall', skills: 'Technique', activeRest: 'Active rest', setting: 'Setting', rest: 'Rest' };
+  const PERIODS = { base: 'Base', strength: 'Strength', power: 'Power', powerEndurance: 'Power endurance', endurance: 'Endurance', performance: 'Performance', deload: 'Deload' };
+  const SLOTS = { warmup: 'Warm-up', strength: 'Strength', wall: 'On the wall', mobility: 'Mobility' };
   const APPLE_EPOCH_MS = Date.UTC(2001, 0, 1);
   // Massimali/test predefiniti. `mode: hang` = zavorra aggiunta al peso corporeo, `lift` = carico sollevato.
   /* Test: ogni test ha i suoi parametri. `mode`: hang = zavorra aggiunta al peso corporeo, lift = carico sollevato,
      value = valore libero (secondi, kg di peso corporeo…). L'ultimo risultato è il massimale usato per calcolare i kg. */
   const TEST_TEMPLATES = [
-    { key: 'bw', name: 'Peso corporeo', unit: 'kg', mode: 'value' },
+    { key: 'bw', name: 'Body weight', unit: 'kg', mode: 'value' },
     { key: 'oh', name: 'Open hand', unit: 'kg', mode: 'hang', edge: 20, seconds: 7, hands: 2 },
     { key: 'hc', name: 'Half-crimp', unit: 'kg', mode: 'hang', edge: 20, seconds: 7, hands: 2 },
     { key: 'sl', name: 'Sloper', unit: 'kg', mode: 'hang', seconds: 7, hands: 2 },
-    { key: 'pinchL', name: 'Pinch block SX', unit: 'kg', mode: 'lift', seconds: 7, hands: 1 },
-    { key: 'pinchR', name: 'Pinch block DX', unit: 'kg', mode: 'lift', seconds: 7, hands: 1 },
-    { key: 'liftL', name: 'Max lift SX', unit: 'kg', mode: 'lift', edge: 20, seconds: 7, hands: 1 },
-    { key: 'liftR', name: 'Max lift DX', unit: 'kg', mode: 'lift', edge: 20, seconds: 7, hands: 1 },
-    { key: 'wrist', name: 'Flessione polso', unit: 'kg', mode: 'lift', reps: 6 },
-    { key: 'pull', name: 'Trazione zavorrata', unit: 'kg', mode: 'hang', reps: 2 },
-    { key: 'onearm', name: 'Sospensione a un braccio', unit: 's', mode: 'value', edge: 22, hands: 1 },
+    { key: 'pinchL', name: 'Pinch block L', unit: 'kg', mode: 'lift', seconds: 7, hands: 1 },
+    { key: 'pinchR', name: 'Pinch block R', unit: 'kg', mode: 'lift', seconds: 7, hands: 1 },
+    { key: 'liftL', name: 'Max lift L', unit: 'kg', mode: 'lift', edge: 20, seconds: 7, hands: 1 },
+    { key: 'liftR', name: 'Max lift R', unit: 'kg', mode: 'lift', edge: 20, seconds: 7, hands: 1 },
+    { key: 'wrist', name: 'Wrist curl', unit: 'kg', mode: 'lift', reps: 6 },
+    { key: 'pull', name: 'Weighted pull-up', unit: 'kg', mode: 'hang', reps: 2 },
+    { key: 'onearm', name: 'One-arm hang', unit: 's', mode: 'value', edge: 22, hands: 1 },
   ];
   /** Parametri di un test in una riga: "20 mm · 7" · zavorra". */
-  const testLabel = d => [d.edge ? d.edge + ' mm' : '', d.seconds ? d.seconds + '"' : '', d.reps ? d.reps + 'RM' : '', d.hands === 1 ? 'una mano' : '',
-    d.mode === 'hang' ? 'zavorra' : d.mode === 'lift' ? 'carico sollevato' : ''].filter(Boolean).join(' · ');
+  const testLabel = d => [d.edge ? d.edge + ' mm' : '', d.seconds ? d.seconds + '"' : '', d.reps ? d.reps + 'RM' : '', d.hands === 1 ? 'one hand' : '',
+    d.mode === 'hang' ? 'added weight' : d.mode === 'lift' ? 'load lifted' : ''].filter(Boolean).join(' · ');
 
   /* Libreria standard: ogni esercizio del calendario è una versione personalizzata di uno di questi.
      Riga: chiave | sezione | nome | minuti | timer. Timer: "t:round/lavoro/recupero" a tempo, "r:round/rip/recupero" a ripetizioni,
      "+serie/recuperoSerie" per le serie raggruppate, "=cue~cue" per i cue a rotazione; vuoto = solo durata. */
-  const SECTIONS = { warmup: 'Riscaldamento', fingers: 'Dita', pull: 'Trazione', strength: 'Forza generale e antagonisti', core: 'Core', wall: 'Sul muro', mobility: 'Mobilità e recupero', mental: 'Mentale' };
-  const LIBRARY = `warmup-general|warmup|Riscaldamento generale|15|
-warmup-wall|warmup|Riscaldamento sul muro|20|
-warmup-fingers|warmup|Attivazione dita|6|t:5/7/60
-warmup-shoulders|warmup|Attivazione spalle con elastico|5|r:2/15/45
+  const SECTIONS = { warmup: 'Warm-up', fingers: 'Fingers', pull: 'Pulling', strength: 'General strength and antagonists', core: 'Core', wall: 'On the wall', mobility: 'Mobility and recovery', mental: 'Mental' };
+  const LIBRARY = `warmup-general|warmup|General warm-up|15|
+warmup-wall|warmup|Wall warm-up|20|
+warmup-fingers|warmup|Finger activation|6|t:5/7/60
+warmup-shoulders|warmup|Shoulder activation with band|5|r:2/15/45
 max-hang|fingers|Max hang|13|t:4/7/180
 repeaters|fingers|Repeaters 7/3|14|t:24/7/3+6/180
-min-edge|fingers|Tacca minima|13|t:4/7/180
-one-arm-hang|fingers|Sospensione a un braccio|14|t:6/7/120=SX~DX
-sloper-hang|fingers|Sospensione su sloper|13|t:4/7/180
-pinch-lift|fingers|Pinch block|8|t:6/7/75=SX~DX
-block-lift|fingers|Max lift|13|t:6/7/120=SX~DX
-density-hang|fingers|Sospensioni lunghe|9|t:4/30/120
-wrist-curl|fingers|Flessione polso|7|r:3/6/120
-finger-ext|fingers|Estensori delle dita|4|r:2/15/45
-weighted-pullup|pull|Trazioni zavorrate|9|r:3/4/180
-pullup|pull|Trazioni|7|r:3/6/120
-one-arm-pull|pull|Trazione a un braccio (progressione)|14|r:6/2/150=SX~DX
-lockoff|pull|Bloccaggi|9|t:6/7/90=SX~DX
-row|pull|Rematore|6|r:3/8/90
+min-edge|fingers|Minimum edge|13|t:4/7/180
+one-arm-hang|fingers|One-arm hang|14|t:6/7/120=L~R
+sloper-hang|fingers|Sloper hang|13|t:4/7/180
+pinch-lift|fingers|Pinch block|8|t:6/7/75=L~R
+block-lift|fingers|Max lift|13|t:6/7/120=L~R
+density-hang|fingers|Long hangs|9|t:4/30/120
+wrist-curl|fingers|Wrist curl|7|r:3/6/120
+finger-ext|fingers|Finger extensors|4|r:2/15/45
+weighted-pullup|pull|Weighted pull-ups|9|r:3/4/180
+pullup|pull|Pull-ups|7|r:3/6/120
+one-arm-pull|pull|One-arm pull-up (progression)|14|r:6/2/150=L~R
+lockoff|pull|Lock-offs|9|t:6/7/90=L~R
+row|pull|Rows|6|r:3/8/90
 campus|pull|Campus board|12|r:5/1/150
-pushup|strength|Push-up o dip|7|r:3/8/120
-press|strength|Press sopra la testa|7|r:3/6/120=SX~DX
-ext-rot|strength|Extrarotazioni|4|r:2/12/60
-fly|strength|Croci (compressione)|6|r:3/8/90
-iso-fly|strength|Croci isometriche|4|t:3/10/60
+pushup|strength|Push-ups or dips|7|r:3/8/120
+press|strength|Overhead press|7|r:3/6/120=L~R
+ext-rot|strength|External rotations|4|r:2/12/60
+fly|strength|Flys (compression)|6|r:3/8/90
+iso-fly|strength|Isometric flys|4|t:3/10/60
 nordic|strength|Nordic curl|7|r:3/5/120
-deadlift|strength|Stacco|10|r:3/5/180
-squat|strength|Squat o pistol|7|r:3/6/120
+deadlift|strength|Deadlift|10|r:3/5/180
+squat|strength|Squat or pistol|7|r:3/6/120
 hollow|core|Hollow body hold|4|t:3/25/60
 ab-wheel|core|Ab wheel|6|r:3/6/90
-pallof|core|Pallof press|7|r:6/10/45=SX~DX
-leg-raise|core|Leg raise alla sbarra|6|r:3/8/90
-front-lever|core|Front lever (progressione)|9|t:4/6/120
+pallof|core|Pallof press|7|r:6/10/45=L~R
+leg-raise|core|Hanging leg raise|6|r:3/8/90
+front-lever|core|Front lever (progression)|9|t:4/6/120
 plank|core|Plank|5|t:3/40/60
 limit|wall|Limit bouldering|40|
-project|wall|Progetto|45|
+project|wall|Project|45|
 board|wall|Board benchmark|40|
-flash|wall|Set al flash|60|r:18/0/120+3/300
+flash|wall|Flash set|60|r:18/0/120+3/300
 volume|wall|Volume|40|
-technique|wall|Tecnica: movimento isolato|8|r:6/1/60=SX~DX
+technique|wall|Technique: isolated move|8|r:6/1/60=L~R
 four-by-four|wall|4x4|25|r:16/1/30+4/240
-circuit|wall|Circuiti di resistenza|30|
-outdoor|wall|Roccia|120|
-activation|wall|Sessione di attivazione|30|
-hips|mobility|Mobilità anche|10|
-shoulders|mobility|Mobilità spalle|8|
-stretch|mobility|Stretching generale|10|
-cooldown|mobility|Defaticamento|10|
-visualize|mental|Visualizzazione del progetto|5|
-review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
+circuit|wall|Endurance circuits|30|
+outdoor|wall|Rock|120|
+activation|wall|Activation session|30|
+hips|mobility|Hip mobility|10|
+shoulders|mobility|Shoulder mobility|8|
+stretch|mobility|General stretching|10|
+cooldown|mobility|Cool-down|10|
+visualize|mental|Project visualisation|5|
+review|mental|Attempt review|10|`.split('\n').map(line => {
     const [key, section, name, minutes, timer] = line.split('|');
     let interval = null;
     if (timer) {
@@ -261,13 +261,18 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
       equipment: [], interval: d.interval ? JSON.parse(JSON.stringify(d.interval)) : null, load: null, surface: '', minutes: d.minutes };
   }
   // Riconduce un nome libero (es. da un programma importato) all'esercizio standard. L'ordine conta: le regole più specifiche prima.
-  const STD_RULES = [[/^test\b/i, 'test'], [/limit|progett/i, 'limit'], [/flash|\btriples?\b|triplett/i, 'flash'], [/pallof/i, 'pallof'], [/tallone|ristabilimento|compressione su|tecnic|movimento isolato/i, 'technique'],
-    [/a bleau|roccia|outdoor/i, 'outdoor'], [/attivazione/i, 'activation'], [/riscaldamento|warm.?up/i, 'warmup-wall'], [/open hand|half.?crimp|max hang/i, 'max-hang'], [/repeater/i, 'repeaters'],
-    [/sloper/i, 'sloper-hang'], [/pinch/i, 'pinch-lift'], [/\blift\b/i, 'block-lift'], [/polso/i, 'wrist-curl'], [/trazion\w* zavorr|weighted pull/i, 'weighted-pullup'], [/trazion|pull.?up/i, 'pullup'], [/bloccagg|lock.?off/i, 'lockoff'],
-    [/campus/i, 'campus'], [/\bpress\b/i, 'press'], [/extrarot/i, 'ext-rot'], [/croci isometr/i, 'iso-fly'], [/croci/i, 'fly'], [/nordic/i, 'nordic'], [/hollow/i, 'hollow'], [/ab wheel/i, 'ab-wheel'], [/leg.?raise/i, 'leg-raise'],
-    [/pallof/i, 'pallof'], [/push.?up|\bdip/i, 'pushup'], [/plank/i, 'plank'], [/front lever/i, 'front-lever'], [/mobilit.* anche/i, 'hips'], [/mobilit.* spall/i, 'shoulders'], [/mobilit|stretch/i, 'stretch'],
+  const STD_RULES = [[/^test\b/i, 'test'], [/limit|progett|\bproject/i, 'limit'], [/flash|\btriples?\b|triplett/i, 'flash'], [/pallof/i, 'pallof'], [/tallone|ristabilimento|compressione su|tecnic|movimento isolato|techni|isolated move|heel hook|mantle/i, 'technique'],
+    [/a bleau|roccia|outdoor|\brock\b/i, 'outdoor'], [/attivazione|activation/i, 'activation'], [/riscaldamento|warm.?up/i, 'warmup-wall'], [/open hand|half.?crimp|max hang/i, 'max-hang'], [/repeater/i, 'repeaters'],
+    [/sloper/i, 'sloper-hang'], [/pinch/i, 'pinch-lift'], [/\blift\b/i, 'block-lift'], [/polso|wrist/i, 'wrist-curl'], [/trazion\w* zavorr|weighted pull/i, 'weighted-pullup'], [/trazion|pull.?up/i, 'pullup'], [/bloccagg|lock.?off/i, 'lockoff'],
+    [/campus/i, 'campus'], [/\bpress\b/i, 'press'], [/extrarot|external rot/i, 'ext-rot'], [/croci isometr|isometric fl/i, 'iso-fly'], [/croci|\bfl(y|ys|ies)\b/i, 'fly'], [/nordic/i, 'nordic'], [/hollow/i, 'hollow'], [/ab wheel/i, 'ab-wheel'], [/leg.?raise/i, 'leg-raise'],
+    [/pallof/i, 'pallof'], [/push.?up|\bdip/i, 'pushup'], [/plank/i, 'plank'], [/front lever/i, 'front-lever'], [/mobilit.* anche|hip mobility/i, 'hips'], [/mobilit.* spall|shoulder mobility/i, 'shoulders'], [/mobilit|stretch/i, 'stretch'],
     [/board|benchmark/i, 'board'], [/volume/i, 'volume'], [/4 ?x ?4/i, 'four-by-four'], [/circuit/i, 'circuit']];
-  const matchStd = name => { const r = STD_RULES.find(([re]) => re.test(name || '')); return r ? r[1] : null; };
+  /* Nomi italiani delle versioni precedenti → nome attuale: servono per aggiornare i dati salvati e per riconoscere i programmi scritti in italiano. */
+  const LEGACY_NAMES = {"Peso corporeo": "Body weight", "Pinch block SX": "Pinch block L", "Pinch block DX": "Pinch block R", "Max lift SX": "Max lift L", "Max lift DX": "Max lift R", "Trazione zavorrata": "Weighted pull-up", "Indoor (palestra)": "Indoor (gym)", "Outdoor (roccia)": "Outdoor (rock)", "Riscaldamento generale": "General warm-up", "Riscaldamento sul muro": "Wall warm-up", "Attivazione dita": "Finger activation", "Attivazione spalle con elastico": "Shoulder activation with band", "Tacca minima": "Minimum edge", "Sospensione a un braccio": "One-arm hang", "Sospensione su sloper": "Sloper hang", "Sospensioni lunghe": "Long hangs", "Flessione polso": "Wrist curl", "Estensori delle dita": "Finger extensors", "Trazioni zavorrate": "Weighted pull-ups", "Trazioni": "Pull-ups", "Trazione a un braccio (progressione)": "One-arm pull-up (progression)", "Bloccaggi": "Lock-offs", "Rematore": "Rows", "Push-up o dip": "Push-ups or dips", "Press sopra la testa": "Overhead press", "Extrarotazioni": "External rotations", "Croci (compressione)": "Flys (compression)", "Croci isometriche": "Isometric flys", "Stacco": "Deadlift", "Squat o pistol": "Squat or pistol", "Leg raise alla sbarra": "Hanging leg raise", "Front lever (progressione)": "Front lever (progression)", "Progetto": "Project", "Set al flash": "Flash set", "Tecnica: movimento isolato": "Technique: isolated move", "Circuiti di resistenza": "Endurance circuits", "Roccia": "Rock", "Sessione di attivazione": "Activation session", "Mobilità anche": "Hip mobility", "Mobilità spalle": "Shoulder mobility", "Stretching generale": "General stretching", "Defaticamento": "Cool-down", "Visualizzazione del progetto": "Project visualisation", "Analisi dei tentativi": "Attempt review"};
+  const EXACT = Object.fromEntries(LIBRARY.map(x => [x.name.toLowerCase(), x.key]));
+  for (const [old, now] of Object.entries(LEGACY_NAMES)) if (EXACT[now.toLowerCase()]) EXACT[old.toLowerCase()] = EXACT[now.toLowerCase()];
+  /** Prima il nome esatto di un esercizio standard (anche nella vecchia versione italiana), poi le regole. */
+  const matchStd = name => { const n = String(name || '').trim(); if (EXACT[n.toLowerCase()]) return EXACT[n.toLowerCase()]; const r = STD_RULES.find(([re]) => re.test(n)); return r ? r[1] : null; };
 
   // Scala dei gradi boulder. I dati salvano l'etichetta Font; `fmtGrade` è l'unico punto in cui si sceglie la scala mostrata.
   const GRADES = ['4', '4+', '5', '5+', '6A', '6A+', '6B', '6B+', '6C', '6C+', '7A', '7A+', '7B', '7B+', '7C', '7C+', '8A', '8A+', '8B', '8B+', '8C', '8C+', '9A'];
@@ -277,7 +282,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
   // Superfici di arrampicata predefinite; l'utente può aggiungerne altre.
   const DEFAULT_SURFACES = [
     { key: 'moonboard', name: 'MoonBoard' }, { key: 'kilter', name: 'Kilter Board' }, { key: 'tension', name: 'Tension Board' },
-    { key: 'gym', name: 'Indoor (palestra)' }, { key: 'outdoor', name: 'Outdoor (roccia)' },
+    { key: 'gym', name: 'Indoor (gym)' }, { key: 'outdoor', name: 'Outdoor (rock)' },
   ];
   /** Superficie deducibile dal nome dell'esercizio (solo i casi ovvi), altrimenti stringa vuota. */
   function inferSurface(name) {
@@ -285,7 +290,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
     if (/moon\s?board/i.test(n)) return 'moonboard';
     if (/kilter/i.test(n)) return 'kilter';
     if (/tension/i.test(n)) return 'tension';
-    if (/outdoor|roccia|falesia/i.test(n)) return 'outdoor';
+    if (/outdoor|roccia|falesia|\brock\b|\bcrag\b/i.test(n)) return 'outdoor';
     return '';
   }
 
@@ -318,7 +323,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
     else if (/sloper bm/i.test(n)) ref = 'sl';
     else if (/pinch/i.test(n)) { ref = 'pinch'; mode = 'lift'; }
     else if (/\blift\b/i.test(n)) { ref = 'lift'; mode = 'lift'; }
-    else if (/polso/i.test(n)) { ref = 'wrist'; mode = 'lift'; }
+    else if (/polso|wrist/i.test(n)) { ref = 'wrist'; mode = 'lift'; }
     if (!ref) return null;
     const m = /(\d+(?:[.,]\d+)?)\s*%/.exec(prescription || '');
     return { ref, mode, pct: m ? num(m[1]) : null, test: /^TEST/i.test(n) };
@@ -330,7 +335,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
   function loadKey(load, cue) {
     if (!load) return null;
     if (!PAIRS[load.ref]) return load.ref;
-    return load.ref + (/^\s*DX/i.test(cue || '') ? 'R' : 'L');
+    return load.ref + (/^\s*(DX|R\b|right)/i.test(cue || '') ? 'R' : 'L');
   }
   /** Carico in kg arrotondato a 0,5: zavorra (può essere negativa = scarico) o carico sollevato. */
   function loadKg(load, cue, maxes) {
@@ -349,7 +354,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
     }
     return out;
   }
-  const fmtKg = kg => (kg > 0 ? '+' : '') + String(kg).replace('.', ',') + ' kg';
+  const fmtKg = kg => (kg > 0 ? '+' : '') + kg + ' kg';
 
   /* ---- Timer ---- */
   const cycle = a => { // periodo minimo di un array ripetuto
@@ -400,24 +405,24 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
     const iv = e.interval, out = [];
     if (iv && iv.rounds) {
       const sets = iv.roundsPerSet && iv.rounds % iv.roundsPerSet === 0 ? iv.rounds / iv.roundsPerSet : 0;
-      const unit = iv.selfPaced ? (iv.reps ? iv.reps + ' rip.' : '') : iv.workSeconds + '"';
-      const count = sets ? `${sets} serie × ${iv.roundsPerSet}` : String(iv.rounds);
+      const unit = iv.selfPaced ? (iv.reps ? iv.reps + ' reps' : '') : iv.workSeconds + '"';
+      const count = sets ? `${sets} sets × ${iv.roundsPerSet}` : String(iv.rounds);
       out.push(unit ? `${count} × ${unit}` : sets ? count : `${count} round`);
-      if (iv.restSeconds) out.push('rec. ' + fmtRest(iv.restSeconds) + (sets && iv.setRestSeconds ? ' / ' + fmtRest(iv.setRestSeconds) + ' tra le serie' : ''));
+      if (iv.restSeconds) out.push('rest ' + fmtRest(iv.restSeconds) + (sets && iv.setRestSeconds ? ' / ' + fmtRest(iv.setRestSeconds) + ' between sets' : ''));
     }
-    if (e.load && e.load.pct != null) out.push(String(e.load.pct).replace('.', ',') + '%');
+    if (e.load && e.load.pct != null) out.push(e.load.pct + '%');
     return out.join(' · ');
   }
   /** Di una prescrizione testuale importata tiene solo ciò che non è un parametro (serie, recuperi, %): diventa la nota del blocco. */
   const leftoverNote = text => String(text || '').split(' · ').map(x => x.trim())
-    .filter(x => x && !/^\d+\s*(×|x|blocchi|serie)\b/i.test(x) && !/^\d+ (×|x) /i.test(x) && !/\brec\./i.test(x) && !/\d\s*%/.test(x) && !/^test$/i.test(x)).join(' · ');
+    .filter(x => x && !/^\d+\s*(×|x|blocchi|serie|problems|sets)\b/i.test(x) && !/^\d+ (×|x) /i.test(x) && !/\brec\.|^rest \d/i.test(x) && !/\d\s*%/.test(x) && !/^test$/i.test(x)).join(' · ');
 
   /** Dai cue per round (formato Blok) ricava le due cose che servono: se l'esercizio alterna SX/DX, e il testo
       che non è un parametro, da mettere nella nota. I cue liberi non esistono più come campo a parte. */
   function splitCues(cues) {
     const list = (cues || []).map(c => String(c).trim()).filter(Boolean);
-    const sided = list.length > 0 && list.length % 2 === 0 && list.every((c, i) => (i % 2 ? /^(DX|lato dx|lato opposto|lato b)\b/i : /^(SX|lato sx|lato karma|lato a)\b/i).test(c) || /^lato\b/i.test(c));
-    const rest = [...new Set(list.map(c => leftoverNote(c.replace(/^(SX|DX)\b\s*·?\s*/i, '').replace(/^lato (sx|dx|a|b)$/i, ''))).filter(Boolean))];
+    const sided = list.length > 0 && list.length % 2 === 0 && list.every((c, i) => (i % 2 ? /^(DX|R|right|lato dx|lato opposto|lato b|side b)\b/i : /^(SX|L|left|lato sx|lato karma|lato a|side a)\b/i).test(c) || /^(lato|side)\b/i.test(c));
+    const rest = [...new Set(list.map(c => leftoverNote(c.replace(/^(SX|DX|L|R|left|right)\b\s*·?\s*/i, '').replace(/^(lato|side) (sx|dx|a|b)$/i, ''))).filter(Boolean))];
     return { sided, note: rest.join(' → ') };
   }
 
@@ -434,7 +439,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
     return out;
   }
   function normExercise(b) {
-    const name = str(b.name, 'Esercizio');
+    const name = str(b.name, 'Exercise');
     const prescription = str(b.prescription, str(b.summary, ''));
     return {
       name, prescription,
@@ -451,7 +456,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
   /** Converte un .blokplan in { plan, exercises }. Lancia Error se il file non è valido.
       Gli esercizi identici vengono deduplicati; `existing` (id → esercizio) permette di riusare la libreria. */
   function importBlokplan(obj, existing) {
-    if (!obj || typeof obj !== 'object' || !Array.isArray(obj.weeks) || !obj.weeks.length) throw new Error('Il file non è un piano Blok Sessions valido.');
+    if (!obj || typeof obj !== 'object' || !Array.isArray(obj.weeks) || !obj.weeks.length) throw new Error('The file is not a valid Blok Sessions plan.');
     const byKey = new Map(), exercises = [];
     const keyOf = e => JSON.stringify([e.name, e.prescription, e.slot, e.location, e.interval]);
     for (const e of Object.values(existing || {})) byKey.set(keyOf(e), e.id);
@@ -461,7 +466,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
       return { id: uid(), exId: byKey.get(k), minutes: int(pb.selectedDurationMinutes || pb.block.defaultMinutes) };
     });
     const weeks = obj.weeks.map(w => {
-      if (!Array.isArray(w)) throw new Error('Settimana non valida nel file.');
+      if (!Array.isArray(w)) throw new Error('Invalid week in the file.');
       const days = w.slice(0, 7).map(d => {
         const sessions = [];
         if (d && DAY_TYPES[d.type] && d.type !== 'rest')
@@ -475,7 +480,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
       return days;
     });
     const startDate = Number.isFinite(obj.startDate) ? mondayOf(appleToISO(obj.startDate)) : mondayOf(todayISO());
-    return { plan: { id: uid(), title: str(obj.title, 'Piano importato'), startDate, weeks }, exercises };
+    return { plan: { id: uid(), title: str(obj.title, 'Imported programme'), startDate, weeks }, exercises };
   }
   function exportBlokplan(plan, exMap) {
     const allPeriods = Object.keys(PERIODS);
@@ -570,13 +575,14 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
       due: due.length, dueDone: due.filter(s => done.has(s.sid)).length };
   }
   /** "SX 15 kg · DX 18 kg" → [{side:'SX',kg:15},{side:'DX',kg:18}]; "+4,5 kg" → [{side:null,kg:4.5}]. */
+  const normSide = x => (/^(DX|R)$/i.test(x) ? 'R' : 'L'); // i dati vecchi usavano SX/DX
   function parseLoads(text) {
     const out = [];
     for (const part of String(text == null ? '' : text).split(/[·;/]/)) {
       const m = /[+-]?\d+(?:[.,]\d+)?/.exec(part);
       if (!m) continue;
-      const side = /\b(SX|DX)\b/i.exec(part);
-      out.push({ side: side ? side[1].toUpperCase() : null, kg: num(m[0]) });
+      const side = /\b(SX|DX|L|R)\b/i.exec(part);
+      out.push({ side: side ? normSide(side[1]) : null, kg: num(m[0]) });
     }
     return out;
   }
@@ -617,7 +623,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
     return { kg: Math.round(((base + kg) * (1 + dir * rule.step / 100) - base) * 2) / 2, dir };
   }
   /* Tempo per categoria: le categorie sono le sezioni della libreria; i gruppi servono al grafico nel tempo. */
-  const GROUPS = { wall: 'Sul muro', strength: 'Forza', other: 'Mobilità e altro' };
+  const GROUPS = { wall: 'On the wall', strength: 'Strength', other: 'Mobility and other' };
   const SECTION_GROUP = { wall: 'wall', fingers: 'strength', pull: 'strength', strength: 'strength', core: 'strength', warmup: 'other', mobility: 'other', mental: 'other', other: 'other' };
   /** Sezione di un esercizio registrato: quella salvata, altrimenti ricavata dallo standard o dal nome. */
   function blockSection(b) {
@@ -693,7 +699,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
   }
 
   return {
-    GROUPS, SECTION_GROUP, blockSection, timeBySection, weeklyGroups, describe, leftoverNote, splitCues, fmtRest, PAIRS, refKeys, recordsOf, lastRecord, nextLoad, TEST_TEMPLATES, testLabel, SECTIONS, LIBRARY, STD, stdVariant, matchStd,
+    GROUPS, SECTION_GROUP, blockSection, timeBySection, weeklyGroups, describe, leftoverNote, splitCues, fmtRest, PAIRS, refKeys, LEGACY_NAMES, normSide, recordsOf, lastRecord, nextLoad, TEST_TEMPLATES, testLabel, SECTIONS, LIBRARY, STD, stdVariant, matchStd,
     DAY_TYPES, PERIODS, SLOTS, GRADES, GRADE_SCALES, gradeIdx, fmtGrade, DEFAULT_SURFACES, inferSurface, validISO, uid, toISO, fromISO, todayISO, addDays, diffDays, appleToISO, isoToApple, mondayOf,
     inferLoad, loadKey, loadKg, latestMaxes, fmtKg, cycle, cueAt, intervalMinutes, buildSteps, normInterval,
     importBlokplan, exportBlokplan, locate, dateOf, sessionMinutes, cloneSession, validState,
@@ -715,7 +721,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
   };
   // Le etichette arrivano dai dati dell'utente: sempre textContent, mai innerHTML.
   const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
-  const fmtNum = (v, digits) => v.toLocaleString('it-IT', { maximumFractionDigits: digits || 0 });
+  const fmtNum = (v, digits) => v.toLocaleString('en-GB', { maximumFractionDigits: digits || 0 });
   const tickDigits = step => (Number.isInteger(step) ? 0 : Number.isInteger(step * 10) ? 1 : 2);
 
   function frame(height, aria) {
@@ -738,7 +744,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
   }
   function tableView(head, rows) {
     const d = el('details', 'viz-table'), t = el('table'), hr = el('tr');
-    d.append(el('summary', '', 'Tabella'));
+    d.append(el('summary', '', 'Table'));
     head.forEach(x => hr.append(el('th', '', x)));
     t.append(hr);
     rows.forEach(r => { const tr = el('tr'); r.forEach(c => tr.append(el('td', '', c))); t.append(tr); });
@@ -808,7 +814,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
       lg.append(a, b);
       box.append(lg);
     }
-    box.append(f.wrap, tableView(hasT ? [o.colLabel || 'Settimana', o.name, o.targetName] : [o.colLabel || 'Settimana', o.name],
+    box.append(f.wrap, tableView(hasT ? [o.colLabel || 'Week', o.name, o.targetName] : [o.colLabel || 'Week', o.name],
       o.values.map((v, i) => [(o.longLabels || o.labels)[i], fmtNum(v) + unit].concat(hasT ? [fmtNum(o.targets[i]) + unit] : []))));
     return box;
   }
@@ -837,7 +843,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
     o.labels.forEach((_, i) => {
       const title = (o.longLabels || o.labels)[i];
       const rows = o.series.filter(s => s.values[i] > 0).map(s => ({ key: s.cls, value: fmtNum(s.values[i]) + unit, label: s.name.toLowerCase() })).reverse();
-      rows.unshift({ key: 'none', value: fmtNum(tot[i]) + unit, label: 'in totale' });
+      rows.unshift({ key: 'none', value: fmtNum(tot[i]) + unit, label: 'in total' });
       if (hasT) rows.push({ key: 'ref', value: fmtNum(o.targets[i]) + unit, label: o.targetName.toLowerCase() });
       const hit = svgEl('rect', { class: 'hit', x: g.l + band * i, y: g.t, width: band, height: H - g.t - g.b, tabindex: 0, 'aria-label': `${title}: ${rows.map(r => r.value + ' ' + r.label).join(', ')}` });
       const on = () => f.show(cx(i), title, rows);
@@ -849,7 +855,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
     const box = el('div'), lg = el('div', 'viz-legend');
     for (const s of o.series) { const a = el('span'); a.append(el('i', 'sw ' + s.cls), document.createTextNode(s.name)); lg.append(a); }
     if (hasT) { const b = el('span'); b.append(el('i', 'lk'), document.createTextNode(o.targetName)); lg.append(b); }
-    box.append(lg, f.wrap, tableView(['Settimana'].concat(o.series.map(s => s.name), ['Totale'], hasT ? [o.targetName] : []),
+    box.append(lg, f.wrap, tableView(['Week'].concat(o.series.map(s => s.name), ['Total'], hasT ? [o.targetName] : []),
       o.labels.map((_, i) => [(o.longLabels || o.labels)[i]].concat(o.series.map(s => fmtNum(s.values[i])), [fmtNum(tot[i]) + unit], hasT ? [fmtNum(o.targets[i]) + unit] : []))));
     return box;
   }
@@ -894,7 +900,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
       pick(best);
     };
     const hit = svgEl('rect', { class: 'hit', x: g.l - 4, y: g.t, width: pw + 24, height: H - g.t - g.b, tabindex: 0,
-      'aria-label': `${o.aria}. Frecce sinistra e destra per scorrere i valori.` });
+      'aria-label': `${o.aria}. Left and right arrows to move through the values.` });
     hit.addEventListener('pointermove', near);
     hit.addEventListener('pointerdown', near);
     hit.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') off(); });
@@ -907,7 +913,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
     });
     f.svg.append(hit);
     const box = el('div');
-    box.append(f.wrap, tableView([o.colLabel || 'Settimana', o.name], idxs.map(i => [(o.longLabels || o.labels)[i], fmt(o.values[i])])));
+    box.append(f.wrap, tableView([o.colLabel || 'Week', o.name], idxs.map(i => [(o.longLabels || o.labels)[i], fmt(o.values[i])])));
     return box;
   }
 
@@ -943,20 +949,20 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
 (function () {
   'use strict';
   const C = Core, KEY = 'allenamento.v1';
-  const WD = ['lun', 'mar', 'mer', 'gio', 'ven', 'sab', 'dom'];
-  const WD_FULL = ['lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato', 'domenica'];
-  const MONTHS = ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic'];
-  const MONTHS_FULL = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'];
-  const FEEL = [['', '—'], ['1', '1 · Distrutto'], ['2', '2 · Stanco'], ['3', '3 · Così così'], ['4', '4 · Bene'], ['5', '5 · Ottimo']];
+  const WD = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const WD_FULL = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const MONTHS_FULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const FEEL = [['', '—'], ['1', '1 · Wrecked'], ['2', '2 · Tired'], ['3', '3 · So-so'], ['4', '4 · Good'], ['5', '5 · Great']];
   const wdIdx = iso => (C.fromISO(iso).getDay() + 6) % 7;
   const fmtDate = iso => { const d = C.fromISO(iso); return `${d.getDate()} ${MONTHS[d.getMonth()]}`; };
   const wdOf = iso => WD[wdIdx(iso)];
-  const dec = v => String(v).replace('.', ',');
+  const dec = v => String(v);
   const log = (area, msg, extra) => console.info(`[${area}] ${msg}`, extra === undefined ? '' : extra);
 
   /* ---------- Stato e persistenza ---------- */
   // Primo avvio: nessun piano precaricato, ogni utente importa o crea i propri.
-  const fresh = () => migrate({ v: 6, plans: [], activePlan: null, exercises: {}, logs: [], tests: [] });
+  const fresh = () => migrate({ v: 7, plans: [], activePlan: null, exercises: {}, logs: [], tests: [] });
   /** I test da cui dipendono i kg degli esercizi (e il peso corporeo) devono esistere nella sezione Test. */
   function ensureTests(s) {
     const need = new Set(['bw'].concat(Object.values(s.exercises).filter(e => e.load).flatMap(e => C.refKeys(e.load.ref))));
@@ -969,7 +975,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
   function cuesToNote(e, b) {
     if (!e.interval) return;
     const { sided, note } = C.splitCues(e.interval.cues);
-    e.interval.cues = sided ? ['SX', 'DX'] : [];
+    e.interval.cues = sided ? ['L', 'R'] : [];
     if (note && !(b.note || '').toLowerCase().includes(note.toLowerCase())) b.note = [b.note, note].filter(Boolean).join(' · ').slice(0, 200);
   }
   function privatize(st, sess) {
@@ -1031,22 +1037,38 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
     prune(s);
     // v6: un solo campo Nota (mostrato anche nel timer) + interruttore SX/DX al posto dei cue
     if (fromV === 5) for (const x of allSessions(s)) for (const b of x.blocks) if (s.exercises[b.exId]) cuesToNote(s.exercises[b.exId], b);
-    s.v = 6;
+    // v7: interfaccia in inglese. Si rinominano solo i nomi predefiniti rimasti uguali all'originale italiano e i lati SX/DX → L/R;
+    // titoli, note ed esercizi scritti dall'utente non si toccano.
+    if (fromV < 7) {
+      const en = n => C.LEGACY_NAMES[n] || n, parts = n => String(n).split(' · ').map(en).join(' · ');
+      for (const e of Object.values(s.exercises)) {
+        if (typeof e.name === 'string') e.name = e.name.startsWith('Test: ') ? 'Test: ' + en(e.name.slice(6)) : en(e.name);
+        if (e.interval && Array.isArray(e.interval.cues)) e.interval.cues = e.interval.cues.map(c => (/^(SX|DX)$/.test(c) ? C.normSide(c) : c));
+      }
+      for (const d of s.testDefs) d.name = en(d.name);
+      for (const x of s.surfaces) x.name = en(x.name);
+      for (const l of s.logs) for (const b of l.blocks || []) {
+        if (typeof b.name === 'string') b.name = b.name.startsWith('Test: ') ? 'Test: ' + en(b.name.slice(6)) : en(b.name);
+        if (typeof b.label === 'string') b.label = parts(b.label);
+        for (const k of b.kgs || []) if (k.side) k.side = C.normSide(k.side);
+      }
+    }
+    s.v = 7;
     return s;
   }
   function load() {
     try {
       const raw = localStorage.getItem(KEY);
-      if (raw) { const s = JSON.parse(raw); if (C.validState(s)) return migrate(s); log('store', 'dati salvati non validi, riparto da zero'); }
-    } catch (e) { console.warn('[store] lettura fallita', e); }
+      if (raw) { const s = JSON.parse(raw); if (C.validState(s)) return migrate(s); log('store', 'saved data is invalid, starting from scratch'); }
+    } catch (e) { console.warn('[store] read failed', e); }
     return fresh();
   }
   let storeOk = true;
   function save() {
     try { localStorage.setItem(KEY, JSON.stringify(S)); storeOk = true; scheduleCloud(); }
     catch (e) {
-      console.warn('[store] scrittura fallita', e);
-      if (storeOk) toast('Salvataggio non disponibile qui: fai un backup da Altro.');
+      console.warn('[store] write failed', e);
+      if (storeOk) toast('Saving is not available here: make a backup from More.');
       storeOk = false;
     }
   }
@@ -1059,7 +1081,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
   const b64 = text => { const u = new TextEncoder().encode(text); let bin = ''; for (let i = 0; i < u.length; i += 0x8000) bin += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(bin); };
   const ghUrl = () => `https://api.github.com/repos/${S.settings.gh.repo}/contents/allenamento-backup.json`;
   const ghHeaders = accept => ({ Authorization: 'Bearer ' + S.settings.gh.token, Accept: accept || 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' });
-  const ghError = r => new Error(r.status === 401 ? 'token non valido o scaduto' : r.status === 403 ? 'il token non ha il permesso di scrivere nel repository' : r.status === 404 ? 'repository non trovato (nome sbagliato o token senza accesso)' : 'GitHub ha risposto ' + r.status);
+  const ghError = r => new Error(r.status === 401 ? 'token invalid or expired' : r.status === 403 ? 'the token is not allowed to write to the repository' : r.status === 404 ? 'repository not found (wrong name, or token without access)' : 'GitHub answered ' + r.status);
   let cloudTimer = null, cloudBusy = false, cloudAt = 0;
   /** Impronta dei dati (senza date di backup né collegamento): dice se c'è qualcosa di nuovo da caricare, anche dopo un riavvio. */
   function cloudSig() {
@@ -1081,13 +1103,13 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
       const put = await fetch(ghUrl(), { method: 'PUT', headers: ghHeaders(), body: JSON.stringify({ message: 'Backup ' + new Date().toISOString().slice(0, 16).replace('T', ' '), content: b64(text), sha }) });
       if (!put.ok) throw ghError(put);
       g.sig = sig; cloudAt = Date.now(); g.error = null; S.settings.lastBackup = C.todayISO();
-      log('backup', 'salvato su GitHub', { kb: Math.ceil(text.length / 1024) });
-      if (manual) toast('Backup salvato su GitHub.');
+      log('backup', 'saved to GitHub', { kb: Math.ceil(text.length / 1024) });
+      if (manual) toast('Backup saved to GitHub.');
       return true;
     } catch (e) {
-      g.error = e instanceof TypeError ? 'rete non disponibile' : String(e.message || e);
+      g.error = e instanceof TypeError ? 'no network' : String(e.message || e);
       console.warn('[backup] GitHub: ' + g.error, e);
-      if (manual) toast('Backup non riuscito: ' + g.error + '.');
+      if (manual) toast('Backup failed: ' + g.error + '.');
       return false;
     } finally {
       cloudBusy = false;
@@ -1110,11 +1132,11 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
       const r = await fetch(ghUrl(), { headers: ghHeaders('application/vnd.github.raw+json'), cache: 'no-store' });
       if (!r.ok) throw ghError(r);
       const obj = JSON.parse(await r.text());
-      if (!C.validState(obj)) throw new Error('il file su GitHub non è un backup valido');
-      if (!await confirmDlg('Sostituire TUTTI i dati di questo dispositivo con il backup su GitHub?', 'Sostituisci')) return;
+      if (!C.validState(obj)) throw new Error('the file on GitHub is not a valid backup');
+      if (!await confirmDlg('Replace ALL data on this device with the backup on GitHub?', 'Replace')) return;
       const gh = S.settings.gh; // collegamento e token restano quelli di questo dispositivo
-      S = migrate(obj); S.settings.gh = gh; calSel = calMonth = null; gh.sig = cloudSig(); save(); render(); toast('Backup ripristinato da GitHub.');
-    } catch (e) { console.warn('[backup] ripristino fallito', e); toast('Ripristino non riuscito: ' + (e instanceof TypeError ? 'rete non disponibile' : e.message) + '.'); }
+      S = migrate(obj); S.settings.gh = gh; calSel = calMonth = null; gh.sig = cloudSig(); save(); render(); toast('Backup restored from GitHub.');
+    } catch (e) { console.warn('[backup] restore failed', e); toast('Restore failed: ' + (e instanceof TypeError ? 'no network' : e.message) + '.'); }
   }
   const maxes = () => C.latestMaxes(S.tests);
   const surfName = k => (S.surfaces.find(x => x.key === k) || { name: k }).name;
@@ -1162,15 +1184,15 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
   }
   function openSheet(title, body, mid) {
     const ov = h('div', { class: 'overlay' + (mid ? ' mid' : ''), onclick: e => { if (e.target === ov) ov.remove(); } },
-      h('div', { class: 'sheet' }, h('div', { class: 'row' }, h('h3', { class: 'grow' }, title), mid ? null : btn('Chiudi', () => ov.remove(), 'sm')), body));
+      h('div', { class: 'sheet' }, h('div', { class: 'row' }, h('h3', { class: 'grow' }, title), mid ? null : btn('Close', () => ov.remove(), 'sm')), body));
     document.body.append(ov);
     return ov;
   }
   // I dialoghi nativi (confirm/alert) non sono affidabili in una PWA: conferma costruita in pagina.
   function confirmDlg(msg, okLabel) {
     return new Promise(res => {
-      const ov = openSheet('Conferma', [h('p', {}, msg), h('div', { class: 'btns' },
-        btn('Annulla', () => { ov.remove(); res(false); }), btn(okLabel || 'Conferma', () => { ov.remove(); res(true); }, 'danger'))], true);
+      const ov = openSheet('Confirm', [h('p', {}, msg), h('div', { class: 'btns' },
+        btn('Cancel', () => { ov.remove(); res(false); }), btn(okLabel || 'Confirm', () => { ov.remove(); res(true); }, 'danger'))], true);
     });
   }
   function download(name, text) {
@@ -1178,13 +1200,13 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
       const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
       const a = h('a', { href: url, download: name }); document.body.append(a); a.click(); a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 5000);
-    } catch (e) { console.warn('[export] download non riuscito', e); toast('Download non disponibile: usa Copia.'); }
+    } catch (e) { console.warn('[export] download failed', e); toast('Download not available: use Copy.'); }
   }
   function exportSheet(title, name, text) {
     const ta = h('textarea', { readonly: '', class: 'inp', style: 'min-height:140px;font-size:12px' }); ta.value = text;
     openSheet(title, [h('p', { class: 'sub' }, name + ' · ' + Math.ceil(text.length / 1024) + ' KB'), ta, h('div', { class: 'btns' },
-      btn('Scarica file', () => download(name, text), 'pri'),
-      btn('Copia', async () => { try { await navigator.clipboard.writeText(text); toast('Copiato.'); } catch (e) { ta.select(); toast('Seleziona e copia manualmente.'); } }))]);
+      btn('Download file', () => download(name, text), 'pri'),
+      btn('Copy', async () => { try { await navigator.clipboard.writeText(text); toast('Copied.'); } catch (e) { ta.select(); toast('Select and copy manually.'); } }))]);
   }
   const go = hash => { if (location.hash.slice(1) === hash) render(); else location.hash = hash; };
 
@@ -1194,7 +1216,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
   const sessOf = r => (r.x ? r.x : r.p.weeks[r.w][r.d].sessions[r.si]);
   const isDone = r => { const id = sessOf(r).id; return S.logs.some(l => l.sid === id); };
   // Titolo per diario e sessione in corso: quello scelto, altrimenti i primi due esercizi che non sono riscaldamento.
-  const autoTitle = s => s.title || s.blocks.map(b => S.exercises[b.exId]).filter(e => e && e.slot !== 'warmup').slice(0, 2).map(e => e.name).join(' · ') || 'Sessione';
+  const autoTitle = s => s.title || s.blocks.map(b => S.exercises[b.exId]).filter(e => e && e.slot !== 'warmup').slice(0, 2).map(e => e.name).join(' · ') || 'Session';
   function findRef(sid) {
     const x = S.extras.find(e => e.id === sid);
     if (x) return { x };
@@ -1231,17 +1253,17 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
     if (!last) return null;
     const nx = last.kgs.map(k => ({ side: k.side, ...C.nextLoad(k.kg, last.rpe, rule, last.mode, maxes().bw) }));
     const fmt = a => a.map(k => (k.side ? k.side + ' ' : '') + kgText(k.kg, last.mode)).join(' · ');
-    return { text: fmt(nx), why: `ultima volta ${fmt(last.kgs)}${last.rpe == null ? ', senza RPE' : ', RPE ' + dec(last.rpe)}` };
+    return { text: fmt(nx), why: `last time ${fmt(last.kgs)}${last.rpe == null ? ', no RPE' : ', RPE ' + dec(last.rpe)}` };
   }
-  const propLine = ex => { const p = proposal(ex); return p ? h('div', { class: 'p' }, `Proposto: ${p.text} (${p.why})`) : null; };
+  const propLine = ex => { const p = proposal(ex); return p ? h('div', { class: 'p' }, `Suggested: ${p.text} (${p.why})`) : null; };
   function loadHint(ex) {
     if (!ex.load || ex.load.pct == null) return '';
     const cues = ex.interval && ex.interval.cues.length ? ex.interval.cues : [''];
     const m = maxes(), out = [];
     for (const c of cues) {
       const kg = C.loadKg(ex.load, c, m);
-      if (kg == null) return 'kg: mancano i massimali';
-      const side = C.PAIRS[ex.load.ref] ? (/^\s*DX/i.test(c) ? 'DX ' : 'SX ') : '';
+      if (kg == null) return 'kg: maxes missing';
+      const side = C.PAIRS[ex.load.ref] ? (/^\s*(DX|R\b)/i.test(c) ? 'R ' : 'L ') : '';
       const s = side + (ex.load.mode === 'hang' ? C.fmtKg(kg) : dec(kg) + ' kg');
       if (!out.includes(s)) out.push(s);
     }
@@ -1252,8 +1274,8 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
   const exLine = e => [stdName(e), C.describe(e), e.surface ? surfName(e.surface) : ''].filter(Boolean).join(' · ');
   function blockRow(b, onclick, drag) {
     const ex = S.exercises[b.exId];
-    const grip = drag ? h('span', { class: 'grip', 'data-grip': '', role: 'img', 'aria-label': 'Trascina per riordinare', onclick: e => e.stopPropagation() }, '≡') : null;
-    if (!ex) return h('div', { class: 'blk', 'data-id': b.id }, grip, h('span', { class: 'p' }, 'Esercizio rimosso'));
+    const grip = drag ? h('span', { class: 'grip', 'data-grip': '', role: 'img', 'aria-label': 'Drag to reorder', onclick: e => e.stopPropagation() }, '≡') : null;
+    if (!ex) return h('div', { class: 'blk', 'data-id': b.id }, grip, h('span', { class: 'p' }, 'Exercise removed'));
     const hint = loadHint(ex);
     return h('div', { class: 'blk', 'data-id': b.id, onclick, style: onclick ? 'cursor:pointer' : null }, grip,
       h('div', { class: 'grow' }, h('div', { class: 'n' }, ex.name), h('div', { class: 'p' }, exLine(ex)), hint ? h('div', { class: 'kg' }, hint) : null, propLine(ex), b.note ? h('div', { class: 'p' }, b.note) : null),
@@ -1293,15 +1315,15 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
   function testExercise(ref) {
     const two = !!C.PAIRS[ref], d = S.testDefs.find(t => t.key === (two ? ref + 'L' : ref));
     const interval = C.normInterval({ rounds: two ? 8 : 4, workSeconds: d.seconds || 45, restSeconds: two ? 90 : 180, selfPaced: !d.seconds, reps: d.reps || 0,
-      cues: two ? ['SX', 'DX'] : [] });
-    return { std: 'test', note: d.mode === 'value' ? 'Al massimo' : 'Carico crescente', name: 'Test: ' + (two ? C.PAIRS[ref] : d.name), slot: 'strength', location: 'off_wall', domain: 'finger_strength',
+      cues: two ? ['L', 'R'] : [] });
+    return { std: 'test', note: d.mode === 'value' ? 'All out' : 'Increasing load', name: 'Test: ' + (two ? C.PAIRS[ref] : d.name), slot: 'strength', location: 'off_wall', domain: 'finger_strength',
       intensity: 'max', risk: 'moderate', equipment: [], interval, load: { ref, mode: d.mode === 'lift' ? 'lift' : 'hang', pct: null, test: true }, surface: '' };
   }
   function pickTest(cb) {
     const pairs = pairsPresent();
-    const items = S.testDefs.filter(t => t.key !== 'bw' && !inPair(t.key, pairs)).map(t => [t.key, t.name, C.testLabel(t)]).concat(pairs.map(k => [k, C.PAIRS[k], 'SX e DX']));
-    if (!items.length) return toast('Crea prima un test in Analisi → Test e massimali.');
-    const ov = openSheet('Aggiungi un test', [h('p', { class: 'sub' }, 'A fine esercizio registri il risultato, che aggiorna il massimale nella sezione Test.'),
+    const items = S.testDefs.filter(t => t.key !== 'bw' && !inPair(t.key, pairs)).map(t => [t.key, t.name, C.testLabel(t)]).concat(pairs.map(k => [k, C.PAIRS[k], 'L and R']));
+    if (!items.length) return toast('Create a test first in Analytics → Tests and maxes.');
+    const ov = openSheet('Add a test', [h('p', { class: 'sub' }, 'When the exercise ends you log the result, which updates the max in the Tests section.'),
       items.map(([k, name, sub]) => h('div', { class: 'blk', style: 'cursor:pointer', onclick: () => { ov.remove(); cb(testExercise(k)); } }, h('div', { class: 'grow' }, h('div', { class: 'n' }, name), h('div', { class: 'p' }, sub))))]);
   }
   function sessionCard(r, edit) {
@@ -1309,18 +1331,18 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
     const list = h('div', {}, s.blocks.map((b, bi) => blockRow(b, edit ? () => blockSheet(r, bi) : null, edit)));
     if (edit) enableDrag(list, s);
     return h('div', { class: 'card' },
-      h('div', { class: 'row' }, h('div', { class: 'grow big', style: 'font-size:17px' }, s.title || 'Sessione'),
-        done ? h('span', { class: 'tag ok' }, 'Fatta') : null, h('span', { class: 'tag' }, C.sessionMinutes(s) + ' min')),
-      list, s.blocks.length ? null : h('p', { class: 'sub' }, 'Nessun esercizio: aggiungili qui oppure durante la sessione.'),
+      h('div', { class: 'row' }, h('div', { class: 'grow big', style: 'font-size:17px' }, s.title || 'Session'),
+        done ? h('span', { class: 'tag ok' }, 'Done') : null, h('span', { class: 'tag' }, C.sessionMinutes(s) + ' min')),
+      list, s.blocks.length ? null : h('p', { class: 'sub' }, 'No exercises yet: add them here or during the session.'),
       h('div', { class: 'btns' },
-        btn(done ? 'Ripeti' : 'Avvia', () => startSession(r), 'pri'),
-        edit ? [btn('+ Esercizio', () => pickExercise(tpl => { addBlock(s, tpl); save(); render(); }), 'sm'), btn('+ Test', () => pickTest(tpl => { addBlock(s, tpl); save(); render(); }), 'sm'),
-          btn('Modifica', () => sessionSheet(r), 'sm')] : btn('Modifica', () => go('calendario-' + (r.x ? r.x.date : C.dateOf(r.p, r.w, r.d))), 'sm')));
+        btn(done ? 'Repeat' : 'Start', () => startSession(r), 'pri'),
+        edit ? [btn('+ Exercise', () => pickExercise(tpl => { addBlock(s, tpl); save(); render(); }), 'sm'), btn('+ Test', () => pickTest(tpl => { addBlock(s, tpl); save(); render(); }), 'sm'),
+          btn('Edit', () => sessionSheet(r), 'sm')] : btn('Edit', () => go('calendar-' + (r.x ? r.x.date : C.dateOf(r.p, r.w, r.d))), 'sm')));
   }
-  const climbText = c => surfName(c.surface) + (c.top ? ' ' + fmtG(c.top) : '') + (c.sends != null ? ` · ${c.sends} ${c.sends === 1 ? 'blocco' : 'blocchi'}` : '');
+  const climbText = c => surfName(c.surface) + (c.top ? ' ' + fmtG(c.top) : '') + (c.sends != null ? ` · ${c.sends} ${c.sends === 1 ? 'send' : 'sends'}` : '');
   const logCard = l => h('div', { class: 'card tap', onclick: () => logSheet(l) },
     h('div', { class: 'row' }, h('div', { class: 'grow n', style: 'font-weight:600' }, l.title), h('span', { class: 'tag' }, (l.minutes || 0) + ' min')),
-    h('div', { class: 'sub' }, `${wdOf(l.date)} ${fmtDate(l.date)}${l.rpe ? ' · RPE ' + dec(l.rpe) : ''}${l.feel ? ' · sensazione ' + l.feel + '/5' : ''}`),
+    h('div', { class: 'sub' }, `${wdOf(l.date)} ${fmtDate(l.date)}${l.rpe ? ' · RPE ' + dec(l.rpe) : ''}${l.feel ? ' · feeling ' + l.feel + '/5' : ''}`),
     (l.climbs || []).length ? h('div', { class: 'sub', style: 'color:var(--tx)' }, l.climbs.map(climbText).join('  |  ')) : null,
     (l.loads || []).length ? h('div', { class: 'p', style: 'color:var(--ac);font-size:13px' }, l.loads.map(x => `${x.name}: ${x.kg}`).join(' · ')) : null,
     (l.blocks || []).some(b => b.note) ? h('div', { class: 'sub' }, l.blocks.filter(b => b.note).map(b => `${b.name}: ${b.note}`).join(' · ')) : null,
@@ -1331,44 +1353,44 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
     const t = C.todayISO(), refs = refsOn(t), out = [h('div', { class: 'sub', style: 'text-transform:capitalize' }, `${WD_FULL[wdIdx(t)]} ${fmtDate(t)}`), h('h1', {}, 'Home')];
     if (S.live) {
       const lr = findRef(S.live.sid);
-      if (lr) out.push(h('div', { class: 'card', style: 'border-color:var(--warn)' }, h('div', { class: 'n' }, 'Sessione in corso'), h('div', { class: 'sub' }, autoTitle(sessOf(lr))),
-        h('div', { class: 'btns' }, btn('Riprendi', () => startSession(lr), 'pri'), btn('Scarta', () => { S.live = null; save(); render(); }))));
+      if (lr) out.push(h('div', { class: 'card', style: 'border-color:var(--warn)' }, h('div', { class: 'n' }, 'Session in progress'), h('div', { class: 'sub' }, autoTitle(sessOf(lr))),
+        h('div', { class: 'btns' }, btn('Resume', () => startSession(lr), 'pri'), btn('Discard', () => { S.live = null; save(); render(); }))));
       else S.live = null;
     }
-    if (newVersion) out.push(h('div', { class: 'card row' }, h('div', { class: 'grow sub' }, 'È disponibile una versione aggiornata dell\'app.'), btn('Aggiorna', () => location.reload(), 'sm pri')));
+    if (newVersion) out.push(h('div', { class: 'card row' }, h('div', { class: 'grow sub' }, 'A newer version of the app is available.'), btn('Update', () => location.reload(), 'sm pri')));
     const since = S.settings.lastBackup ? C.diffDays(t, S.settings.lastBackup) : null;
-    if (cloudOn() && S.settings.gh.error) out.push(h('div', { class: 'card', style: 'border-color:var(--bad)' }, h('div', { class: 'sub' }, 'Backup automatico non riuscito: ' + S.settings.gh.error + '.'),
-      h('div', { class: 'btns' }, btn('Riprova', () => cloudBackup(true), 'sm'), btn('Impostazioni', () => go('altro'), 'sm'))));
+    if (cloudOn() && S.settings.gh.error) out.push(h('div', { class: 'card', style: 'border-color:var(--bad)' }, h('div', { class: 'sub' }, 'Automatic backup failed: ' + S.settings.gh.error + '.'),
+      h('div', { class: 'btns' }, btn('Retry', () => cloudBackup(true), 'sm'), btn('Settings', () => go('more'), 'sm'))));
     else if (S.logs.length && (since == null || since >= 7))
-      out.push(h('div', { class: 'card row' }, h('div', { class: 'grow sub' }, since == null ? 'I tuoi dati non hanno ancora un backup.' : `Ultimo backup ${since} giorni fa.`), btn('Salva backup', doBackup, 'sm')));
+      out.push(h('div', { class: 'card row' }, h('div', { class: 'grow sub' }, since == null ? 'Your data has no backup yet.' : `Last backup ${since} days ago.`), btn('Save backup', doBackup, 'sm')));
     refs.forEach(r => out.push(sessionCard(r, false)));
-    if (!refs.length) out.push(h('div', { class: 'card' }, h('div', { class: 'big' }, 'Rest day'), h('p', { class: 'sub', style: 'margin-bottom:0' }, 'Nessuna sessione in programma oggi.')));
-    out.push(h('div', { class: 'btns' }, btn('Crea sessione', () => newSessionSheet(t), 'pri'), btn('Registra sessione', () => logSheet(null))));
+    if (!refs.length) out.push(h('div', { class: 'card' }, h('div', { class: 'big' }, 'Rest day'), h('p', { class: 'sub', style: 'margin-bottom:0' }, 'No session planned today.')));
+    out.push(h('div', { class: 'btns' }, btn('Create session', () => newSessionSheet(t), 'pri'), btn('Log session', () => logSheet(null))));
     return out;
   }
 
   /* ---------- Sessioni extra e calendario ---------- */
   function showDate(iso) { // dopo aver creato o spostato una sessione si apre quel giorno nel calendario, dove si aggiungono gli esercizi
-    go('calendario-' + iso);
+    go('calendar-' + iso);
   }
   function newSessionSheet(dateDefault) {
-    const date = h('input', { type: 'date', value: dateDefault }), title = h('input', { placeholder: 'Es. Board con amici' });
-    const ov = openSheet('Crea sessione', [h('div', { class: 'cols' }, field('Data', date), field('Titolo (facoltativo)', title)),
-      btn('Crea sessione', () => {
+    const date = h('input', { type: 'date', value: dateDefault }), title = h('input', { placeholder: 'E.g. Board session with friends' });
+    const ov = openSheet('Create session', [h('div', { class: 'cols' }, field('Date', date), field('Title (optional)', title)),
+      btn('Create session', () => {
         const iso = C.validISO(date.value);
-        if (!iso) return toast('Scegli una data valida.');
+        if (!iso) return toast('Pick a valid date.');
         S.extras.push({ id: C.uid(), date: iso, type: 'wall', period: 'base', title: title.value.trim().slice(0, 80), blocks: [] });
         save(); ov.remove(); showDate(iso);
       }, 'pri block')]);
   }
   function copyToDateSheet(r) {
     const s = sessOf(r), date = h('input', { type: 'date', value: C.todayISO() });
-    const ov = openSheet('Copia su una data', [h('p', { class: 'sub' }, `"${autoTitle(s)}" viene copiata su un'altra data con gli stessi esercizi.`), field('Data', date),
-      btn('Copia', () => {
+    const ov = openSheet('Copy to a date', [h('p', { class: 'sub' }, `"${autoTitle(s)}" is copied to another date with the same exercises.`), field('Date', date),
+      btn('Copy', () => {
         const iso = C.validISO(date.value);
-        if (!iso) return toast('Scegli una data valida.');
+        if (!iso) return toast('Pick a valid date.');
         const copy = { ...C.cloneSession(s), date: iso, title: s.title || '' }; privatize(S, copy); S.extras.push(copy);
-        save(); ov.remove(); toast(`Copiata su ${wdOf(iso)} ${fmtDate(iso)}.`); render();
+        save(); ov.remove(); toast(`Copied to ${wdOf(iso)} ${fmtDate(iso)}.`); render();
       }, 'pri block')]);
   }
   let calMonth = null, calSel = null;
@@ -1388,31 +1410,31 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
       if (dots.length < 3 && S.logs.some(l => l.date === iso && !ids.has(l.sid))) dots.push(h('i', { class: 'ok' }));
       const d = C.fromISO(iso);
       return h('button', { type: 'button', class: 'cal-d' + (iso.slice(0, 7) === calMonth.slice(0, 7) ? '' : ' out') + (iso === t ? ' today' : '') + (iso === calSel ? ' sel' : ''),
-        'aria-label': `${WD_FULL[wdIdx(iso)]} ${d.getDate()} ${MONTHS_FULL[d.getMonth()]}, ${refs.length} sessioni`, 'aria-pressed': iso === calSel ? 'true' : 'false',
-        onclick: () => go('calendario-' + iso) }, d.getDate(), h('span', { class: 'dots' }, dots));
+        'aria-label': `${WD_FULL[wdIdx(iso)]} ${d.getDate()} ${MONTHS_FULL[d.getMonth()]}, ${refs.length} sessions`, 'aria-pressed': iso === calSel ? 'true' : 'false',
+        onclick: () => go('calendar-' + iso) }, d.getDate(), h('span', { class: 'dots' }, dots));
     };
     const refs = refsOn(calSel), logs = S.logs.filter(l => l.date === calSel);
-    return [h('h1', {}, 'Calendario'),
+    return [h('h1', {}, 'Calendar'),
       h('div', { class: 'week' }, btn('‹', () => shift(-1), 'sm'), h('div', { class: 't big', style: 'font-size:17px;text-transform:capitalize' }, `${MONTHS_FULL[first.getMonth()]} ${first.getFullYear()}`),
-        btn('Oggi', () => { calMonth = t.slice(0, 7) + '-01'; go('calendario-' + t); }, 'sm'), btn('›', () => shift(1), 'sm')),
-      h('div', { class: 'cal' }, ['L', 'M', 'M', 'G', 'V', 'S', 'D'].map(x => h('div', { class: 'wh' }, x)), cells.map(cell)),
-      h('div', { class: 'cal-key sub' }, h('span', {}, h('i', {}), 'in programma'), h('span', {}, h('i', { class: 'ok' }), 'fatta')),
+        btn('Today', () => { calMonth = t.slice(0, 7) + '-01'; go('calendar-' + t); }, 'sm'), btn('›', () => shift(1), 'sm')),
+      h('div', { class: 'cal' }, ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map(x => h('div', { class: 'wh' }, x)), cells.map(cell)),
+      h('div', { class: 'cal-key sub' }, h('span', {}, h('i', {}), 'planned'), h('span', {}, h('i', { class: 'ok' }), 'done')),
       h('div', { class: 'row', style: 'margin-top:18px' }, h('h2', { class: 'grow', style: 'margin:0;text-transform:capitalize' }, `${WD_FULL[wdIdx(calSel)]} ${fmtDate(calSel)}`),
-        btn('Crea sessione', () => newSessionSheet(calSel), 'sm pri')),
+        btn('Create session', () => newSessionSheet(calSel), 'sm pri')),
       refs.map(r => sessionCard(r, true)),
-      refs.length ? null : h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin:0' }, 'Nessuna sessione in programma.')),
-      logs.length ? [h('h2', {}, 'Registrazioni'), h('div', { class: 'sub' }, 'Tocca per vedere o modificare.'), logs.map(logCard)] : null];
+      refs.length ? null : h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin:0' }, 'No session planned.')),
+      logs.length ? [h('h2', {}, 'Logged'), h('div', { class: 'sub' }, 'Tap to view or edit.'), logs.map(logCard)] : null];
   }
 
   /* ---------- Programmi: insiemi di sessioni importati, visibili solo nel calendario ---------- */
   function planSheet(p) {
     const title = h('input', { value: p.title }), start = h('input', { type: 'date', value: p.startDate });
     const done = () => { save(); ov.remove(); render(); };
-    const ov = openSheet('Programma', [field('Nome', title), field('Inizio (viene portato al lunedì di quella settimana)', start),
-      h('p', { class: 'sub' }, `${p.weeks.length} settimane · fino a ${fmtDate(C.dateOf(p, p.weeks.length - 1, 6))}. Le sessioni si modificano dal calendario.`),
-      btn('Salva', () => { p.title = title.value.trim().slice(0, 80) || p.title; if (C.validISO(start.value)) p.startDate = C.mondayOf(start.value); done(); }, 'pri block'),
-      h('div', { class: 'btns' }, btn('Esporta .blokplan', () => exportSheet('Esporta programma', p.title.replace(/[^\w+-]+/g, '_') + '.blokplan', JSON.stringify(C.exportBlokplan(p, S.exercises))), 'sm'),
-        btn('Elimina programma', async () => { if (await confirmDlg(`Eliminare "${p.title}"? Le sue sessioni spariscono dal calendario, le registrazioni restano.`, 'Elimina')) { S.plans = S.plans.filter(x => x !== p); done(); } }, 'sm danger'))]);
+    const ov = openSheet('Programme', [field('Name', title), field('Start (moved to the Monday of that week)', start),
+      h('p', { class: 'sub' }, `${p.weeks.length} weeks · until ${fmtDate(C.dateOf(p, p.weeks.length - 1, 6))}. Sessions are edited from the calendar.`),
+      btn('Save', () => { p.title = title.value.trim().slice(0, 80) || p.title; if (C.validISO(start.value)) p.startDate = C.mondayOf(start.value); done(); }, 'pri block'),
+      h('div', { class: 'btns' }, btn('Export .blokplan', () => exportSheet('Export programme', p.title.replace(/[^\w+-]+/g, '_') + '.blokplan', JSON.stringify(C.exportBlokplan(p, S.exercises))), 'sm'),
+        btn('Delete programme', async () => { if (await confirmDlg(`Delete "${p.title}"? Its sessions disappear from the calendar, logged sessions stay.`, 'Delete')) { S.plans = S.plans.filter(x => x !== p); done(); } }, 'sm danger'))]);
   }
 
   function fileBtn(label, after) {
@@ -1420,48 +1442,48 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
       const f = inp.files[0]; inp.value = '';
       if (!f) return;
       try { await importText(await f.text()); if (after) after(); }
-      catch (e) { console.warn('[import] fallito', e); toast(e instanceof SyntaxError ? 'Il file non è JSON valido.' : e.message); }
+      catch (e) { console.warn('[import] failed', e); toast(e instanceof SyntaxError ? 'The file is not valid JSON.' : e.message); }
     } });
     return h('span', {}, inp, btn(label, () => inp.click(), 'sm'));
   }
   async function importText(text) {
     const obj = JSON.parse(text);
     if (C.validState(obj)) { // backup completo
-      if (!await confirmDlg('Questo è un backup completo: sostituire TUTTI i dati attuali?', 'Sostituisci')) return;
-      S = migrate(obj); calSel = calMonth = null; save(); render(); toast('Backup ripristinato.'); log('import', 'backup ripristinato');
+      if (!await confirmDlg('This is a full backup: replace ALL current data?', 'Replace')) return;
+      S = migrate(obj); calSel = calMonth = null; save(); render(); toast('Backup restored.'); log('import', 'backup restored');
       return;
     }
     const r = C.importBlokplan(obj, {}); // lancia se non valido: lo stato non viene toccato
     const title = h('input', { value: r.plan.title }), start = h('input', { type: 'date', value: r.plan.startDate });
-    const ov = openSheet('Importa programma', [h('p', { class: 'sub' }, `${r.plan.weeks.length} settimane. Scegli da quando parte: le sessioni compaiono nel calendario.`),
-      field('Nome', title), field('Inizio (viene portato al lunedì di quella settimana)', start),
-      btn('Importa', () => {
+    const ov = openSheet('Import programme', [h('p', { class: 'sub' }, `${r.plan.weeks.length} weeks. Choose when it starts: sessions appear in the calendar.`),
+      field('Name', title), field('Start (moved to the Monday of that week)', start),
+      btn('Import', () => {
         const iso = C.validISO(start.value);
-        if (!iso) return toast('Scegli una data valida.');
+        if (!iso) return toast('Pick a valid date.');
         r.plan.title = title.value.trim().slice(0, 80) || r.plan.title; r.plan.startDate = C.mondayOf(iso);
         for (const e of r.exercises) S.exercises[e.id] = e;
         ensureTests(S);
         S.plans.push(r.plan);
         for (const w of r.plan.weeks) for (const d of w) for (const x of d.sessions) privatize(S, x); // i parametri diventano di ogni sessione
         prune(S); save(); ov.remove();
-        toast(`Importato ${r.plan.title}.`); log('import', 'programma importato', { title: r.plan.title, weeks: r.plan.weeks.length, nuoviEsercizi: r.exercises.length });
-        go('calendario-' + r.plan.startDate);
+        toast(`Imported ${r.plan.title}.`); log('import', 'programme imported', { title: r.plan.title, weeks: r.plan.weeks.length, newExercises: r.exercises.length });
+        go('calendar-' + r.plan.startDate);
       }, 'pri block')]);
   }
 
   function sessionSheet(r) {
-    const s = sessOf(r), title = h('input', { value: s.title || '', placeholder: 'Sessione' }), date = r.x ? h('input', { type: 'date', value: r.x.date }) : null;
-    const ov = openSheet('Sessione', [field('Titolo', title), r.x ? field('Data', date) : null,
-      btn('Salva', () => {
+    const s = sessOf(r), title = h('input', { value: s.title || '', placeholder: 'Session' }), date = r.x ? h('input', { type: 'date', value: r.x.date }) : null;
+    const ov = openSheet('Session', [field('Title', title), r.x ? field('Date', date) : null,
+      btn('Save', () => {
         const iso = r.x ? C.validISO(date.value) : null, moved = iso && iso !== r.x.date;
         s.title = title.value.trim().slice(0, 80);
         if (iso) r.x.date = iso;
         save(); ov.remove();
         if (moved) showDate(iso); else render();
       }, 'pri block'),
-      h('div', { class: 'btns' }, btn('Copia su una data…', () => { ov.remove(); copyToDateSheet(r); }, 'sm'),
-        btn('Elimina sessione', async () => {
-          if (!await confirmDlg('Eliminare questa sessione? Le sue registrazioni restano.', 'Elimina')) return;
+      h('div', { class: 'btns' }, btn('Copy to a date…', () => { ov.remove(); copyToDateSheet(r); }, 'sm'),
+        btn('Delete session', async () => {
+          if (!await confirmDlg('Delete this session? Its logged entries stay.', 'Delete')) return;
           if (r.x) S.extras = S.extras.filter(e => e !== r.x); else r.p.weeks[r.w][r.d].sessions.splice(r.si, 1);
           save(); ov.remove(); render();
         }, 'sm danger'))]);
@@ -1470,42 +1492,42 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
   function blockSheet(r, bi) {
     const s = sessOf(r), b = s.blocks[bi], e = S.exercises[b.exId];
     const close = () => { save(); ov.remove(); render(); };
-    if (!e) { const ov0 = openSheet('Esercizio rimosso', btn('Togli dalla sessione', () => { s.blocks.splice(bi, 1); save(); ov0.remove(); render(); }, 'danger block')); return; }
+    if (!e) { const ov0 = openSheet('Exercise removed', btn('Remove from session', () => { s.blocks.splice(bi, 1); save(); ov0.remove(); render(); }, 'danger block')); return; }
     const iv = e.interval || {}, ld = e.load || {};
-    const name = h('input', { value: e.name }), min = numInp(b.minutes), note = h('input', { value: b.note || '', placeholder: 'Facoltativa: si vede anche nel timer' });
-    const sfSel = opts(surfOpts().concat([['+new', '＋ Aggiungi nuova…']]), e.surface || '', { onchange: () => sync() }), sfNew = h('input', { placeholder: 'Es. Spray wall' });
-    const sfNewField = field('Nome della nuova superficie', sfNew);
-    const mode = opts([['none', 'Solo durata'], ['timed', 'A tempo (countdown)'], ['reps', 'A ripetizioni (tocco "Fatto")']], !e.interval ? 'none' : iv.selfPaced ? 'reps' : 'timed', { onchange: () => sync() });
+    const name = h('input', { value: e.name }), min = numInp(b.minutes), note = h('input', { value: b.note || '', placeholder: 'Optional: also shown in the timer' });
+    const sfSel = opts(surfOpts().concat([['+new', '＋ Add new…']]), e.surface || '', { onchange: () => sync() }), sfNew = h('input', { placeholder: 'E.g. Spray wall' });
+    const sfNewField = field('Name of the new surface', sfNew);
+    const mode = opts([['none', 'Duration only'], ['timed', 'Timed (countdown)'], ['reps', 'Reps (tap "Done")']], !e.interval ? 'none' : iv.selfPaced ? 'reps' : 'timed', { onchange: () => sync() });
     const rounds = numInp(iv.rounds || 3), work = numInp(iv.workSeconds || 7), rest = numInp(iv.restSeconds == null ? 180 : iv.restSeconds);
     const reps = numInp(iv.reps), perSet = numInp(iv.roundsPerSet), setRest = numInp(iv.setRestSeconds);
     const sides = h('input', { type: 'checkbox', checked: (iv.cues || []).length > 0 });
     const pairs = pairsPresent();
-    const refs = [['', 'Nessuno']].concat(S.testDefs.filter(t => t.key !== 'bw' && !inPair(t.key, pairs)).map(t => [t.key, t.name]), pairs.map(k => [k, C.PAIRS[k] + ' (SX/DX dal cue)']));
+    const refs = [['', 'None']].concat(S.testDefs.filter(t => t.key !== 'bw' && !inPair(t.key, pairs)).map(t => [t.key, t.name]), pairs.map(k => [k, C.PAIRS[k] + ' (L/R alternating)']));
     const ref = opts(refs, ld.ref || ''), pct = numInp(ld.pct);
-    const workF = field('Lavoro (s)', work), repsF = field('Ripetizioni', reps);
-    const timer = h('div', {}, h('div', { class: 'cols3' }, field('Round', rounds), workF, repsF, field('Recupero (s)', rest)),
-      h('div', { class: 'cols' }, field('Round per serie (facolt.)', perSet), field('Recupero tra serie (s)', setRest)),
-      h('label', { class: 'f' }, 'Lati', h('div', { style: 'margin-top:8px;color:var(--tx)' }, sides, ' Alterna SX/DX (i round contano entrambi i lati: 6 round = 3 per lato)')));
+    const workF = field('Work (s)', work), repsF = field('Reps', reps);
+    const timer = h('div', {}, h('div', { class: 'cols3' }, field('Round', rounds), workF, repsF, field('Rest (s)', rest)),
+      h('div', { class: 'cols' }, field('Rounds per set (optional)', perSet), field('Rest between sets (s)', setRest)),
+      h('label', { class: 'f' }, 'Sides', h('div', { style: 'margin-top:8px;color:var(--tx)' }, sides, ' Alternate L/R (rounds count both sides: 6 rounds = 3 per side)')));
     const sync = () => { timer.hidden = mode.value === 'none'; workF.hidden = mode.value !== 'timed'; repsF.hidden = mode.value !== 'reps'; sfNewField.hidden = sfSel.value !== '+new'; };
     const isTest = !!ld.test;
-    const ov = openSheet(e.std && C.STD[e.std] ? C.STD[e.std].name : e.name, [h('p', { class: 'sub' }, 'Parametri di questo esercizio in questa sessione.'),
-      h('div', { class: 'cols' }, field('Nome', name), field('Minuti previsti', min)), field('Timer', mode), timer,
-      isTest ? null : h('div', { class: 'cols' }, field('Carico: test di riferimento', ref), field('% del massimale', pct)),
-      e.slot === 'wall' || e.slot === 'warmup' || e.surface ? [field('Superficie di arrampicata', sfSel), sfNewField] : null,
-      field('Nota', note),
-      btn('Salva', () => {
-        if (!name.value.trim()) return toast('Serve un nome.');
+    const ov = openSheet(e.std && C.STD[e.std] ? C.STD[e.std].name : e.name, [h('p', { class: 'sub' }, 'Parameters of this exercise in this session.'),
+      h('div', { class: 'cols' }, field('Name', name), field('Planned minutes', min)), field('Timer', mode), timer,
+      isTest ? null : h('div', { class: 'cols' }, field('Load: reference test', ref), field('% of max', pct)),
+      e.slot === 'wall' || e.slot === 'warmup' || e.surface ? [field('Climbing surface', sfSel), sfNewField] : null,
+      field('Note', note),
+      btn('Save', () => {
+        if (!name.value.trim()) return toast('A name is required.');
         let sf = sfSel.value;
-        if (sf === '+new') { const nm = sfNew.value.trim().slice(0, 40); if (!nm) return toast('Scrivi il nome della nuova superficie.'); sf = addSurface(nm); }
+        if (sf === '+new') { const nm = sfNew.value.trim().slice(0, 40); if (!nm) return toast('Type the name of the new surface.'); sf = addSurface(nm); }
         e.name = name.value.trim().slice(0, 80); e.surface = sf;
         e.interval = mode.value === 'none' ? null : C.normInterval({ rounds: Math.max(1, val(rounds) || 1), workSeconds: mode.value === 'timed' ? val(work) || 0 : 45, restSeconds: val(rest) || 0, selfPaced: mode.value === 'reps',
-          reps: mode.value === 'reps' ? val(reps) || 0 : 0, roundsPerSet: val(perSet) || 0, setRestSeconds: val(setRest) || 0, cues: sides.checked ? ['SX', 'DX'] : [] });
+          reps: mode.value === 'reps' ? val(reps) || 0 : 0, roundsPerSet: val(perSet) || 0, setRestSeconds: val(setRest) || 0, cues: sides.checked ? ['L', 'R'] : [] });
         if (!isTest) { const d = S.testDefs.find(t => t.key === C.refKeys(ref.value)[0]); e.load = ref.value ? { ref: ref.value, mode: d && d.mode === 'hang' ? 'hang' : 'lift', pct: val(pct), test: false } : null; }
         const m = val(min); b.minutes = m == null ? C.intervalMinutes(e.interval) || b.minutes : Math.max(0, Math.round(m));
         b.note = note.value.trim().slice(0, 200);
         close();
       }, 'pri block'),
-      h('div', { class: 'btns' }, btn('Sostituisci…', () => pickExercise(tpl => { s.blocks.splice(bi, 1); addBlock(s, tpl); s.blocks.splice(bi, 0, s.blocks.pop()); close(); }), 'sm'), btn('Rimuovi', () => { s.blocks.splice(bi, 1); close(); }, 'sm danger'))]);
+      h('div', { class: 'btns' }, btn('Replace…', () => pickExercise(tpl => { s.blocks.splice(bi, 1); addBlock(s, tpl); s.blocks.splice(bi, 0, s.blocks.pop()); close(); }), 'sm'), btn('Remove', () => { s.blocks.splice(bi, 1); close(); }, 'sm danger'))]);
     sync();
   }
 
@@ -1513,47 +1535,47 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
   const secHead = t => h('div', { class: 'sec' }, t);
   const customTpl = c => ({ std: null, custom: c.key, name: c.name, slot: c.slot, location: c.slot === 'wall' || c.slot === 'warmup' ? 'wall' : 'off_wall', domain: 'other', intensity: 'moderate', risk: 'low', equipment: [], interval: null, load: null, surface: '' });
   function customSheet(onDone) {
-    const name = h('input', { placeholder: 'Es. Circuito spray' }), slot = opts(C.SLOTS, 'wall');
-    const ov = openSheet('Nuovo esercizio', [h('p', { class: 'sub' }, 'Entra nella tua libreria. Serie, tempi e carichi li imposti ogni volta nella sessione.'), h('div', { class: 'cols' }, field('Nome', name), field('Sezione', slot)),
-      btn('Crea esercizio', () => {
+    const name = h('input', { placeholder: 'E.g. Spray circuit' }), slot = opts(C.SLOTS, 'wall');
+    const ov = openSheet('New exercise', [h('p', { class: 'sub' }, 'It joins your library. Sets, times and loads are set each time in the session.'), h('div', { class: 'cols' }, field('Name', name), field('Section', slot)),
+      btn('Create exercise', () => {
         const n = name.value.trim().slice(0, 80);
-        if (!n) return toast('Serve un nome.');
+        if (!n) return toast('A name is required.');
         const c = { key: 'c-' + C.uid().slice(0, 8), name: n, slot: slot.value };
         S.custom.push(c); save(); ov.remove();
         if (onDone) onDone(customTpl(c)); else render();
       }, 'pri block')]);
   }
   function pickExercise(cb) {
-    const list = h('div', {}), q = h('input', { class: 'inp', placeholder: 'Cerca…', oninput: () => fill() });
+    const list = h('div', {}), q = h('input', { class: 'inp', placeholder: 'Search…', oninput: () => fill() });
     let ov;
     const row = (name, sub, tpl) => h('div', { class: 'blk', style: 'cursor:pointer', onclick: () => { ov.remove(); cb(tpl()); } }, h('div', { class: 'grow n' }, name), sub ? h('div', { class: 'm' }, sub) : null);
     const fill = () => {
       const t = q.value.trim().toLowerCase(), nodes = [], mine = S.custom.filter(c => !t || c.name.toLowerCase().includes(t));
-      if (mine.length) nodes.push(secHead('I miei esercizi'), ...mine.map(c => row(c.name, '', () => customTpl(c))));
+      if (mine.length) nodes.push(secHead('My exercises'), ...mine.map(c => row(c.name, '', () => customTpl(c))));
       for (const [sec, label] of Object.entries(C.SECTIONS)) {
         const items = C.LIBRARY.filter(x => x.section === sec && (!t || x.name.toLowerCase().includes(t)));
         if (items.length) nodes.push(secHead(label), ...items.map(x => row(x.name, '', () => C.stdVariant(x.key))));
       }
-      list.replaceChildren(...(nodes.length ? nodes : [h('p', { class: 'sub' }, 'Nessun esercizio con questo nome: crealo con "+ Nuovo".')]));
+      list.replaceChildren(...(nodes.length ? nodes : [h('p', { class: 'sub' }, 'No exercise with this name: create it with "+ New".')]));
     };
-    ov = openSheet('Scegli esercizio', [h('div', { class: 'row' }, h('div', { class: 'grow' }, q), btn('+ Nuovo', () => { ov.remove(); customSheet(cb); }, 'sm pri')), list]);
+    ov = openSheet('Choose exercise', [h('div', { class: 'row' }, h('div', { class: 'grow' }, q), btn('+ New', () => { ov.remove(); customSheet(cb); }, 'sm pri')), list]);
     fill();
   }
   function viewLibrary() {
-    const list = h('div', {}), q = h('input', { class: 'inp', placeholder: 'Cerca…', oninput: () => fill() });
+    const list = h('div', {}), q = h('input', { class: 'inp', placeholder: 'Search…', oninput: () => fill() });
     const fill = () => {
       const t = q.value.trim().toLowerCase(), nodes = [], mine = S.custom.filter(c => !t || c.name.toLowerCase().includes(t));
-      if (mine.length) nodes.push(secHead('I miei esercizi'), ...mine.map(c => h('div', { class: 'blk' }, h('div', { class: 'grow' }, h('div', { class: 'n' }, c.name), h('div', { class: 'p' }, C.SLOTS[c.slot])),
-        btn('Elimina', async () => { if (await confirmDlg(`Eliminare "${c.name}" dalla libreria? Le sessioni che lo contengono non cambiano.`, 'Elimina')) { S.custom = S.custom.filter(x => x !== c); save(); render(); } }, 'sm danger'))));
+      if (mine.length) nodes.push(secHead('My exercises'), ...mine.map(c => h('div', { class: 'blk' }, h('div', { class: 'grow' }, h('div', { class: 'n' }, c.name), h('div', { class: 'p' }, C.SLOTS[c.slot])),
+        btn('Delete', async () => { if (await confirmDlg(`Delete "${c.name}" from the library? Sessions that contain it do not change.`, 'Delete')) { S.custom = S.custom.filter(x => x !== c); save(); render(); } }, 'sm danger'))));
       for (const [sec, label] of Object.entries(C.SECTIONS)) {
         const items = C.LIBRARY.filter(x => x.section === sec && (!t || x.name.toLowerCase().includes(t)));
         if (items.length) nodes.push(secHead(label), ...items.map(x => h('div', { class: 'blk' }, h('div', { class: 'grow n' }, x.name))));
       }
-      list.replaceChildren(...(nodes.length ? nodes : [h('p', { class: 'sub' }, 'Nessun risultato.')]));
+      list.replaceChildren(...(nodes.length ? nodes : [h('p', { class: 'sub' }, 'No results.')]));
     };
     fill();
-    return [h('div', { class: 'row' }, btn('‹ Altro', () => { location.hash = 'altro'; }, 'sm'), btn('+ Nuovo', () => customSheet(null), 'sm pri right')),
-      h('h1', { style: 'margin-top:10px' }, 'Esercizi'), h('div', { class: 'sub' }, 'Gli esercizi di base hanno solo un nome. Serie, tempi, ripetizioni e carichi sono parametri che imposti in ogni sessione.'),
+    return [h('div', { class: 'row' }, btn('‹ More', () => { location.hash = 'more'; }, 'sm'), btn('+ New', () => customSheet(null), 'sm pri right')),
+      h('h1', { style: 'margin-top:10px' }, 'Exercises'), h('div', { class: 'sub' }, 'Base exercises only have a name. Sets, times, reps and loads are parameters you set in each session.'),
       h('div', { style: 'margin-top:10px' }, q), h('div', { class: 'card' }, list)];
   }
 
@@ -1565,34 +1587,34 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
       const sf = opts(surfOpts(), c.surface || ''), gr = opts(gradeOpts(), c.top || ''), sends = numInp(c.sends), min = numInp(c.minutes);
       items.push({ c, sf, gr, sends, min });
       box.append(h('div', { class: 'climb' }, c.name ? h('div', { class: 'n' }, c.name) : null,
-        h('div', { class: 'cols' }, field('Superficie', sf), field('Grado max chiuso', gr)), h('div', { class: 'cols' }, field('Blocchi chiusi', sends), field('Minuti', min))));
+        h('div', { class: 'cols' }, field('Surface', sf), field('Top grade sent', gr)), h('div', { class: 'cols' }, field('Problems sent', sends), field('Minutes', min))));
     };
     rows.forEach(add);
-    return { node: h('div', {}, box, btn('+ Superficie', () => add({ minutes: items.length ? null : defaultMinutes() }), 'sm')),
+    return { node: h('div', {}, box, btn('+ Surface', () => add({ minutes: items.length ? null : defaultMinutes() }), 'sm')),
       read: () => items.filter(i => i.sf.value).map(i => ({ name: i.c.name || '', surface: i.sf.value, top: i.gr.value || null,
         sends: val(i.sends) == null ? null : Math.max(0, Math.round(val(i.sends))), minutes: Math.max(0, Math.round(val(i.min) || 0)) })) };
   }
   function logSheet(l) {
-    const isNew = !l; l = l || { id: C.uid(), date: C.todayISO(), type: 'wall', title: 'Sessione libera', minutes: 60, rpe: null, feel: null, notes: '', loads: [], climbs: [] };
+    const isNew = !l; l = l || { id: C.uid(), date: C.todayISO(), type: 'wall', title: 'Free session', minutes: 60, rpe: null, feel: null, notes: '', loads: [], climbs: [] };
     const date = h('input', { type: 'date', value: l.date }), title = h('input', { value: l.title }), min = numInp(l.minutes);
     const rpe = numInp(l.rpe), feel = opts(FEEL, l.feel ? String(l.feel) : '');
     const notes = h('textarea', {}); notes.value = l.notes || '';
     const climbs = climbEditor(l.climbs || [], () => val(min));
-    const ov = openSheet(isNew ? 'Registra sessione' : 'Modifica registrazione', [h('div', { class: 'cols' }, field('Data', date), field('Minuti', min)),
-      field('Titolo', title),
-      h('div', { class: 'cols' }, field('RPE (1-10)', rpe), field('Come ti sentivi', feel)),
-      h('h2', {}, 'Arrampicata'), climbs.node, field('Note', notes),
+    const ov = openSheet(isNew ? 'Log session' : 'Edit log entry', [h('div', { class: 'cols' }, field('Date', date), field('Minutes', min)),
+      field('Title', title),
+      h('div', { class: 'cols' }, field('RPE (1-10)', rpe), field('How you felt', feel)),
+      h('h2', {}, 'Climbing'), climbs.node, field('Notes', notes),
       (l.loads || []).length ? h('div', { class: 'sub' }, l.loads.map(x => `${x.name}: ${x.kg}`).join(' · ')) : null,
-      btn('Salva', () => {
-        Object.assign(l, { date: C.validISO(date.value) || l.date, title: title.value.trim() || 'Sessione', minutes: Math.max(0, Math.round(val(min) || 0)), rpe: val(rpe),
+      btn('Save', () => {
+        Object.assign(l, { date: C.validISO(date.value) || l.date, title: title.value.trim() || 'Session', minutes: Math.max(0, Math.round(val(min) || 0)), rpe: val(rpe),
           feel: feel.value ? +feel.value : null, notes: notes.value.trim(), climbs: climbs.read() });
         if (isNew) S.logs.push(l);
         save(); ov.remove(); render();
       }, 'pri block'),
-      isNew ? null : btn('Elimina', async () => { if (await confirmDlg('Eliminare questa registrazione?', 'Elimina')) { S.logs = S.logs.filter(x => x !== l); save(); ov.remove(); render(); } }, 'danger block')]);
+      isNew ? null : btn('Delete', async () => { if (await confirmDlg('Delete this log entry?', 'Delete')) { S.logs = S.logs.filter(x => x !== l); save(); ov.remove(); render(); } }, 'danger block')]);
   }
   /* ---------- Analisi ---------- */
-  const anHead = cur => [h('h1', {}, 'Analisi'), seg([['analisi', 'Grafici'], ['progressi', 'Test e massimali']], cur, k => { location.hash = k; })];
+  const anHead = cur => [h('h1', {}, 'Analytics'), seg([['analytics', 'Charts'], ['tests', 'Tests and maxes']], cur, k => { location.hash = k; })];
   const chartCard = (title, sub, ...nodes) => h('div', { class: 'card' }, h('div', { class: 'ct' }, title), sub ? h('div', { class: 'sub' }, sub) : null, nodes);
   /** Sezione della libreria a cui appartiene un esercizio (per il tempo per categoria). */
   const exSection = e => (e.std === 'test' ? 'fingers' : e.std && C.STD[e.std] ? C.STD[e.std].section : ({ warmup: 'warmup', wall: 'wall', mobility: 'mobility' }[e.slot] || 'strength'));
@@ -1610,43 +1632,43 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
     const sched = S.plans.flatMap(p => C.scheduled(p, [])).concat(C.scheduled(null, S.extras)), wk = C.weeklyStats(S.logs, sched, from, to), sum = C.summary(S.logs, sched, from, to, t);
     const labels = wk.map(w => fmtDate(w.week)), long = wk.map(w => `${fmtDate(w.week)} – ${fmtDate(C.addDays(w.week, 6))}`);
     // Un solo filtro, sopra tutto quello che governa
-    const out = [anHead('analisi'), seg([[4, '4 sett.'], [8, '8 sett.'], [12, '12 sett.'], [0, 'Tutto']], anWeeks, k => { anWeeks = k; render(); }),
-      h('div', { class: 'sub' }, `${fmtDate(from)} – ${fmtDate(to)} · settimana in corso inclusa`),
+    const out = [anHead('analytics'), seg([[4, '4 wk'], [8, '8 wk'], [12, '12 wk'], [0, 'All']], anWeeks, k => { anWeeks = k; render(); }),
+      h('div', { class: 'sub' }, `${fmtDate(from)} – ${fmtDate(to)} · current week included`),
       h('div', { class: 'tiles' },
-        tile('Sessioni', sum.sessions, sum.due ? `${sum.due} in programma finora` : ''),
-        tile('Tempo', sum.minutes < 120 ? sum.minutes + ' min' : dec((sum.minutes / 60).toFixed(1)) + ' h', sum.sessions ? `${Math.round(sum.minutes / sum.sessions)} min a sessione` : ''),
-        tile('RPE medio', sum.rpe == null ? '—' : dec(sum.rpe.toFixed(1)), sum.rpeN ? `su ${sum.rpeN} ${sum.rpeN === 1 ? 'sessione' : 'sessioni'}` : 'nessun RPE registrato'),
-        tile('Aderenza', sum.due ? Math.round(sum.dueDone / sum.due * 100) + '%' : '—', sum.due ? `${sum.dueDone} di ${sum.due} sessioni fatte` : 'niente in programma'))];
+        tile('Sessions', sum.sessions, sum.due ? `${sum.due} planned so far` : ''),
+        tile('Time', sum.minutes < 120 ? sum.minutes + ' min' : dec((sum.minutes / 60).toFixed(1)) + ' h', sum.sessions ? `${Math.round(sum.minutes / sum.sessions)} min per session` : ''),
+        tile('Average RPE', sum.rpe == null ? '—' : dec(sum.rpe.toFixed(1)), sum.rpeN ? `over ${sum.rpeN} ${sum.rpeN === 1 ? 'session' : 'sessions'}` : 'no RPE logged'),
+        tile('Adherence', sum.due ? Math.round(sum.dueDone / sum.due * 100) + '%' : '—', sum.due ? `${sum.dueDone} of ${sum.due} sessions done` : 'nothing planned'))];
     if (!sum.sessions && !wk.some(w => w.plannedMinutes))
-      return out.concat(h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin:0' }, 'Nessun dato in questo periodo. I grafici si riempiono quando completi una sessione o ne registri una dalla Home.')));
+      return out.concat(h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin:0' }, 'No data in this period. Charts fill in when you complete a session or log one from Home.')));
 
     // Tempo per categoria: quota di arrampicata in evidenza, poi le sezioni ordinate (colore = gruppo)
-    const cat = C.timeBySection(S.logs, from, to), grp = C.weeklyGroups(S.logs, from, to), SEC = { ...C.SECTIONS, strength: 'Forza generale', mobility: 'Mobilità', other: 'Altro' };
+    const cat = C.timeBySection(S.logs, from, to), grp = C.weeklyGroups(S.logs, from, to), SEC = { ...C.SECTIONS, strength: 'General strength', mobility: 'Mobility', other: 'Other' };
     if (cat.classified || cat.unclassified) {
       const pct = m => Math.round(m / cat.classified * 100) + '%'; // stessa base della cifra in evidenza: il tempo classificato
       const rows = cat.rows.map(r => ({ label: SEC[r.section], value: r.minutes, text: `${hm(r.minutes)} · ${pct(r.minutes)}`, cls: 'g-' + C.SECTION_GROUP[r.section] }));
-      if (cat.unclassified) rows.push({ label: 'Non classificato', value: cat.unclassified, text: hm(cat.unclassified), cls: 'g-none' });
-      out.push(chartCard('Tempo per categoria', cat.classified ? 'Dai minuti registrati per ogni esercizio.' : 'Servono sessioni fatte con il timer: solo lì i minuti sono per esercizio.',
-        cat.wallShare == null ? null : [h('div', { class: 'hero', style: 'margin-top:4px' }, Math.round(cat.wallShare * 100) + '%', h('small', {}, 'sul muro')), h('div', { class: 'sub', style: 'margin-bottom:10px' }, `${hm(cat.wall)} su ${hm(cat.classified)} classificati`)],
+      if (cat.unclassified) rows.push({ label: 'Unclassified', value: cat.unclassified, text: hm(cat.unclassified), cls: 'g-none' });
+      out.push(chartCard('Time by category', cat.classified ? 'From the minutes logged for each exercise.' : 'Needs sessions done with the timer: only there are minutes logged per exercise.',
+        cat.wallShare == null ? null : [h('div', { class: 'hero', style: 'margin-top:4px' }, Math.round(cat.wallShare * 100) + '%', h('small', {}, 'on the wall')), h('div', { class: 'sub', style: 'margin-bottom:10px' }, `${hm(cat.wall)} of ${hm(cat.classified)} classified`)],
         Charts.hbars(rows),
-        cat.unclassified ? h('p', { class: 'sub', style: 'margin-bottom:0' }, 'Non classificato: sessioni registrate a mano, o tempo non attribuito a un esercizio. Resta fuori dalle percentuali.') : null));
+        cat.unclassified ? h('p', { class: 'sub', style: 'margin-bottom:0' }, 'Unclassified: sessions logged by hand, or time not assigned to an exercise. Left out of the percentages.') : null));
     }
-    if (wk.some(w => w.minutes || w.plannedMinutes)) out.push(chartCard('Volume settimanale', 'Minuti registrati per gruppo, confrontati con quelli in programma.',
-      Charts.stacked({ labels, longLabels: long, unit: 'min', targets: wk.map(w => w.plannedMinutes), targetName: 'In programma', aria: 'Minuti di allenamento per settimana, divisi per gruppo',
-        series: [['wall', C.GROUPS.wall], ['strength', C.GROUPS.strength], ['other', C.GROUPS.other], ['unclassified', 'Non classificato']].map(([k, name]) => ({ name, cls: k === 'unclassified' ? 'g-none' : 'g-' + k, values: grp.map(w => w[k]) })).filter(x => x.values.some(v => v > 0)) })));
-    if (wk.some(w => w.load)) out.push(chartCard('Carico settimanale', 'Somma di minuti × RPE delle sessioni con RPE (unità arbitrarie).',
-      Charts.columns({ labels, longLabels: long, values: wk.map(w => Math.round(w.load)), name: 'Carico', aria: 'Carico di allenamento sRPE per settimana' })));
-    if (wk.some(w => w.rpe != null)) out.push(chartCard('Sforzo percepito', 'RPE medio delle sessioni della settimana (scala 1–10).',
-      Charts.line({ labels, longLabels: long, values: wk.map(w => w.rpe), name: 'RPE medio', domain: { min: 0, max: 10, step: 5 }, height: 120, aria: 'RPE medio per settimana' })));
-    if (wk.some(w => w.feel != null)) out.push(chartCard('Sensazione', 'Media di "come ti sentivi" (1 distrutto – 5 ottimo).',
-      Charts.line({ labels, longLabels: long, values: wk.map(w => w.feel), name: 'Sensazione media', domain: { min: 1, max: 5, step: 2 }, height: 120, aria: 'Sensazione media per settimana' })));
+    if (wk.some(w => w.minutes || w.plannedMinutes)) out.push(chartCard('Weekly volume', 'Minutes logged by group, compared with the planned ones.',
+      Charts.stacked({ labels, longLabels: long, unit: 'min', targets: wk.map(w => w.plannedMinutes), targetName: 'Planned', aria: 'Training minutes per week, split by group',
+        series: [['wall', C.GROUPS.wall], ['strength', C.GROUPS.strength], ['other', C.GROUPS.other], ['unclassified', 'Unclassified']].map(([k, name]) => ({ name, cls: k === 'unclassified' ? 'g-none' : 'g-' + k, values: grp.map(w => w[k]) })).filter(x => x.values.some(v => v > 0)) })));
+    if (wk.some(w => w.load)) out.push(chartCard('Weekly load', 'Sum of minutes × RPE for sessions with an RPE (arbitrary units).',
+      Charts.columns({ labels, longLabels: long, values: wk.map(w => Math.round(w.load)), name: 'Load', aria: 'Training load (sRPE) per week' })));
+    if (wk.some(w => w.rpe != null)) out.push(chartCard('Perceived effort', 'Average RPE of the sessions in the week (scale 1–10).',
+      Charts.line({ labels, longLabels: long, values: wk.map(w => w.rpe), name: 'Average RPE', domain: { min: 0, max: 10, step: 5 }, height: 120, aria: 'Average RPE per week' })));
+    if (wk.some(w => w.feel != null)) out.push(chartCard('Feeling', 'Average of "how you felt" (1 wrecked – 5 great).',
+      Charts.line({ labels, longLabels: long, values: wk.map(w => w.feel), name: 'Average feeling', domain: { min: 1, max: 5, step: 2 }, height: 120, aria: 'Average feeling per week' })));
 
     // Superfici: tempo, blocchi chiusi e grado massimo; poi un pannello per superficie, tutti sulla stessa scala di gradi
     const surf = C.surfaceStats(S.logs, from, to);
     if (surf.length) {
-      const table = h('table', { class: 'tbl' }, h('tr', {}, ['Superficie', 'Sessioni', 'Blocchi chiusi', 'Grado max'].map(x => h('th', {}, x))),
+      const table = h('table', { class: 'tbl' }, h('tr', {}, ['Surface', 'Sessions', 'Problems sent', 'Top grade'].map(x => h('th', {}, x))),
         surf.map(x => h('tr', {}, h('td', {}, surfName(x.surface)), h('td', {}, x.sessions), h('td', {}, x.sends), h('td', {}, x.top ? fmtG(x.top) : '—'))));
-      out.push(chartCard('Superfici di arrampicata', 'Minuti passati su ogni superficie nel periodo.',
+      out.push(chartCard('Climbing surfaces', 'Minutes spent on each surface in the period.',
         Charts.hbars(surf.map(x => ({ label: surfName(x.surface), value: x.minutes, text: x.minutes + ' min' }))), table));
       const tg = C.weeklyTopGrades(S.logs, from, to);
       const keys = S.surfaces.map(x => x.key).filter(k => tg.series[k]).concat(Object.keys(tg.series).filter(k => !S.surfaces.some(x => x.key === k)));
@@ -1654,34 +1676,34 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
         const all = keys.flatMap(k => tg.series[k].filter(v => v != null));
         const lo = Math.max(0, Math.min(...all) - 1), hi = Math.min(C.GRADES.length - 1, Math.max(...all) + 1), step = Math.max(1, Math.ceil((hi - lo) / 4));
         const domain = { min: lo, max: lo + step * Math.ceil((hi - lo) / step), step }, fmt = v => (C.GRADES[Math.round(v)] ? fmtG(C.GRADES[Math.round(v)]) : '');
-        out.push(chartCard('Grado massimo chiuso per superficie', 'Il blocco più duro chiuso ogni settimana. I pannelli usano la stessa scala, così si confrontano a colpo d\'occhio.',
+        out.push(chartCard('Top grade sent by surface', 'The hardest problem sent each week. Panels share the same scale, so they compare at a glance.',
           keys.map(k => [h('div', { class: 'sm-t' }, surfName(k)),
-            Charts.line({ labels, longLabels: long, values: tg.series[k], name: 'Grado max', domain, fmt, height: 112, aria: `Grado massimo chiuso per settimana su ${surfName(k)}` })])));
+            Charts.line({ labels, longLabels: long, values: tg.series[k], name: 'Top grade', domain, fmt, height: 112, aria: `Top grade sent per week on ${surfName(k)}` })])));
       }
     }
 
     const loads = C.loadSeries(S.logs, from, to);
-    if (loads.length) out.push(chartCard('Carichi per esercizio', 'Un grafico per esercizio standard e test: le sospensioni a due mani in una serie, i sollevamenti divisi per lato SX/DX. Tocca una riga per il dettaglio.',
+    if (loads.length) out.push(chartCard('Loads by exercise', 'One chart per standard exercise and test: two-handed hangs in one series, lifts split by side L/R. Tap a row for detail.',
       loads.map(s => {
         const v = s.points.map(p => p.kg), last = v[v.length - 1];
-        return h('div', { class: 'blk', style: 'cursor:pointer;align-items:center', onclick: () => openSheet(s.name, Charts.line({ labels: s.points.map(p => fmtDate(p.date)), values: v, name: 'Carico', unit: 'kg', colLabel: 'Data', aria: `Carico usato per ${s.name}` })) },
-          h('div', { class: 'grow' }, h('div', { class: 'n' }, s.name), h('div', { class: 'p' }, `${v.length} ${v.length === 1 ? 'registrazione' : 'registrazioni'}`)),
+        return h('div', { class: 'blk', style: 'cursor:pointer;align-items:center', onclick: () => openSheet(s.name, Charts.line({ labels: s.points.map(p => fmtDate(p.date)), values: v, name: 'Load', unit: 'kg', colLabel: 'Date', aria: `Load used for ${s.name}` })) },
+          h('div', { class: 'grow' }, h('div', { class: 'n' }, s.name), h('div', { class: 'p' }, `${v.length} ${v.length === 1 ? 'entry' : 'entries'}`)),
           Charts.spark(v), h('div', { class: 'm', style: 'color:var(--tx);font-weight:600;min-width:58px;text-align:right' }, dec(last) + ' kg'));
       })));
     return out;
   }
 
-  const MODES = [['hang', 'Zavorra aggiunta al peso corporeo'], ['lift', 'Carico sollevato'], ['value', 'Valore libero (secondi, kg…)']];
+  const MODES = [['hang', 'Weight added to body weight'], ['lift', 'Load lifted'], ['value', 'Free value (seconds, kg…)']];
   const testUsed = key => Object.values(S.exercises).some(e => e.load && C.refKeys(e.load.ref).includes(key));
   function testDefSheet(def) {
     const isNew = !def; def = def || { key: 'c-' + C.uid().slice(0, 8), name: '', unit: 'kg', mode: 'hang', hands: 2 };
     const name = h('input', { value: def.name, placeholder: 'Half-crimp' }), unit = h('input', { value: def.unit }), mode = opts(MODES, def.mode || 'value');
-    const edge = numInp(def.edge), secs = numInp(def.seconds), reps = numInp(def.reps), hands = opts([['2', 'Due mani'], ['1', 'Una mano']], String(def.hands || 2));
-    const ov = openSheet(isNew ? 'Nuovo test' : 'Parametri del test', [field('Nome', name), h('div', { class: 'cols' }, field('Cosa misura', mode), field('Unità', unit)),
-      h('div', { class: 'cols' }, field('Tacca (mm)', edge), field('Durata (secondi)', secs)), h('div', { class: 'cols' }, field('Ripetizioni (RM)', reps), field('Mani', hands)),
-      h('p', { class: 'sub' }, 'Lascia vuoti i parametri che non servono. Tacca, secondi e ripetizioni compaiono accanto al nome.'),
-      btn(isNew ? 'Crea test' : 'Salva', () => {
-        if (!name.value.trim()) return toast('Serve un nome.');
+    const edge = numInp(def.edge), secs = numInp(def.seconds), reps = numInp(def.reps), hands = opts([['2', 'Two hands'], ['1', 'One hand']], String(def.hands || 2));
+    const ov = openSheet(isNew ? 'New test' : 'Test parameters', [field('Name', name), h('div', { class: 'cols' }, field('What it measures', mode), field('Unit', unit)),
+      h('div', { class: 'cols' }, field('Edge (mm)', edge), field('Duration (seconds)', secs)), h('div', { class: 'cols' }, field('Reps (RM)', reps), field('Hands', hands)),
+      h('p', { class: 'sub' }, 'Leave unused parameters empty. Edge, seconds and reps are shown next to the name.'),
+      btn(isNew ? 'Create test' : 'Save', () => {
+        if (!name.value.trim()) return toast('A name is required.');
         Object.assign(def, { name: name.value.trim().slice(0, 60), unit: unit.value.trim().slice(0, 8) || 'kg', mode: mode.value, edge: val(edge) || null, seconds: val(secs) || null, reps: val(reps) || null, hands: +hands.value });
         if (isNew) S.testDefs.push(def);
         save(); ov.remove(); render();
@@ -1692,42 +1714,42 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
     const hist = S.tests.filter(t => t.key === def.key).sort((a, b) => (a.date < b.date ? 1 : -1));
     let ov;
     const again = () => { save(); ov.remove(); render(); };
-    ov = openSheet(def.name, [C.testLabel(def) ? h('p', { class: 'sub' }, C.testLabel(def)) : null, h('div', { class: 'cols' }, field('Data', date), field(`Valore (${def.unit})`, v)),
-      btn('Aggiungi risultato', () => { const n = val(v); if (n == null) return toast('Inserisci un numero.'); S.tests.push({ id: C.uid(), key: def.key, date: C.validISO(date.value) || C.todayISO(), value: n }); again(); }, 'pri block'),
-      h('h2', {}, 'Storico'), hist.length ? hist.map(t => h('div', { class: 'blk' }, h('div', { class: 'grow' }, `${fmtDate(t.date)} ${t.date.slice(0, 4)}`), h('div', { class: 'n' }, dec(t.value) + ' ' + def.unit),
-        btn('✕', () => { S.tests = S.tests.filter(x => x !== t); again(); }, 'sm'))) : h('p', { class: 'sub' }, 'Ancora nessun risultato.'),
-      h('div', { class: 'btns' }, btn('Modifica parametri', () => { ov.remove(); testDefSheet(def); }, 'sm'),
-        def.key === 'bw' ? null : btn('Elimina test', async () => {
-          if (testUsed(def.key)) return toast('È usato da alcuni esercizi per calcolare i kg: toglilo prima da lì.');
-          if (await confirmDlg(`Eliminare "${def.name}" e il suo storico?`, 'Elimina')) { S.testDefs = S.testDefs.filter(x => x !== def); S.tests = S.tests.filter(t => t.key !== def.key); again(); }
+    ov = openSheet(def.name, [C.testLabel(def) ? h('p', { class: 'sub' }, C.testLabel(def)) : null, h('div', { class: 'cols' }, field('Date', date), field(`Value (${def.unit})`, v)),
+      btn('Add result', () => { const n = val(v); if (n == null) return toast('Enter a number.'); S.tests.push({ id: C.uid(), key: def.key, date: C.validISO(date.value) || C.todayISO(), value: n }); again(); }, 'pri block'),
+      h('h2', {}, 'History'), hist.length ? hist.map(t => h('div', { class: 'blk' }, h('div', { class: 'grow' }, `${fmtDate(t.date)} ${t.date.slice(0, 4)}`), h('div', { class: 'n' }, dec(t.value) + ' ' + def.unit),
+        btn('✕', () => { S.tests = S.tests.filter(x => x !== t); again(); }, 'sm'))) : h('p', { class: 'sub' }, 'No results yet.'),
+      h('div', { class: 'btns' }, btn('Edit parameters', () => { ov.remove(); testDefSheet(def); }, 'sm'),
+        def.key === 'bw' ? null : btn('Delete test', async () => {
+          if (testUsed(def.key)) return toast('It is used by some exercises to compute kg: remove it from them first.');
+          if (await confirmDlg(`Delete "${def.name}" and its history?`, 'Delete')) { S.testDefs = S.testDefs.filter(x => x !== def); S.tests = S.tests.filter(t => t.key !== def.key); again(); }
         }, 'sm danger'))]);
   }
   function viewProgress() {
     const missing = C.TEST_TEMPLATES.filter(t => !S.testDefs.some(d => d.key === t.key));
-    return [anHead('progressi'), h('div', { class: 'sub' }, 'L\'ultimo risultato di ogni test è il massimale usato per calcolare i kg. Un test si può anche aggiungere a una sessione: a fine esercizio il risultato arriva qui.'),
+    return [anHead('tests'), h('div', { class: 'sub' }, 'The latest result of each test is the max used to compute kg. A test can also be added to a session: the result lands here when the exercise ends.'),
       S.testDefs.map(def => {
         const hist = S.tests.filter(t => t.key === def.key).sort((a, b) => (a.date < b.date ? -1 : 1)), last = hist[hist.length - 1];
         return h('div', { class: 'card tap row', onclick: () => testSheet(def) },
           h('div', { class: 'grow' }, h('div', { class: 'n', style: 'font-weight:600' }, def.name), C.testLabel(def) ? h('div', { class: 'sub' }, C.testLabel(def)) : null,
             h('div', { class: 'big' }, last ? dec(last.value) + ' ' + def.unit : '—'),
-            h('div', { class: 'sub' }, last ? `${fmtDate(last.date)} · ${hist.length} ${hist.length === 1 ? 'risultato' : 'risultati'}` : 'Tocca per aggiungere un risultato')),
+            h('div', { class: 'sub' }, last ? `${fmtDate(last.date)} · ${hist.length} ${hist.length === 1 ? 'result' : 'results'}` : 'Tap to add a result')),
           Charts.spark(hist.map(t => t.value)));
       }),
-      h('h2', {}, 'Aggiungi un test'), h('div', { class: 'card' },
-        missing.length ? [h('p', { class: 'sub', style: 'margin-top:0' }, 'Parti da un modello (poi cambi tacca, secondi e il resto) oppure creane uno da zero.'),
+      h('h2', {}, 'Add a test'), h('div', { class: 'card' },
+        missing.length ? [h('p', { class: 'sub', style: 'margin-top:0' }, 'Start from a template (then change edge, seconds and the rest) or create one from scratch.'),
           h('div', { class: 'btns', style: 'margin-top:0' }, missing.map(t => btn(t.name, () => { S.testDefs.push({ ...t }); save(); render(); }, 'sm')))] : null,
-        btn('Test personalizzato', () => testDefSheet(null), 'sm pri block'))];
+        btn('Custom test', () => testDefSheet(null), 'sm pri block'))];
   }
 
   /* ---------- Altro ---------- */
   function surfaceSheet(x) {
     const name = h('input', { value: x.name });
     const used = Object.values(S.exercises).some(e => e.surface === x.key) || S.logs.some(l => (l.climbs || []).some(c => c.surface === x.key));
-    const ov = openSheet('Superficie', [field('Nome', name),
-      btn('Salva', () => { const n = name.value.trim().slice(0, 40); if (!n) return toast('Serve un nome.'); x.name = n; save(); ov.remove(); render(); }, 'pri block'),
-      btn(used ? 'In uso: non eliminabile' : 'Elimina', async () => {
-        if (used) return toast('È usata da esercizi o registrazioni: puoi rinominarla.');
-        if (await confirmDlg(`Eliminare la superficie "${x.name}"?`, 'Elimina')) { S.surfaces = S.surfaces.filter(s => s !== x); save(); ov.remove(); render(); }
+    const ov = openSheet('Surface', [field('Name', name),
+      btn('Save', () => { const n = name.value.trim().slice(0, 40); if (!n) return toast('A name is required.'); x.name = n; save(); ov.remove(); render(); }, 'pri block'),
+      btn(used ? 'In use: cannot be deleted' : 'Delete', async () => {
+        if (used) return toast('It is used by exercises or log entries: you can rename it.');
+        if (await confirmDlg(`Delete the surface "${x.name}"?`, 'Delete')) { S.surfaces = S.surfaces.filter(s => s !== x); save(); ov.remove(); render(); }
       }, 'danger block')]);
   }
   /** Backup su file: con il menu di condivisione di iOS finisce in File/iCloud Drive; dove non c'è, download o copia. */
@@ -1737,37 +1759,37 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
     const text = backupText();
     try {
       const file = new File([text], name, { type: 'application/json' });
-      if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: 'Backup Allenamento' }); mark(); return toast('Backup salvato.'); }
+      if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: 'Allenamento backup' }); mark(); return toast('Backup saved.'); }
     } catch (e) {
       if (e && e.name === 'AbortError') return; // l'utente ha chiuso il menu: nessun backup fatto
-      console.warn('[backup] condivisione non riuscita, ripiego sul file', e);
+      console.warn('[backup] sharing failed, falling back to file', e);
     }
     exportSheet('Backup', name, text); mark();
   }
   function cloudCard() {
-    const g = S.settings.gh || {}, repo = h('input', { value: g.repo || '', placeholder: 'utente/nome-repository', autocapitalize: 'off', autocorrect: 'off' }), token = h('input', { type: 'password', value: g.token || '', placeholder: 'github_pat_…', autocomplete: 'off' });
-    return h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin-top:0' }, 'Salva da solo i dati in un tuo repository GitHub privato, pochi secondi dopo ogni modifica. Serve un token "fine-grained" limitato a quel repository, con permesso Contents: Read and write. Il token resta solo su questo dispositivo.'),
-      field('Repository privato', repo), field('Token', token),
-      cloudOn() ? h('p', { class: 'sub' }, g.error ? 'Ultimo tentativo non riuscito: ' + g.error + '.' : S.settings.lastBackup ? `Attivo. Ultimo backup: ${fmtDate(S.settings.lastBackup)}.` : 'Attivo. Nessun backup ancora.') : null,
-      h('div', { class: 'btns' }, btn('Salva e prova', () => {
+    const g = S.settings.gh || {}, repo = h('input', { value: g.repo || '', placeholder: 'user/repository-name', autocapitalize: 'off', autocorrect: 'off' }), token = h('input', { type: 'password', value: g.token || '', placeholder: 'github_pat_…', autocomplete: 'off' });
+    return h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin-top:0' }, 'Saves your data automatically to a private GitHub repository of yours, a few seconds after each change. It needs a fine-grained token limited to that repository, with Contents: Read and write. The token stays on this device only.'),
+      field('Private repository', repo), field('Token', token),
+      cloudOn() ? h('p', { class: 'sub' }, g.error ? 'Last attempt failed: ' + g.error + '.' : S.settings.lastBackup ? `Active. Last backup: ${fmtDate(S.settings.lastBackup)}.` : 'Active. No backup yet.') : null,
+      h('div', { class: 'btns' }, btn('Save and test', () => {
         const r = repo.value.trim().replace(/^https:\/\/github\.com\//, '').replace(/\.git$|\/$/g, '');
-        if (!/^[\w.-]+\/[\w.-]+$/.test(r)) return toast('Scrivi il repository come utente/nome.');
-        if (!token.value.trim()) return toast('Incolla il token.');
+        if (!/^[\w.-]+\/[\w.-]+$/.test(r)) return toast('Type the repository as user/name.');
+        if (!token.value.trim()) return toast('Paste the token.');
         S.settings.gh = { repo: r, token: token.value.trim(), error: null }; save(); cloudBackup(true);
       }, 'sm pri'),
-        cloudOn() ? [btn('Ripristina da GitHub', cloudRestore, 'sm'), btn('Scollega', async () => { if (await confirmDlg('Scollegare GitHub? Il token viene cancellato da questo dispositivo, i backup già caricati restano nel repository.', 'Scollega')) { S.settings.gh = null; clearTimeout(cloudTimer); save(); render(); } }, 'sm danger')] : null));
+        cloudOn() ? [btn('Restore from GitHub', cloudRestore, 'sm'), btn('Disconnect', async () => { if (await confirmDlg('Disconnect GitHub? The token is deleted from this device; backups already uploaded stay in the repository.', 'Disconnect')) { S.settings.gh = null; clearTimeout(cloudTimer); save(); render(); } }, 'sm danger')] : null));
   }
   /* ---------- Taccuino: note al volo durante la prova dell'app, con il contesto per poterle riprodurre ---------- */
-  const VERSION = '20261116.1350';
+  const VERSION = '20261116.1405';
   function noteSheet() {
-    const text = h('textarea', { placeholder: 'Cosa non va, o cosa vorresti diverso?' });
-    const where = P ? 'timer: ' + P.steps[P.idx].name : R ? 'sessione in corso' : (location.hash.slice(1) || 'home');
-    const ov = openSheet('Annota un problema', [h('p', { class: 'sub' }, `Viene salvata con schermata (${where}), data e versione. La ritrovi in Altro → Taccuino.`), text,
-      btn('Salva nota', () => {
+    const text = h('textarea', { placeholder: 'What is wrong, or what would you like to be different?' });
+    const where = P ? 'timer: ' + P.steps[P.idx].name : R ? 'session in progress' : (location.hash.slice(1) || 'home');
+    const ov = openSheet('Note a problem', [h('p', { class: 'sub' }, `Saved with screen (${where}), date and version. You find it in More → Notebook.`), text,
+      btn('Save note', () => {
         const t = text.value.trim().slice(0, 1000);
-        if (!t) return toast('Scrivi qualcosa.');
+        if (!t) return toast('Write something.');
         S.notes.push({ id: C.uid(), at: new Date().toISOString(), text: t, where, version: VERSION });
-        save(); ov.remove(); toast('Nota salvata.'); if (!R && !P) render();
+        save(); ov.remove(); toast('Note saved.'); if (!R && !P) render();
       }, 'pri block')]);
     ov.style.zIndex = 50; // anche sopra il timer
     setTimeout(() => text.focus(), 50);
@@ -1775,50 +1797,50 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
   const noteLine = n => `[${n.at.slice(0, 16).replace('T', ' ')} · ${n.where} · v${n.version}] ${n.text}`;
   function viewNotes() {
     const notes = [...S.notes].reverse();
-    return [h('div', { class: 'row' }, btn('‹ Altro', () => go('altro'), 'sm'), btn('+ Nota', noteSheet, 'sm pri right')),
-      h('h1', { style: 'margin-top:10px' }, 'Taccuino'), h('div', { class: 'sub' }, 'Appunti presi mentre usi l\'app. Esportali per riportarli a chi la sviluppa.'),
-      notes.length ? h('div', { class: 'btns' }, btn('Esporta elenco', () => exportSheet('Taccuino', `allenamento-note-${C.todayISO()}.txt`, notes.map(noteLine).reverse().join('\n')), 'sm pri'),
-        btn('Svuota', async () => { if (await confirmDlg(`Eliminare tutte le ${notes.length} note?`, 'Svuota')) { S.notes = []; save(); render(); } }, 'sm danger')) : null,
+    return [h('div', { class: 'row' }, btn('‹ More', () => go('more'), 'sm'), btn('+ Note', noteSheet, 'sm pri right')),
+      h('h1', { style: 'margin-top:10px' }, 'Notebook'), h('div', { class: 'sub' }, 'Notes taken while you use the app. Export them to hand them to whoever develops it.'),
+      notes.length ? h('div', { class: 'btns' }, btn('Export list', () => exportSheet('Notebook', `allenamento-notes-${C.todayISO()}.txt`, notes.map(noteLine).reverse().join('\n')), 'sm pri'),
+        btn('Clear', async () => { if (await confirmDlg(`Delete all ${notes.length} notes?`, 'Clear')) { S.notes = []; save(); render(); } }, 'sm danger')) : null,
       notes.length ? notes.map(n => h('div', { class: 'card' }, h('div', {}, n.text), h('div', { class: 'row', style: 'margin-top:6px' }, h('div', { class: 'grow sub' }, `${n.at.slice(0, 16).replace('T', ' ')} · ${n.where} · v${n.version}`),
         btn('✕', () => { S.notes = S.notes.filter(x => x !== n); save(); render(); }, 'sm'))))
-        : h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin:0' }, 'Nessuna nota. Usa "Nota" nella barra in basso (o nella sessione in corso) quando qualcosa non ti torna.'))];
+        : h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin:0' }, 'No notes. Use "Note" in the bottom bar (or in the session in progress) when something feels off.'))];
   }
 
   /* ---------- Diagnostica: cosa funziona davvero su questo dispositivo ---------- */
   let diag = null;
   async function runDiag() {
     const out = [], add = (name, ok, detail) => out.push({ name, ok, detail });
-    try { localStorage.setItem(KEY + '.t', '1'); const v = localStorage.getItem(KEY + '.t'); localStorage.removeItem(KEY + '.t'); add('Salvataggio dei dati', v === '1', v === '1' ? 'lettura e scrittura riuscite' : 'il valore scritto non si rilegge'); }
-    catch (e) { add('Salvataggio dei dati', false, 'non disponibile: ' + e.message); }
+    try { localStorage.setItem(KEY + '.t', '1'); const v = localStorage.getItem(KEY + '.t'); localStorage.removeItem(KEY + '.t'); add('Data storage', v === '1', v === '1' ? 'read and write succeeded' : 'the written value cannot be read back'); }
+    catch (e) { add('Data storage', false, 'not available: ' + e.message); }
     try {
-      if (navigator.storage && navigator.storage.persist) { const p = await navigator.storage.persisted() || await navigator.storage.persist(); add('Dati protetti dalla pulizia automatica', p ? true : null, p ? 'il sistema si impegna a non cancellarli' : 'non concesso: apri l\'app regolarmente e tieni attivo il backup'); }
-      else add('Dati protetti dalla pulizia automatica', null, 'funzione non disponibile su questo browser');
-    } catch (e) { add('Dati protetti dalla pulizia automatica', null, 'richiesta non riuscita'); }
+      if (navigator.storage && navigator.storage.persist) { const p = await navigator.storage.persisted() || await navigator.storage.persist(); add('Data protected from automatic cleanup', p ? true : null, p ? 'the system commits to keeping them' : 'not granted: open the app regularly and keep the backup on'); }
+      else add('Data protected from automatic cleanup', null, 'not available in this browser');
+    } catch (e) { add('Data protected from automatic cleanup', null, 'request failed'); }
     const standalone = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
-    add('Installata sulla Home', standalone ? true : null, standalone ? 'aperta come app' : 'aperta nel browser: aggiungila alla schermata Home');
+    add('Installed on the Home Screen', standalone ? true : null, standalone ? 'opened as an app' : 'opened in the browser: add it to the Home Screen');
     try {
       const reg = 'serviceWorker' in navigator ? await navigator.serviceWorker.getRegistration() : null, hit = reg && window.caches ? await caches.match('./') : null;
-      add('Uso senza rete', reg && hit ? true : reg ? null : false, reg && hit ? 'copia dell\'app salvata sul dispositivo' : reg ? 'in preparazione: riapri l\'app una volta con la rete' : 'non disponibile in questa modalità');
-    } catch (e) { add('Uso senza rete', false, 'controllo non riuscito'); }
-    try { audioInit(); beep(880, 0.25); add('Segnali acustici', ac && ac.state === 'running' ? true : null, ac && ac.state === 'running' ? 'ho appena suonato un segnale: se non l\'hai sentito controlla volume e tasto silenzioso' : 'audio non avviato: riprova toccando "Esegui"'); }
-    catch (e) { add('Segnali acustici', false, 'audio non disponibile'); }
+      add('Offline use', reg && hit ? true : reg ? null : false, reg && hit ? 'a copy of the app is stored on the device' : reg ? 'getting ready: reopen the app once while online' : 'not available in this mode');
+    } catch (e) { add('Offline use', false, 'check failed'); }
+    try { audioInit(); beep(880, 0.25); add('Sound signals', ac && ac.state === 'running' ? true : null, ac && ac.state === 'running' ? 'a signal was just played: if you did not hear it, check the volume and the silent switch' : 'audio not started: try again by tapping "Run the checks"'); }
+    catch (e) { add('Sound signals', false, 'audio not available'); }
     try {
-      if (navigator.wakeLock) { const l = await navigator.wakeLock.request('screen'); await l.release(); add('Schermo sempre acceso in sessione', true, 'concesso'); }
-      else add('Schermo sempre acceso in sessione', false, 'non supportato: lo schermo può spegnersi durante il timer');
-    } catch (e) { add('Schermo sempre acceso in sessione', false, 'rifiutato dal sistema (per esempio con il risparmio energetico attivo)'); }
-    add('Rete', navigator.onLine !== false ? true : null, navigator.onLine !== false ? 'online' : 'offline');
-    add('Backup', cloudOn() ? !S.settings.gh.error : null, cloudOn() ? (S.settings.gh.error ? 'ultimo tentativo non riuscito: ' + S.settings.gh.error : 'automatico su GitHub attivo') : S.settings.lastBackup ? 'manuale, ultimo il ' + fmtDate(S.settings.lastBackup) : 'nessun backup finora');
-    diag = out; log('diagnostica', 'eseguita', out.map(x => `${x.name}: ${x.ok === true ? 'ok' : x.ok === false ? 'no' : 'attenzione'}`));
+      if (navigator.wakeLock) { const l = await navigator.wakeLock.request('screen'); await l.release(); add('Screen stays on during a session', true, 'granted'); }
+      else add('Screen stays on during a session', false, 'not supported: the screen may turn off during the timer');
+    } catch (e) { add('Screen stays on during a session', false, 'refused by the system (for example with Low Power Mode on)'); }
+    add('Network', navigator.onLine !== false ? true : null, navigator.onLine !== false ? 'online' : 'offline');
+    add('Backup', cloudOn() ? !S.settings.gh.error : null, cloudOn() ? (S.settings.gh.error ? 'last attempt failed: ' + S.settings.gh.error : 'automatic to GitHub, active') : S.settings.lastBackup ? 'manual, last on ' + fmtDate(S.settings.lastBackup) : 'no backup yet');
+    diag = out; log('diagnostics', 'run', out.map(x => `${x.name}: ${x.ok === true ? 'ok' : x.ok === false ? 'no' : 'warning'}`));
     render();
   }
   function viewDiag() {
     const report = () => [`Allenamento v${VERSION}`, navigator.userAgent, ...(diag || []).map(x => `${x.ok === true ? 'OK ' : x.ok === false ? 'NO ' : '?? '} ${x.name}: ${x.detail}`)].join('\n');
-    return [h('div', { class: 'row' }, btn('‹ Altro', () => go('altro'), 'sm')), h('h1', { style: 'margin-top:10px' }, 'Diagnostica'),
-      h('div', { class: 'sub' }, 'Controlla su questo dispositivo le cose che non si possono provare in laboratorio. Fallo dall\'app aperta dalla schermata Home.'),
-      h('div', { class: 'btns' }, btn('Esegui i controlli', runDiag, 'pri'), diag ? btn('Copia rapporto', () => exportSheet('Rapporto', 'allenamento-diagnostica.txt', report()), '') : null),
-      diag ? h('div', { class: 'card' }, diag.map(x => h('div', { class: 'blk' }, h('span', { class: 'tag ' + (x.ok === true ? 'ok' : x.ok === false ? 'bad' : 'ac') }, x.ok === true ? 'OK' : x.ok === false ? 'No' : 'Attenzione'),
+    return [h('div', { class: 'row' }, btn('‹ More', () => go('more'), 'sm')), h('h1', { style: 'margin-top:10px' }, 'Diagnostics'),
+      h('div', { class: 'sub' }, 'Checks on this device the things that cannot be tested in the lab. Run it from the app opened from the Home Screen.'),
+      h('div', { class: 'btns' }, btn('Run the checks', runDiag, 'pri'), diag ? btn('Copy report', () => exportSheet('Report', 'allenamento-diagnostics.txt', report()), '') : null),
+      diag ? h('div', { class: 'card' }, diag.map(x => h('div', { class: 'blk' }, h('span', { class: 'tag ' + (x.ok === true ? 'ok' : x.ok === false ? 'bad' : 'ac') }, x.ok === true ? 'OK' : x.ok === false ? 'No' : 'Warning'),
         h('div', { class: 'grow' }, h('div', { class: 'n' }, x.name), h('div', { class: 'p' }, x.detail))))) : null,
-      h('div', { class: 'sub', style: 'margin-top:14px' }, 'Versione ' + VERSION)];
+      h('div', { class: 'sub', style: 'margin-top:14px' }, 'Version ' + VERSION)];
   }
   /** Aggiornamenti: confronta la versione in uso con quella pubblicata (solo con rete; in anteprima il file non c'è). */
   let newVersion = null;
@@ -1835,28 +1857,28 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
   function viewMore() {
     const pr = S.settings.prog, progOn = h('input', { type: 'checkbox', checked: pr.on }), progStep = numInp(pr.step), progRpe = numInp(pr.rpe);
     const prep = numInp(S.settings.prep), sound = h('input', { type: 'checkbox', checked: S.settings.sound, onchange: () => { S.settings.sound = sound.checked; save(); } });
-    const sfNew = h('input', { class: 'inp', style: 'margin:0', placeholder: 'Nuova superficie' });
-    return [h('h1', {}, 'Altro'),
-      h('div', { class: 'card tap row', onclick: () => { location.hash = 'libreria'; } }, h('div', { class: 'grow' }, h('div', { class: 'n', style: 'font-weight:600' }, 'Libreria esercizi'), h('div', { class: 'sub' }, (C.LIBRARY.length + S.custom.length) + ' esercizi')), '›'),
-      h('div', { class: 'card tap row', onclick: () => go('taccuino') }, h('div', { class: 'grow' }, h('div', { class: 'n', style: 'font-weight:600' }, 'Taccuino'), h('div', { class: 'sub' }, S.notes.length ? `${S.notes.length} note` : 'Annota cosa non va mentre usi l\'app')), '›'),
-      h('div', { class: 'card tap row', onclick: () => go('diagnostica') }, h('div', { class: 'grow' }, h('div', { class: 'n', style: 'font-weight:600' }, 'Diagnostica'), h('div', { class: 'sub' }, 'Audio, schermo acceso, offline e salvataggio su questo dispositivo · v' + VERSION)), '›'),
-      h('h2', {}, 'Programmi'), h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin-top:0' }, 'Un programma è un insieme di sessioni: lo importi, scegli da quando parte e lo ritrovi nel calendario.'),
+    const sfNew = h('input', { class: 'inp', style: 'margin:0', placeholder: 'New surface' });
+    return [h('h1', {}, 'More'),
+      h('div', { class: 'card tap row', onclick: () => { location.hash = 'library'; } }, h('div', { class: 'grow' }, h('div', { class: 'n', style: 'font-weight:600' }, 'Exercise library'), h('div', { class: 'sub' }, (C.LIBRARY.length + S.custom.length) + ' exercises')), '›'),
+      h('div', { class: 'card tap row', onclick: () => go('notebook') }, h('div', { class: 'grow' }, h('div', { class: 'n', style: 'font-weight:600' }, 'Notebook'), h('div', { class: 'sub' }, S.notes.length ? `${S.notes.length} notes` : 'Note what is wrong while you use the app')), '›'),
+      h('div', { class: 'card tap row', onclick: () => go('diagnostics') }, h('div', { class: 'grow' }, h('div', { class: 'n', style: 'font-weight:600' }, 'Diagnostics'), h('div', { class: 'sub' }, 'Audio, screen on, offline and storage on this device · v' + VERSION)), '›'),
+      h('h2', {}, 'Programmes'), h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin-top:0' }, 'A programme is a set of sessions: import it, choose when it starts and find it in the calendar.'),
         S.plans.map(p => h('div', { class: 'blk', style: 'cursor:pointer', onclick: () => planSheet(p) }, h('div', { class: 'grow' }, h('div', { class: 'n' }, p.title),
-          h('div', { class: 'p' }, `${fmtDate(p.startDate)} – ${fmtDate(C.dateOf(p, p.weeks.length - 1, 6))} · ${p.weeks.length} settimane`)), h('div', { class: 'm' }, '›'))),
-        h('div', { class: 'btns' }, fileBtn('Importa programma (.blokplan)'))),
-      h('h2', {}, 'Superfici di arrampicata'), h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin-top:0' }, 'Si assegnano agli esercizi e alle registrazioni, per confrontare l\'avanzamento nei grafici. Tocca per rinominare.'),
+          h('div', { class: 'p' }, `${fmtDate(p.startDate)} – ${fmtDate(C.dateOf(p, p.weeks.length - 1, 6))} · ${p.weeks.length} weeks`)), h('div', { class: 'm' }, '›'))),
+        h('div', { class: 'btns' }, fileBtn('Import programme (.blokplan)'))),
+      h('h2', {}, 'Climbing surfaces'), h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin-top:0' }, 'Assigned to exercises and log entries, to compare progress in the charts. Tap to rename.'),
         h('div', { class: 'btns', style: 'margin-top:0' }, S.surfaces.map(x => btn(x.name, () => surfaceSheet(x), 'sm'))),
-        h('div', { class: 'row', style: 'margin-top:10px' }, h('div', { class: 'grow' }, sfNew), btn('Aggiungi', () => { const n = sfNew.value.trim().slice(0, 40); if (!n) return toast('Scrivi un nome.'); addSurface(n); save(); render(); }, 'sm')),
-        h('p', { class: 'sub', style: 'margin-bottom:0' }, `Scala dei gradi: ${C.GRADE_SCALES[S.settings.gradeScale] || 'Font'}. La scelta di altre scale arriverà qui.`)),
-      h('h2', {}, 'Timer'), h('div', { class: 'card' }, h('div', { class: 'cols' }, field('Preparazione prima di un hang (s)', prep), h('label', { class: 'f' }, 'Segnali acustici', h('div', { style: 'margin-top:12px' }, sound, ' attivi'))),
-        btn('Salva', () => { S.settings.prep = Math.min(60, Math.max(0, Math.round(val(prep) || 0))); save(); toast('Salvato.'); }, 'sm')),
-      h('h2', {}, 'Progressione dei carichi'), h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin-top:0' }, 'A fine esercizio registri carico e RPE. La volta dopo l\'app propone il carico: più alto se l\'RPE era entro la soglia, più basso se era molto sopra, uguale negli altri casi.'),
-        h('div', { class: 'cols3' }, h('label', { class: 'f' }, 'Proposte', h('div', { style: 'margin-top:12px' }, progOn, ' attive')), field('Aumento (%)', progStep), field('Soglia RPE', progRpe)),
-        btn('Salva', () => { Object.assign(S.settings.prog, { on: progOn.checked, step: Math.min(20, Math.max(0.5, val(progStep) || 2.5)), rpe: Math.min(10, Math.max(1, val(progRpe) || 8)) }); save(); toast('Salvato.'); render(); }, 'sm')),
-      h('h2', {}, 'Backup automatico'), cloudCard(),
-      h('h2', {}, 'Dati'), h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin-top:0' }, (cloudOn() ? 'Il backup automatico su GitHub è attivo. ' : 'I dati restano solo su questo dispositivo. "Salva backup" apre il menu di condivisione: scegli "Salva su File" per metterlo in iCloud Drive.') + (S.settings.lastBackup ? ` Ultimo backup: ${fmtDate(S.settings.lastBackup)}.` : ' Nessun backup finora.')),
-        h('div', { class: 'btns' }, btn(cloudOn() ? 'Backup adesso' : 'Salva backup', doBackup, 'sm pri'), fileBtn('Ripristina / importa file'),
-          btn('Azzera tutto', async () => { if (await confirmDlg('Cancellare programmi, sessioni, esercizi, registrazioni e test? L\'operazione non si può annullare: fai prima un backup.', 'Azzera')) { S = fresh(); calSel = calMonth = null; save(); render(); } }, 'sm danger')))];
+        h('div', { class: 'row', style: 'margin-top:10px' }, h('div', { class: 'grow' }, sfNew), btn('Add', () => { const n = sfNew.value.trim().slice(0, 40); if (!n) return toast('Type a name.'); addSurface(n); save(); render(); }, 'sm')),
+        h('p', { class: 'sub', style: 'margin-bottom:0' }, `Grade scale: ${C.GRADE_SCALES[S.settings.gradeScale] || 'Font'}. Other scales will be selectable here.`)),
+      h('h2', {}, 'Timer'), h('div', { class: 'card' }, h('div', { class: 'cols' }, field('Get-ready time before a hang (s)', prep), h('label', { class: 'f' }, 'Sound signals', h('div', { style: 'margin-top:12px' }, sound, ' on'))),
+        btn('Save', () => { S.settings.prep = Math.min(60, Math.max(0, Math.round(val(prep) || 0))); save(); toast('Saved.'); }, 'sm')),
+      h('h2', {}, 'Load progression'), h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin-top:0' }, 'When an exercise ends you log load and RPE. Next time the app suggests the load: higher if the RPE was within the threshold, lower if it was well above, the same otherwise.'),
+        h('div', { class: 'cols3' }, h('label', { class: 'f' }, 'Suggestions', h('div', { style: 'margin-top:12px' }, progOn, ' on')), field('Increase (%)', progStep), field('RPE threshold', progRpe)),
+        btn('Save', () => { Object.assign(S.settings.prog, { on: progOn.checked, step: Math.min(20, Math.max(0.5, val(progStep) || 2.5)), rpe: Math.min(10, Math.max(1, val(progRpe) || 8)) }); save(); toast('Saved.'); render(); }, 'sm')),
+      h('h2', {}, 'Automatic backup'), cloudCard(),
+      h('h2', {}, 'Data'), h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin-top:0' }, (cloudOn() ? 'Automatic backup to GitHub is active. ' : 'Data stays on this device only. "Save backup" opens the share sheet: choose "Save to Files" to put it in iCloud Drive.') + (S.settings.lastBackup ? ` Last backup: ${fmtDate(S.settings.lastBackup)}.` : ' No backup yet.')),
+        h('div', { class: 'btns' }, btn(cloudOn() ? 'Back up now' : 'Save backup', doBackup, 'sm pri'), fileBtn('Restore / import file'),
+          btn('Reset everything', async () => { if (await confirmDlg('Delete programmes, sessions, exercises, log entries and tests? This cannot be undone: make a backup first.', 'Reset')) { S = fresh(); calSel = calMonth = null; save(); render(); } }, 'sm danger')))];
   }
 
   /* ---------- Player ---------- */
@@ -1884,7 +1906,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
     R = { r, s, startedAt: resumed ? S.live.startedAt : Date.now(), done: resumed ? S.live.done || {} : {} };
     S.live = { sid: s.id, startedAt: R.startedAt, done: R.done }; save();
     drawRunner();
-    log('sessione', resumed ? 'ripresa' : 'avviata', { titolo: autoTitle(s), esercizi: s.blocks.length });
+    log('session', resumed ? 'resumed' : 'started', { title: autoTitle(s), exercises: s.blocks.length });
   }
   function closeRunner() { $('runner').hidden = true; R = null; try { if (wl) wl.release(); } catch (e) { /* già rilasciato */ } wl = null; }
   function drawRunner() {
@@ -1892,25 +1914,25 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
     const row = (b, i) => {
       const ex = S.exercises[b.exId], d = done[b.id], hint = ex ? loadHint(ex) : '';
       return h('div', { class: 'run-r' + (d ? ' done' : '') }, h('div', { class: 'st' }, d ? '✓' : i + 1),
-        h('div', { class: 'grow' }, h('div', { class: 'n', style: 'font-weight:600' }, ex ? ex.name : 'Esercizio rimosso'), ex ? h('div', { class: 'sub' }, exLine(ex)) : null,
-          hint && !d ? h('div', { style: 'color:var(--ac);font-size:13px;font-weight:600' }, hint) : null, ex && !d ? propLine(ex) : null, d && d.minutes ? h('div', { class: 'sub' }, `fatto · ${d.minutes} min`) : null),
-        ex ? btn(d ? 'Rifai' : 'Avvia', () => startBlock(b), 'sm' + (b === nextB ? ' pri' : '')) : null);
+        h('div', { class: 'grow' }, h('div', { class: 'n', style: 'font-weight:600' }, ex ? ex.name : 'Exercise removed'), ex ? h('div', { class: 'sub' }, exLine(ex)) : null,
+          hint && !d ? h('div', { style: 'color:var(--ac);font-size:13px;font-weight:600' }, hint) : null, ex && !d ? propLine(ex) : null, d && d.minutes ? h('div', { class: 'sub' }, `done · ${d.minutes} min`) : null),
+        ex ? btn(d ? 'Redo' : 'Start', () => startBlock(b), 'sm' + (b === nextB ? ' pri' : '')) : null);
     };
     const quit = () => {
-      const ov = openSheet('Uscire dalla sessione?', h('div', { class: 'btns' }, btn('Continua', () => ov.remove()),
-        btn('Esci e riprendi dopo', () => { ov.remove(); closeRunner(); render(); }), btn('Abbandona', () => { ov.remove(); S.live = null; save(); closeRunner(); render(); }, 'danger')), true);
+      const ov = openSheet('Leave the session?', h('div', { class: 'btns' }, btn('Continue', () => ov.remove()),
+        btn('Leave and resume later', () => { ov.remove(); closeRunner(); render(); }), btn('Abandon', () => { ov.remove(); S.live = null; save(); closeRunner(); render(); }, 'danger')), true);
     };
     $('runner').hidden = false;
     $('runner').replaceChildren(h('div', { class: 'in' },
-      h('div', { class: 'row' }, h('div', { class: 'grow' }, h('div', { class: 'sub' }, 'Sessione in corso'), h('h1', {}, s.title || 'Sessione')), btn('Nota', noteSheet, 'sm'), btn('Esci', quit, 'sm')),
-      h('div', { class: 'card' }, s.blocks.map(row), s.blocks.length ? null : h('p', { class: 'sub', style: 'margin:0' }, 'Nessun esercizio: aggiungine uno per iniziare.')),
-      h('div', { class: 'btns' }, btn('+ Esercizio', () => pickExercise(tpl => { addBlock(s, tpl); save(); drawRunner(); }), ''), btn('+ Test', () => pickTest(tpl => { addBlock(s, tpl); save(); drawRunner(); }), ''),
-        btn('Termina sessione', finishSession, nextB ? '' : 'pri'))));
+      h('div', { class: 'row' }, h('div', { class: 'grow' }, h('div', { class: 'sub' }, 'Session in progress'), h('h1', {}, s.title || 'Session')), btn('Note', noteSheet, 'sm'), btn('Leave', quit, 'sm')),
+      h('div', { class: 'card' }, s.blocks.map(row), s.blocks.length ? null : h('p', { class: 'sub', style: 'margin:0' }, 'No exercises: add one to start.')),
+      h('div', { class: 'btns' }, btn('+ Exercise', () => pickExercise(tpl => { addBlock(s, tpl); save(); drawRunner(); }), ''), btn('+ Test', () => pickTest(tpl => { addBlock(s, tpl); save(); drawRunner(); }), ''),
+        btn('Finish session', finishSession, nextB ? '' : 'pri'))));
   }
 
   function startBlock(b) {
     const steps = C.buildSteps([b], S.exercises, S.settings.prep);
-    if (!steps.length) return toast('Esercizio non disponibile.');
+    if (!steps.length) return toast('Exercise not available.');
     audioInit();
     P = { b, steps, idx: null, ms: 0, paused: false };
     $('player').hidden = false;
@@ -1953,17 +1975,17 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
     const ph = st.prep ? 'prep' : st.kind;
     $('player').dataset.ph = ph;
     $('p-bar').style.width = (P.idx / P.steps.length * 100) + '%';
-    $('p-ph').textContent = { prep: 'PREPARATI', work: st.selfPaced ? 'ESEGUI' : 'LAVORO', rest: 'RECUPERO', free: 'IN CORSO' }[ph];
+    $('p-ph').textContent = { prep: 'GET READY', work: st.selfPaced ? 'GO' : 'WORK', rest: 'REST', free: 'IN PROGRESS' }[ph];
     $('p-name').textContent = st.name;
-    $('p-round').textContent = st.kind === 'free' ? (ex && ex.surface ? surfName(ex.surface) : '') : `Round ${st.round} di ${st.rounds}`;
+    $('p-round').textContent = st.kind === 'free' ? (ex && ex.surface ? surfName(ex.surface) : '') : `Round ${st.round} of ${st.rounds}`;
     $('p-cue').textContent = [st.cue, P.b.note].filter(Boolean).join(' · ');
     const kg = ex && st.kind !== 'free' ? C.loadKg(ex.load, st.cue, maxes()) : null;
     $('p-kg').textContent = kg == null ? '' : (ex.load.mode === 'hang' ? C.fmtKg(kg) : dec(kg) + ' kg');
-    $('p-next').textContent = nx ? 'Poi: ' + (nx.kind === 'rest' ? `recupero ${mmss(nx.seconds)}` : (nx.cue || `round ${nx.round}`)) : 'Ultimo passo dell\'esercizio';
-    $('p-done').textContent = isAuto(st) ? 'Salta' : 'Fatto';
+    $('p-next').textContent = nx ? 'Next: ' + (nx.kind === 'rest' ? `rest ${mmss(nx.seconds)}` : (nx.cue || `round ${nx.round}`)) : 'Last step of the exercise';
+    $('p-done').textContent = isAuto(st) ? 'Skip' : 'Done';
     $('p-done').className = 'btn ' + (isAuto(st) ? '' : 'pri');
     $('p-plus').disabled = st.kind === 'work';
-    $('p-pause').textContent = P.paused ? 'Riprendi' : 'Pausa';
+    $('p-pause').textContent = P.paused ? 'Resume' : 'Pause';
     drawClock();
   }
   /** Fine dell'esercizio: il timer si ferma e si apre la sua registrazione. */
@@ -1975,13 +1997,13 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
   }
   function recordSheet(b, ms) {
     const ex = S.exercises[b.exId], m = maxes(), isClimb = ex.slot === 'wall' || !!ex.surface;
-    const min = numInp(Math.round(ms / 60000)), note = h('input', { placeholder: 'Facoltativa' });
-    const isTest = !!(ex.load && ex.load.test), prop = proposal(ex), planned = loadHint(ex).replace('kg: mancano i massimali', '');
+    const min = numInp(Math.round(ms / 60000)), note = h('input', { placeholder: 'Optional' });
+    const isTest = !!(ex.load && ex.load.test), prop = proposal(ex), planned = loadHint(ex).replace('kg: maxes missing', '');
     // Carico e RPE per ogni esercizio di forza: sono lo storico da cui nasce la proposta della volta dopo.
-    const load = !isTest && (ex.load || ex.slot === 'strength') ? h('input', { value: planned || (prop ? prop.text : ''), placeholder: 'es. 20 kg oppure SX 18 kg · DX 20 kg' }) : null;
+    const load = !isTest && (ex.load || ex.slot === 'strength') ? h('input', { value: planned || (prop ? prop.text : ''), placeholder: 'e.g. 20 kg or L 18 kg · R 20 kg' }) : null;
     const rpe = load ? numInp(null, { placeholder: '1-10' }) : null;
     const tests = ex.load && ex.load.test ? C.refKeys(ex.load.ref).map(k => S.testDefs.find(t => t.key === k)).filter(Boolean)
-      .map(def => ({ def, inp: numInp(null, { placeholder: m[def.key] == null ? '' : 'precedente: ' + dec(m[def.key]) }) })) : [];
+      .map(def => ({ def, inp: numInp(null, { placeholder: m[def.key] == null ? '' : 'previous: ' + dec(m[def.key]) }) })) : [];
     const sf = isClimb ? opts(surfOpts(), ex.surface || '') : null, gr = isClimb ? opts(gradeOpts(), '') : null, sends = isClimb ? numInp(null) : null;
     const put = rec => {
       const prev = R.done[b.id], date = C.todayISO();
@@ -1989,35 +2011,35 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
       rec.testIds = (rec.tests || []).map(t => { const id = C.uid(); S.tests.push({ id, key: t.key, date, value: t.value }); return id; });
       R.done[b.id] = rec; S.live.done = R.done; save(); ov.remove(); drawRunner();
     };
-    const ov = openSheet(ex.name, [h('p', { class: 'sub' }, 'Esercizio completato: registra com\'è andato.'),
-      field('Minuti', min),
-      tests.length ? [tests.map(x => field(`Risultato: ${x.def.name} (${x.def.unit})`, x.inp)), h('p', { class: 'sub' }, 'Salvando, il risultato aggiorna subito il massimale nella sezione Test.')] : null,
-      load ? h('div', { class: 'cols' }, field('Carico usato', load), field('RPE dell\'esercizio', rpe)) : null,
-      load && prop && planned ? h('p', { class: 'sub' }, `Proposto: ${prop.text} (${prop.why}).`) : null,
-      isClimb ? [h('div', { class: 'cols' }, field('Superficie', sf), field('Grado max chiuso', gr)), field('Blocchi chiusi', sends)] : null,
-      field('Nota', note),
-      btn('Salva', () => put({ name: ex.name, minutes: Math.max(0, Math.round(val(min) || 0)), note: note.value.trim().slice(0, 200), load: load ? load.value.trim() : '', sec: exSection(ex),
+    const ov = openSheet(ex.name, [h('p', { class: 'sub' }, 'Exercise complete: log how it went.'),
+      field('Minutes', min),
+      tests.length ? [tests.map(x => field(`Result: ${x.def.name} (${x.def.unit})`, x.inp)), h('p', { class: 'sub' }, 'On save, the result immediately updates the max in the Tests section.')] : null,
+      load ? h('div', { class: 'cols' }, field('Load used', load), field('Exercise RPE', rpe)) : null,
+      load && prop && planned ? h('p', { class: 'sub' }, `Suggested: ${prop.text} (${prop.why}).`) : null,
+      isClimb ? [h('div', { class: 'cols' }, field('Surface', sf), field('Top grade sent', gr)), field('Problems sent', sends)] : null,
+      field('Note', note),
+      btn('Save', () => put({ name: ex.name, minutes: Math.max(0, Math.round(val(min) || 0)), note: note.value.trim().slice(0, 200), load: load ? load.value.trim() : '', sec: exSection(ex),
         key: exKey(ex), label: exLabel(ex), kgs: load ? C.parseLoads(load.value) : [], rpe: rpe ? val(rpe) : null, mode: ex.load ? ex.load.mode : 'lift',
         tests: tests.map(x => ({ key: x.def.key, value: val(x.inp) })).filter(x => x.value != null),
         climb: isClimb && sf.value ? { name: ex.name, surface: sf.value, top: gr.value || null, sends: val(sends) == null ? null : Math.max(0, Math.round(val(sends))), minutes: Math.max(0, Math.round(val(min) || 0)) } : null }), 'pri block'),
-      btn('Fatto, senza registrare', () => put({ name: ex.name, minutes: Math.round(ms / 60000) }), 'block'),
-      btn('Non fatto: torna all\'elenco', () => { ov.remove(); drawRunner(); }, 'block')]);
+      btn('Done, without logging', () => put({ name: ex.name, minutes: Math.round(ms / 60000) }), 'block'),
+      btn('Not done: back to the list', () => { ov.remove(); drawRunner(); }, 'block')]);
   }
   function finishSession() {
     const { r, s, done } = R, recs = s.blocks.map(b => done[b.id]).filter(Boolean);
     const min = numInp(Math.max(1, Math.round((Date.now() - R.startedAt) / 60000))), rpe = numInp(null), feel = opts(FEEL, ''), notes = h('textarea', {});
     let ov;
-    const end = () => { S.live = null; save(); ov.remove(); closeRunner(); go('calendario-' + C.todayISO()); };
-    ov = openSheet('Termina sessione', [h('p', { class: 'sub' }, `${recs.length} di ${s.blocks.length} esercizi fatti.`),
-      h('div', { class: 'cols3' }, field('Minuti totali', min), field('RPE (1-10)', rpe), field('Sensazione', feel)), field('Note', notes),
-      btn('Salva', () => {
+    const end = () => { S.live = null; save(); ov.remove(); closeRunner(); go('calendar-' + C.todayISO()); };
+    ov = openSheet('Finish session', [h('p', { class: 'sub' }, `${recs.length} of ${s.blocks.length} exercises done.`),
+      h('div', { class: 'cols3' }, field('Total minutes', min), field('RPE (1-10)', rpe), field('Feeling', feel)), field('Notes', notes),
+      btn('Save', () => {
         const date = C.todayISO();
         S.logs.push({ id: C.uid(), date, sid: s.id, type: s.type || 'wall', title: autoTitle(s), minutes: Math.max(0, Math.round(val(min) || 0)), rpe: val(rpe), feel: feel.value ? +feel.value : null, notes: notes.value.trim(),
           loads: recs.filter(x => x.load).map(x => ({ name: x.name, kg: x.load })), climbs: recs.map(x => x.climb).filter(Boolean),
           blocks: recs.map(x => ({ name: x.name, minutes: x.minutes || 0, note: x.note || '', key: x.key, label: x.label, sec: x.sec, kgs: x.kgs && x.kgs.length ? x.kgs : undefined, rpe: x.rpe == null ? undefined : x.rpe, mode: x.mode })) });
-        log('sessione', 'registrata', { esercizi: recs.length });
+        log('session', 'logged', { exercises: recs.length });
         end();
-      }, 'pri block'), btn('Chiudi senza salvare', end, 'block')]);
+      }, 'pri block'), btn('Close without saving', end, 'block')]);
   }
   function wirePlayer() {
     $('p-done').onclick = () => next();
@@ -2032,22 +2054,22 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
   }
 
   /* ---------- Router ---------- */
-  const VIEWS = { home: viewHome, calendario: viewCalendar, analisi: viewAnalytics, progressi: viewProgress, altro: viewMore, libreria: viewLibrary, taccuino: viewNotes, diagnostica: viewDiag };
+  const VIEWS = { home: viewHome, calendar: viewCalendar, analytics: viewAnalytics, tests: viewProgress, more: viewMore, library: viewLibrary, notebook: viewNotes, diagnostics: viewDiag };
   function render() {
     const [name, ...args] = (location.hash.slice(1) || 'home').split('-');
     const fn = VIEWS[name] || viewHome;
     let nodes;
     try { nodes = fn(args); }
-    catch (e) { console.error('[ui] errore nella vista ' + name, e); nodes = [h('h1', {}, 'Qualcosa è andato storto'), h('p', { class: 'sub' }, String(e.message || e)), btn('Torna alla Home', () => go('home'))]; }
+    catch (e) { console.error('[ui] error in view ' + name, e); nodes = [h('h1', {}, 'Something went wrong'), h('p', { class: 'sub' }, String(e.message || e)), btn('Back to Home', () => go('home'))]; }
     $('view').replaceChildren(...[nodes].flat(Infinity).filter(n => n != null && n !== false));
-    const tab = { libreria: 'altro', taccuino: 'altro', diagnostica: 'altro', progressi: 'analisi' }[name] || (VIEWS[name] ? name : 'home');
+    const tab = { library: 'more', notebook: 'more', diagnostics: 'more', tests: 'analytics' }[name] || (VIEWS[name] ? name : 'home');
     for (const el of document.querySelectorAll('#tabs a')) el.classList.toggle('on', el.getAttribute('href') === '#' + tab);
   }
   let lastView = (location.hash.slice(1) || 'home').split('-')[0];
   window.addEventListener('hashchange', () => {
     for (const o of document.querySelectorAll('.overlay')) o.remove();
     const view = (location.hash.slice(1) || 'home').split('-')[0];
-    if (view !== lastView || view !== 'calendario') window.scrollTo(0, 0); // nel calendario cambiare giorno non deve riportare in cima
+    if (view !== lastView || view !== 'calendar') window.scrollTo(0, 0); // nel calendario cambiare giorno non deve riportare in cima
     lastView = view;
     render();
   });

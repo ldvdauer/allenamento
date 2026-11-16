@@ -12,7 +12,7 @@
   };
   // Le etichette arrivano dai dati dell'utente: sempre textContent, mai innerHTML.
   const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
-  const fmtNum = (v, digits) => v.toLocaleString('it-IT', { maximumFractionDigits: digits || 0 });
+  const fmtNum = (v, digits) => v.toLocaleString('en-GB', { maximumFractionDigits: digits || 0 });
   const tickDigits = step => (Number.isInteger(step) ? 0 : Number.isInteger(step * 10) ? 1 : 2);
 
   function frame(height, aria) {
@@ -35,7 +35,7 @@
   }
   function tableView(head, rows) {
     const d = el('details', 'viz-table'), t = el('table'), hr = el('tr');
-    d.append(el('summary', '', 'Tabella'));
+    d.append(el('summary', '', 'Table'));
     head.forEach(x => hr.append(el('th', '', x)));
     t.append(hr);
     rows.forEach(r => { const tr = el('tr'); r.forEach(c => tr.append(el('td', '', c))); t.append(tr); });
@@ -105,7 +105,7 @@
       lg.append(a, b);
       box.append(lg);
     }
-    box.append(f.wrap, tableView(hasT ? [o.colLabel || 'Settimana', o.name, o.targetName] : [o.colLabel || 'Settimana', o.name],
+    box.append(f.wrap, tableView(hasT ? [o.colLabel || 'Week', o.name, o.targetName] : [o.colLabel || 'Week', o.name],
       o.values.map((v, i) => [(o.longLabels || o.labels)[i], fmtNum(v) + unit].concat(hasT ? [fmtNum(o.targets[i]) + unit] : []))));
     return box;
   }
@@ -134,7 +134,7 @@
     o.labels.forEach((_, i) => {
       const title = (o.longLabels || o.labels)[i];
       const rows = o.series.filter(s => s.values[i] > 0).map(s => ({ key: s.cls, value: fmtNum(s.values[i]) + unit, label: s.name.toLowerCase() })).reverse();
-      rows.unshift({ key: 'none', value: fmtNum(tot[i]) + unit, label: 'in totale' });
+      rows.unshift({ key: 'none', value: fmtNum(tot[i]) + unit, label: 'in total' });
       if (hasT) rows.push({ key: 'ref', value: fmtNum(o.targets[i]) + unit, label: o.targetName.toLowerCase() });
       const hit = svgEl('rect', { class: 'hit', x: g.l + band * i, y: g.t, width: band, height: H - g.t - g.b, tabindex: 0, 'aria-label': `${title}: ${rows.map(r => r.value + ' ' + r.label).join(', ')}` });
       const on = () => f.show(cx(i), title, rows);
@@ -146,7 +146,7 @@
     const box = el('div'), lg = el('div', 'viz-legend');
     for (const s of o.series) { const a = el('span'); a.append(el('i', 'sw ' + s.cls), document.createTextNode(s.name)); lg.append(a); }
     if (hasT) { const b = el('span'); b.append(el('i', 'lk'), document.createTextNode(o.targetName)); lg.append(b); }
-    box.append(lg, f.wrap, tableView(['Settimana'].concat(o.series.map(s => s.name), ['Totale'], hasT ? [o.targetName] : []),
+    box.append(lg, f.wrap, tableView(['Week'].concat(o.series.map(s => s.name), ['Total'], hasT ? [o.targetName] : []),
       o.labels.map((_, i) => [(o.longLabels || o.labels)[i]].concat(o.series.map(s => fmtNum(s.values[i])), [fmtNum(tot[i]) + unit], hasT ? [fmtNum(o.targets[i]) + unit] : []))));
     return box;
   }
@@ -191,7 +191,7 @@
       pick(best);
     };
     const hit = svgEl('rect', { class: 'hit', x: g.l - 4, y: g.t, width: pw + 24, height: H - g.t - g.b, tabindex: 0,
-      'aria-label': `${o.aria}. Frecce sinistra e destra per scorrere i valori.` });
+      'aria-label': `${o.aria}. Left and right arrows to move through the values.` });
     hit.addEventListener('pointermove', near);
     hit.addEventListener('pointerdown', near);
     hit.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') off(); });
@@ -204,7 +204,7 @@
     });
     f.svg.append(hit);
     const box = el('div');
-    box.append(f.wrap, tableView([o.colLabel || 'Settimana', o.name], idxs.map(i => [(o.longLabels || o.labels)[i], fmt(o.values[i])])));
+    box.append(f.wrap, tableView([o.colLabel || 'Week', o.name], idxs.map(i => [(o.longLabels || o.labels)[i], fmt(o.values[i])])));
     return box;
   }
 
