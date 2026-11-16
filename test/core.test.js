@@ -234,7 +234,7 @@ test('libreria standard: voci valide, versioni e abbinamento dei nomi', () => {
   const cases = { 'Limit Karma': 'limit', 'Limit MoonBoard': 'limit', 'Limit sloper/compressione': 'limit', 'Compressione su sloper': 'technique', 'Tallone su strapiombo': 'technique',
     'Open hand 20 mm 7"': 'max-hang', 'Half-crimp 20 mm 7"': 'max-hang', 'Sloper BM2000 7"': 'sloper-hang', 'Pinch block 7"': 'pinch-lift', 'TEST open hand 20 mm 7"': 'test',
     'Trazioni zavorrate': 'weighted-pullup', 'KB press 1 braccio': 'press', 'Croci isometriche': 'iso-fly', 'Croci ai cavi (compressione)': 'fly', 'Push-up zavorrati o dip': 'pushup',
-    'Karma a Bleau': 'outdoor', 'Mobilità anche': 'hips', 'Riscaldamento': 'warmup-wall', 'Set tecnici al flash': 'flash', 'Pallof press': 'pallof', 'Qualcosa di mio': null };
+    'Karma a Bleau': 'outdoor', 'Mobilità anche': 'hips', 'Riscaldamento': 'warmup-wall', 'Set tecnici al flash': 'flash', 'Technical Triples': 'flash', 'Leg raise alla sbarra': 'leg-raise', 'Croci agli anelli': 'fly', 'Pallof press': 'pallof', 'Qualcosa di mio': null };
   for (const [name, std] of Object.entries(cases)) assert.equal(C.matchStd(name), std, name);
   assert.equal(imported().exercises.find(e => /^Limit/.test(e.name)).std, 'limit');
 });
