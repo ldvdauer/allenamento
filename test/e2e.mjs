@@ -37,7 +37,7 @@ await pg.goto(url);
 let home = await txt('#view');
 ok(home.includes('Home') && home.includes('Rest day') && home.includes('Crea sessione') && home.includes('Registra sessione'), 'Home al primo avvio: Rest day + crea/registra');
 ok(!/pian|programm.*settimana|Questa settimana/i.test(home.replace('in programma oggi', '')), 'Home: nessun riferimento al piano né riepiloghi');
-ok((await txt('#tabs')).replace(/\s+/g, ' ').trim() === 'Home Calendario Analisi Altro', 'navigazione: 4 schede, niente Piano né Diario');
+ok((await txt('#tabs')).replace(/\s+/g, ' ').trim() === 'Home Calendario Analisi Altro Nota', 'navigazione: 4 schede + Nota, niente Piano né Diario');
 
 // Import: si sceglie la data di inizio e il programma finisce nel calendario
 await go('altro');
@@ -213,6 +213,26 @@ ok(!an.includes('esercizi con più tempo'), 'nessuna classifica dei dieci eserci
 await pg.evaluate(() => { const hit = [...document.querySelectorAll('#view .viz')][0].querySelectorAll('.hit'); hit[hit.length - 1].dispatchEvent(new MouseEvent('click', { bubbles: true })); });
 ok(/in totale/.test(await pg.$eval('#view .viz-tip', e => e.innerText)), 'grafico impilato: tocco su una settimana → totale e gruppi');
 await shot('10-analisi', true);
+
+// Taccuino: nota al volo dalla barra, con contesto; elenco esportabile
+await go('analisi'); await pg.click('#tab-note');
+await pg.type('.sheet textarea', 'Il grafico del volume è poco leggibile'); await clickText('Salva nota', '.sheet');
+await go('taccuino');
+const nt = await txt('#view');
+ok(nt.includes('Il grafico del volume è poco leggibile') && nt.includes('· analisi · v'), 'taccuino: nota salvata con schermata e versione');
+await clickText('Esporta elenco', '#view');
+ok(/\[2026-11-25 \d\d:\d\d · analisi · v[\d.]+\] Il grafico/.test(await pg.$eval('.sheet textarea', e => e.value)), 'taccuino: elenco esportabile come testo');
+await pg.evaluate(() => document.querySelector('.overlay').remove());
+// Diagnostica: controlli eseguiti sul dispositivo, con esito e rapporto
+await go('diagnostica'); await clickText('Esegui i controlli', '#view'); await sleep(600);
+const dg = await txt('#view');
+ok(['Salvataggio dei dati', 'Uso senza rete', 'Segnali acustici', 'Schermo sempre acceso', 'Installata sulla Home', 'Backup'].every(x => dg.includes(x)) && dg.includes('lettura e scrittura riuscite') && /Versione [\d.]+/.test(dg), 'diagnostica: esito di ogni controllo e versione');
+await shot('13-diagnostica');
+// Aggiornamento disponibile: versione pubblicata diversa da quella in uso
+await pg.evaluate(async () => { window.__f0 = window.fetch; window.fetch = async u => (String(u).includes('version.json') ? { ok: true, json: async () => ({ version: '99999999.0000' }) } : window.__f0(u)); await __app.checkUpdate(true); });
+await sleep(100); await go('home');
+ok((await txt('#view')).includes('È disponibile una versione aggiornata'), 'Home: avviso quando c\'è una versione nuova');
+await pg.evaluate(() => { window.fetch = window.__f0; });
 
 // Backup automatico su GitHub (rete simulata): primo backup, file senza token, errore di autenticazione
 await go('altro');

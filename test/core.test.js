@@ -99,13 +99,8 @@ test('player: passi per hang a tempo, ripetizioni e serie raggruppate', () => {
   assert.equal(C.intervalMinutes(ex.hang.interval), 7); // 21" + 360" → 7 min
 });
 
-test('utilità piano: copia giorno, conteggio uso, validazione backup', () => {
+test('validazione di un backup', () => {
   const r = imported();
-  const copy = C.cloneDay(r.plan.weeks[0][0]);
-  assert.notEqual(copy.sessions[0].blocks[0].id, r.plan.weeks[0][0].sessions[0].blocks[0].id);
-  assert.equal(copy.sessions[0].blocks[0].exId, r.plan.weeks[0][0].sessions[0].blocks[0].exId);
-  const warmup = r.plan.weeks[0][0].sessions[0].blocks[0].exId;
-  assert.equal(C.usage([r.plan], warmup), 6); // 2 volte a settimana per 3 settimane
   assert.equal(C.validState({ plans: [r.plan], exercises: {}, logs: [], tests: [] }), true);
   assert.equal(C.validState({ plans: [{}], exercises: {}, logs: [], tests: [] }), false);
   assert.equal(C.validState(null), false);
@@ -163,8 +158,6 @@ test('analisi: settimane, carico sRPE e aderenza al piano', () => {
   // al 19 nov erano in programma 4 sessioni (lun, extra di martedì, mer, gio) e 3 hanno una registrazione
   const sum = C.summary(logs, sched, '2026-11-16', '2026-11-29', '2026-11-19');
   assert.deepEqual(sum, { sessions: 4, minutes: 180, rpe: 19 / 3, rpeN: 3, feel: 3, due: 4, dueDone: 3 });
-  assert.deepEqual(C.minutesByType(logs, '2026-11-16', '2026-11-29'), [
-    { type: 'wall', minutes: 100, sessions: 2 }, { type: 'skills', minutes: 50, sessions: 1 }, { type: 'other', minutes: 30, sessions: 1 }]);
   assert.deepEqual(C.weeklyStats([], [], '2026-11-20', '2026-11-10'), []);
   assert.deepEqual(C.summary([], [], '2026-11-16', '2026-11-29', '2026-11-19'), { sessions: 0, minutes: 0, rpe: null, rpeN: 0, feel: null, due: 0, dueDone: 0 });
 });

@@ -85,6 +85,7 @@
     ensureTests(s);
     // v5: i parametri (serie, recuperi, %, cue) stanno nel blocco della sessione; spariscono le "versioni" condivise e le descrizioni testuali
     s.custom = Array.isArray(s.custom) ? s.custom : [];
+    s.notes = Array.isArray(s.notes) ? s.notes : [];
     if (fromV < 5) for (const x of allSessions(s)) privatize(s, x);
     prune(s);
     // v6: un solo campo Nota (mostrato anche nel timer) + interruttore SX/DX al posto dei cue
@@ -393,6 +394,7 @@
         h('div', { class: 'btns' }, btn('Riprendi', () => startSession(lr), 'pri'), btn('Scarta', () => { S.live = null; save(); render(); }))));
       else S.live = null;
     }
+    if (newVersion) out.push(h('div', { class: 'card row' }, h('div', { class: 'grow sub' }, 'È disponibile una versione aggiornata dell\'app.'), btn('Aggiorna', () => location.reload(), 'sm pri')));
     const since = S.settings.lastBackup ? C.diffDays(t, S.settings.lastBackup) : null;
     if (cloudOn() && S.settings.gh.error) out.push(h('div', { class: 'card', style: 'border-color:var(--bad)' }, h('div', { class: 'sub' }, 'Backup automatico non riuscito: ' + S.settings.gh.error + '.'),
       h('div', { class: 'btns' }, btn('Riprova', () => cloudBackup(true), 'sm'), btn('Impostazioni', () => go('altro'), 'sm'))));
@@ -814,12 +816,89 @@
       }, 'sm pri'),
         cloudOn() ? [btn('Ripristina da GitHub', cloudRestore, 'sm'), btn('Scollega', async () => { if (await confirmDlg('Scollegare GitHub? Il token viene cancellato da questo dispositivo, i backup già caricati restano nel repository.', 'Scollega')) { S.settings.gh = null; clearTimeout(cloudTimer); save(); render(); } }, 'sm danger')] : null));
   }
+  /* ---------- Taccuino: note al volo durante la prova dell'app, con il contesto per poterle riprodurre ---------- */
+  const VERSION = '__APP_VERSION__';
+  function noteSheet() {
+    const text = h('textarea', { placeholder: 'Cosa non va, o cosa vorresti diverso?' });
+    const where = P ? 'timer: ' + P.steps[P.idx].name : R ? 'sessione in corso' : (location.hash.slice(1) || 'home');
+    const ov = openSheet('Annota un problema', [h('p', { class: 'sub' }, `Viene salvata con schermata (${where}), data e versione. La ritrovi in Altro → Taccuino.`), text,
+      btn('Salva nota', () => {
+        const t = text.value.trim().slice(0, 1000);
+        if (!t) return toast('Scrivi qualcosa.');
+        S.notes.push({ id: C.uid(), at: new Date().toISOString(), text: t, where, version: VERSION });
+        save(); ov.remove(); toast('Nota salvata.'); if (!R && !P) render();
+      }, 'pri block')]);
+    ov.style.zIndex = 50; // anche sopra il timer
+    setTimeout(() => text.focus(), 50);
+  }
+  const noteLine = n => `[${n.at.slice(0, 16).replace('T', ' ')} · ${n.where} · v${n.version}] ${n.text}`;
+  function viewNotes() {
+    const notes = [...S.notes].reverse();
+    return [h('div', { class: 'row' }, btn('‹ Altro', () => go('altro'), 'sm'), btn('+ Nota', noteSheet, 'sm pri right')),
+      h('h1', { style: 'margin-top:10px' }, 'Taccuino'), h('div', { class: 'sub' }, 'Appunti presi mentre usi l\'app. Esportali per riportarli a chi la sviluppa.'),
+      notes.length ? h('div', { class: 'btns' }, btn('Esporta elenco', () => exportSheet('Taccuino', `allenamento-note-${C.todayISO()}.txt`, notes.map(noteLine).reverse().join('\n')), 'sm pri'),
+        btn('Svuota', async () => { if (await confirmDlg(`Eliminare tutte le ${notes.length} note?`, 'Svuota')) { S.notes = []; save(); render(); } }, 'sm danger')) : null,
+      notes.length ? notes.map(n => h('div', { class: 'card' }, h('div', {}, n.text), h('div', { class: 'row', style: 'margin-top:6px' }, h('div', { class: 'grow sub' }, `${n.at.slice(0, 16).replace('T', ' ')} · ${n.where} · v${n.version}`),
+        btn('✕', () => { S.notes = S.notes.filter(x => x !== n); save(); render(); }, 'sm'))))
+        : h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin:0' }, 'Nessuna nota. Usa "Nota" nella barra in basso (o nella sessione in corso) quando qualcosa non ti torna.'))];
+  }
+
+  /* ---------- Diagnostica: cosa funziona davvero su questo dispositivo ---------- */
+  let diag = null;
+  async function runDiag() {
+    const out = [], add = (name, ok, detail) => out.push({ name, ok, detail });
+    try { localStorage.setItem(KEY + '.t', '1'); const v = localStorage.getItem(KEY + '.t'); localStorage.removeItem(KEY + '.t'); add('Salvataggio dei dati', v === '1', v === '1' ? 'lettura e scrittura riuscite' : 'il valore scritto non si rilegge'); }
+    catch (e) { add('Salvataggio dei dati', false, 'non disponibile: ' + e.message); }
+    try {
+      if (navigator.storage && navigator.storage.persist) { const p = await navigator.storage.persisted() || await navigator.storage.persist(); add('Dati protetti dalla pulizia automatica', p ? true : null, p ? 'il sistema si impegna a non cancellarli' : 'non concesso: apri l\'app regolarmente e tieni attivo il backup'); }
+      else add('Dati protetti dalla pulizia automatica', null, 'funzione non disponibile su questo browser');
+    } catch (e) { add('Dati protetti dalla pulizia automatica', null, 'richiesta non riuscita'); }
+    const standalone = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+    add('Installata sulla Home', standalone ? true : null, standalone ? 'aperta come app' : 'aperta nel browser: aggiungila alla schermata Home');
+    try {
+      const reg = 'serviceWorker' in navigator ? await navigator.serviceWorker.getRegistration() : null, hit = reg && window.caches ? await caches.match('./') : null;
+      add('Uso senza rete', reg && hit ? true : reg ? null : false, reg && hit ? 'copia dell\'app salvata sul dispositivo' : reg ? 'in preparazione: riapri l\'app una volta con la rete' : 'non disponibile in questa modalità');
+    } catch (e) { add('Uso senza rete', false, 'controllo non riuscito'); }
+    try { audioInit(); beep(880, 0.25); add('Segnali acustici', ac && ac.state === 'running' ? true : null, ac && ac.state === 'running' ? 'ho appena suonato un segnale: se non l\'hai sentito controlla volume e tasto silenzioso' : 'audio non avviato: riprova toccando "Esegui"'); }
+    catch (e) { add('Segnali acustici', false, 'audio non disponibile'); }
+    try {
+      if (navigator.wakeLock) { const l = await navigator.wakeLock.request('screen'); await l.release(); add('Schermo sempre acceso in sessione', true, 'concesso'); }
+      else add('Schermo sempre acceso in sessione', false, 'non supportato: lo schermo può spegnersi durante il timer');
+    } catch (e) { add('Schermo sempre acceso in sessione', false, 'rifiutato dal sistema (per esempio con il risparmio energetico attivo)'); }
+    add('Rete', navigator.onLine !== false ? true : null, navigator.onLine !== false ? 'online' : 'offline');
+    add('Backup', cloudOn() ? !S.settings.gh.error : null, cloudOn() ? (S.settings.gh.error ? 'ultimo tentativo non riuscito: ' + S.settings.gh.error : 'automatico su GitHub attivo') : S.settings.lastBackup ? 'manuale, ultimo il ' + fmtDate(S.settings.lastBackup) : 'nessun backup finora');
+    diag = out; log('diagnostica', 'eseguita', out.map(x => `${x.name}: ${x.ok === true ? 'ok' : x.ok === false ? 'no' : 'attenzione'}`));
+    render();
+  }
+  function viewDiag() {
+    const report = () => [`Allenamento v${VERSION}`, navigator.userAgent, ...(diag || []).map(x => `${x.ok === true ? 'OK ' : x.ok === false ? 'NO ' : '?? '} ${x.name}: ${x.detail}`)].join('\n');
+    return [h('div', { class: 'row' }, btn('‹ Altro', () => go('altro'), 'sm')), h('h1', { style: 'margin-top:10px' }, 'Diagnostica'),
+      h('div', { class: 'sub' }, 'Controlla su questo dispositivo le cose che non si possono provare in laboratorio. Fallo dall\'app aperta dalla schermata Home.'),
+      h('div', { class: 'btns' }, btn('Esegui i controlli', runDiag, 'pri'), diag ? btn('Copia rapporto', () => exportSheet('Rapporto', 'allenamento-diagnostica.txt', report()), '') : null),
+      diag ? h('div', { class: 'card' }, diag.map(x => h('div', { class: 'blk' }, h('span', { class: 'tag ' + (x.ok === true ? 'ok' : x.ok === false ? 'bad' : 'ac') }, x.ok === true ? 'OK' : x.ok === false ? 'No' : 'Attenzione'),
+        h('div', { class: 'grow' }, h('div', { class: 'n' }, x.name), h('div', { class: 'p' }, x.detail))))) : null,
+      h('div', { class: 'sub', style: 'margin-top:14px' }, 'Versione ' + VERSION)];
+  }
+  /** Aggiornamenti: confronta la versione in uso con quella pubblicata (solo con rete; in anteprima il file non c'è). */
+  let newVersion = null;
+  async function checkUpdate(force) {
+    if (force !== true && !/^https?:$/.test(location.protocol)) return; // file locale o anteprima: niente da confrontare
+    try {
+      const r = await fetch('version.json', { cache: 'no-store' });
+      if (!r.ok) return;
+      const v = (await r.json()).version;
+      if (v && v !== VERSION && v !== newVersion) { newVersion = v; if (!R && !P) render(); }
+    } catch (e) { /* offline o anteprima: nessun controllo */ }
+  }
+
   function viewMore() {
     const pr = S.settings.prog, progOn = h('input', { type: 'checkbox', checked: pr.on }), progStep = numInp(pr.step), progRpe = numInp(pr.rpe);
     const prep = numInp(S.settings.prep), sound = h('input', { type: 'checkbox', checked: S.settings.sound, onchange: () => { S.settings.sound = sound.checked; save(); } });
     const sfNew = h('input', { class: 'inp', style: 'margin:0', placeholder: 'Nuova superficie' });
     return [h('h1', {}, 'Altro'),
       h('div', { class: 'card tap row', onclick: () => { location.hash = 'libreria'; } }, h('div', { class: 'grow' }, h('div', { class: 'n', style: 'font-weight:600' }, 'Libreria esercizi'), h('div', { class: 'sub' }, (C.LIBRARY.length + S.custom.length) + ' esercizi')), '›'),
+      h('div', { class: 'card tap row', onclick: () => go('taccuino') }, h('div', { class: 'grow' }, h('div', { class: 'n', style: 'font-weight:600' }, 'Taccuino'), h('div', { class: 'sub' }, S.notes.length ? `${S.notes.length} note` : 'Annota cosa non va mentre usi l\'app')), '›'),
+      h('div', { class: 'card tap row', onclick: () => go('diagnostica') }, h('div', { class: 'grow' }, h('div', { class: 'n', style: 'font-weight:600' }, 'Diagnostica'), h('div', { class: 'sub' }, 'Audio, schermo acceso, offline e salvataggio su questo dispositivo · v' + VERSION)), '›'),
       h('h2', {}, 'Programmi'), h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin-top:0' }, 'Un programma è un insieme di sessioni: lo importi, scegli da quando parte e lo ritrovi nel calendario.'),
         S.plans.map(p => h('div', { class: 'blk', style: 'cursor:pointer', onclick: () => planSheet(p) }, h('div', { class: 'grow' }, h('div', { class: 'n' }, p.title),
           h('div', { class: 'p' }, `${fmtDate(p.startDate)} – ${fmtDate(C.dateOf(p, p.weeks.length - 1, 6))} · ${p.weeks.length} settimane`)), h('div', { class: 'm' }, '›'))),
@@ -882,7 +961,7 @@
     };
     $('runner').hidden = false;
     $('runner').replaceChildren(h('div', { class: 'in' },
-      h('div', { class: 'row' }, h('div', { class: 'grow' }, h('div', { class: 'sub' }, 'Sessione in corso'), h('h1', {}, s.title || 'Sessione')), btn('Esci', quit, 'sm')),
+      h('div', { class: 'row' }, h('div', { class: 'grow' }, h('div', { class: 'sub' }, 'Sessione in corso'), h('h1', {}, s.title || 'Sessione')), btn('Nota', noteSheet, 'sm'), btn('Esci', quit, 'sm')),
       h('div', { class: 'card' }, s.blocks.map(row), s.blocks.length ? null : h('p', { class: 'sub', style: 'margin:0' }, 'Nessun esercizio: aggiungine uno per iniziare.')),
       h('div', { class: 'btns' }, btn('+ Esercizio', () => pickExercise(tpl => { addBlock(s, tpl); save(); drawRunner(); }), ''), btn('+ Test', () => pickTest(tpl => { addBlock(s, tpl); save(); drawRunner(); }), ''),
         btn('Termina sessione', finishSession, nextB ? '' : 'pri'))));
@@ -1012,7 +1091,7 @@
   }
 
   /* ---------- Router ---------- */
-  const VIEWS = { home: viewHome, calendario: viewCalendar, analisi: viewAnalytics, progressi: viewProgress, altro: viewMore, libreria: viewLibrary };
+  const VIEWS = { home: viewHome, calendario: viewCalendar, analisi: viewAnalytics, progressi: viewProgress, altro: viewMore, libreria: viewLibrary, taccuino: viewNotes, diagnostica: viewDiag };
   function render() {
     const [name, ...args] = (location.hash.slice(1) || 'home').split('-');
     const fn = VIEWS[name] || viewHome;
@@ -1020,7 +1099,7 @@
     try { nodes = fn(args); }
     catch (e) { console.error('[ui] errore nella vista ' + name, e); nodes = [h('h1', {}, 'Qualcosa è andato storto'), h('p', { class: 'sub' }, String(e.message || e)), btn('Torna alla Home', () => go('home'))]; }
     $('view').replaceChildren(...[nodes].flat(Infinity).filter(n => n != null && n !== false));
-    const tab = { libreria: 'altro', progressi: 'analisi' }[name] || (VIEWS[name] ? name : 'home');
+    const tab = { libreria: 'altro', taccuino: 'altro', diagnostica: 'altro', progressi: 'analisi' }[name] || (VIEWS[name] ? name : 'home');
     for (const el of document.querySelectorAll('#tabs a')) el.classList.toggle('on', el.getAttribute('href') === '#' + tab);
   }
   let lastView = (location.hash.slice(1) || 'home').split('-')[0];
@@ -1032,7 +1111,12 @@
     render();
   });
   wirePlayer();
+  $('tab-note').addEventListener('click', e => { e.preventDefault(); noteSheet(); });
   render();
   cloudRetry();
-  window.__app = { get state() { return S; }, render, cloudBackup }; // utile per debug dalla console
+  checkUpdate();
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkUpdate(); });
+  // Chiede al sistema di non cancellare i dati quando lo spazio scarseggia (dove supportato); l'esito si vede in Diagnostica.
+  if (S.logs.length && navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+  window.__app = { get state() { return S; }, render, cloudBackup, checkUpdate }; // utile per debug dalla console
 })();

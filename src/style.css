@@ -107,3 +107,4 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
 .viz .seg.g-none,.viz-legend .sw.g-none,.viz-key.g-none,.viz-hb-t i.g-none{fill:#5b636d;background:#5b636d}
 .viz-key.none{visibility:hidden}.viz-legend{flex-wrap:wrap;row-gap:4px}
 .hero{font-size:44px;font-weight:700;letter-spacing:-.03em;line-height:1.05}.hero small{font-size:17px;font-weight:600;color:var(--mu);letter-spacing:0;margin-left:6px}
+.tag.bad{background:#3a1c1c;color:var(--bad)}

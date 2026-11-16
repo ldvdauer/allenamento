@@ -118,6 +118,7 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
 .viz .seg.g-none,.viz-legend .sw.g-none,.viz-key.g-none,.viz-hb-t i.g-none{fill:#5b636d;background:#5b636d}
 .viz-key.none{visibility:hidden}.viz-legend{flex-wrap:wrap;row-gap:4px}
 .hero{font-size:44px;font-weight:700;letter-spacing:-.03em;line-height:1.05}.hero small{font-size:17px;font-weight:600;color:var(--mu);letter-spacing:0;margin-left:6px}
+.tag.bad{background:#3a1c1c;color:var(--bad)}
 </style>
 </head>
 <body>
@@ -127,6 +128,7 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
   <a href="#calendario"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Calendario</a>
   <a href="#analisi"><svg viewBox="0 0 24 24"><path d="M3 20h18M7 20v-7M12 20V5M17 20v-10"/></svg>Analisi</a>
   <a href="#altro"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>Altro</a>
+  <a href="#" id="tab-note" role="button"><svg viewBox="0 0 24 24"><path d="M5 4h10l4 4v12H5zM9 12h6M9 16h4"/></svg>Nota</a>
 </nav>
 <section id="runner" hidden></section>
 <section id="player" hidden>
@@ -513,13 +515,6 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
   const sessionMinutes = s => s.blocks.reduce((t, b) => t + (b.minutes || 0), 0);
   // Le copie hanno id nuovi: una sessione copiata non eredita lo stato "fatta" dell'originale.
   const cloneSession = s => ({ ...s, id: uid(), blocks: s.blocks.map(b => ({ ...b, id: uid() })) });
-  const cloneDay = day => ({ sessions: day.sessions.map(cloneSession) });
-  const emptyWeek = () => Array.from({ length: 7 }, () => ({ sessions: [] }));
-  function usage(plans, exId) {
-    let n = 0;
-    for (const p of plans) for (const w of p.weeks) for (const d of w) for (const s of d.sessions) for (const b of s.blocks) if (b.exId === exId) n++;
-    return n;
-  }
   /** Validazione minima di un backup completo. */
   function validState(s) {
     return !!s && typeof s === 'object' && Array.isArray(s.plans) && s.exercises && typeof s.exercises === 'object' &&
@@ -570,16 +565,6 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
     const avg = k => { const a = inR.filter(l => l[k] != null); return a.length ? a.reduce((t, l) => t + l[k], 0) / a.length : null; };
     return { sessions: inR.length, minutes: inR.reduce((t, l) => t + (l.minutes || 0), 0), rpe: avg('rpe'), rpeN: inR.filter(l => l.rpe != null).length, feel: avg('feel'),
       due: due.length, dueDone: due.filter(s => done.has(s.sid)).length };
-  }
-  /** Minuti e sessioni per tipo di sessione, dal più grande. */
-  function minutesByType(logs, from, to) {
-    const m = new Map();
-    for (const l of logs || []) {
-      if (l.date < from || l.date > to) continue;
-      const k = DAY_TYPES[l.type] ? l.type : 'other', o = m.get(k) || { type: k, minutes: 0, sessions: 0 };
-      o.minutes += l.minutes || 0; o.sessions++; m.set(k, o);
-    }
-    return [...m.values()].sort((a, b) => b.minutes - a.minutes || a.type.localeCompare(b.type));
   }
   /** "SX 15 kg · DX 18 kg" → [{side:'SX',kg:15},{side:'DX',kg:18}]; "+4,5 kg" → [{side:null,kg:4.5}]. */
   function parseLoads(text) {
@@ -708,8 +693,8 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
     GROUPS, SECTION_GROUP, blockSection, timeBySection, weeklyGroups, describe, leftoverNote, splitCues, fmtRest, PAIRS, refKeys, recordsOf, lastRecord, nextLoad, TEST_TEMPLATES, testLabel, SECTIONS, LIBRARY, STD, stdVariant, matchStd,
     DAY_TYPES, PERIODS, SLOTS, GRADES, GRADE_SCALES, gradeIdx, fmtGrade, DEFAULT_SURFACES, inferSurface, validISO, uid, toISO, fromISO, todayISO, addDays, diffDays, appleToISO, isoToApple, mondayOf,
     inferLoad, loadKey, loadKg, latestMaxes, fmtKg, cycle, cueAt, intervalMinutes, buildSteps, normInterval,
-    importBlokplan, exportBlokplan, locate, dateOf, sessionMinutes, cloneSession, cloneDay, emptyWeek, usage, validState,
-    niceRange, scheduled, weeklyStats, summary, minutesByType, parseLoads, loadSeries, surfaceStats, weeklyTopGrades,
+    importBlokplan, exportBlokplan, locate, dateOf, sessionMinutes, cloneSession, validState,
+    niceRange, scheduled, weeklyStats, summary, parseLoads, loadSeries, surfaceStats, weeklyTopGrades,
   };
 });
 </script>
@@ -1038,6 +1023,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
     ensureTests(s);
     // v5: i parametri (serie, recuperi, %, cue) stanno nel blocco della sessione; spariscono le "versioni" condivise e le descrizioni testuali
     s.custom = Array.isArray(s.custom) ? s.custom : [];
+    s.notes = Array.isArray(s.notes) ? s.notes : [];
     if (fromV < 5) for (const x of allSessions(s)) privatize(s, x);
     prune(s);
     // v6: un solo campo Nota (mostrato anche nel timer) + interruttore SX/DX al posto dei cue
@@ -1346,6 +1332,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
         h('div', { class: 'btns' }, btn('Riprendi', () => startSession(lr), 'pri'), btn('Scarta', () => { S.live = null; save(); render(); }))));
       else S.live = null;
     }
+    if (newVersion) out.push(h('div', { class: 'card row' }, h('div', { class: 'grow sub' }, 'È disponibile una versione aggiornata dell\'app.'), btn('Aggiorna', () => location.reload(), 'sm pri')));
     const since = S.settings.lastBackup ? C.diffDays(t, S.settings.lastBackup) : null;
     if (cloudOn() && S.settings.gh.error) out.push(h('div', { class: 'card', style: 'border-color:var(--bad)' }, h('div', { class: 'sub' }, 'Backup automatico non riuscito: ' + S.settings.gh.error + '.'),
       h('div', { class: 'btns' }, btn('Riprova', () => cloudBackup(true), 'sm'), btn('Impostazioni', () => go('altro'), 'sm'))));
@@ -1767,12 +1754,89 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
       }, 'sm pri'),
         cloudOn() ? [btn('Ripristina da GitHub', cloudRestore, 'sm'), btn('Scollega', async () => { if (await confirmDlg('Scollegare GitHub? Il token viene cancellato da questo dispositivo, i backup già caricati restano nel repository.', 'Scollega')) { S.settings.gh = null; clearTimeout(cloudTimer); save(); render(); } }, 'sm danger')] : null));
   }
+  /* ---------- Taccuino: note al volo durante la prova dell'app, con il contesto per poterle riprodurre ---------- */
+  const VERSION = '20261116.1346';
+  function noteSheet() {
+    const text = h('textarea', { placeholder: 'Cosa non va, o cosa vorresti diverso?' });
+    const where = P ? 'timer: ' + P.steps[P.idx].name : R ? 'sessione in corso' : (location.hash.slice(1) || 'home');
+    const ov = openSheet('Annota un problema', [h('p', { class: 'sub' }, `Viene salvata con schermata (${where}), data e versione. La ritrovi in Altro → Taccuino.`), text,
+      btn('Salva nota', () => {
+        const t = text.value.trim().slice(0, 1000);
+        if (!t) return toast('Scrivi qualcosa.');
+        S.notes.push({ id: C.uid(), at: new Date().toISOString(), text: t, where, version: VERSION });
+        save(); ov.remove(); toast('Nota salvata.'); if (!R && !P) render();
+      }, 'pri block')]);
+    ov.style.zIndex = 50; // anche sopra il timer
+    setTimeout(() => text.focus(), 50);
+  }
+  const noteLine = n => `[${n.at.slice(0, 16).replace('T', ' ')} · ${n.where} · v${n.version}] ${n.text}`;
+  function viewNotes() {
+    const notes = [...S.notes].reverse();
+    return [h('div', { class: 'row' }, btn('‹ Altro', () => go('altro'), 'sm'), btn('+ Nota', noteSheet, 'sm pri right')),
+      h('h1', { style: 'margin-top:10px' }, 'Taccuino'), h('div', { class: 'sub' }, 'Appunti presi mentre usi l\'app. Esportali per riportarli a chi la sviluppa.'),
+      notes.length ? h('div', { class: 'btns' }, btn('Esporta elenco', () => exportSheet('Taccuino', `allenamento-note-${C.todayISO()}.txt`, notes.map(noteLine).reverse().join('\n')), 'sm pri'),
+        btn('Svuota', async () => { if (await confirmDlg(`Eliminare tutte le ${notes.length} note?`, 'Svuota')) { S.notes = []; save(); render(); } }, 'sm danger')) : null,
+      notes.length ? notes.map(n => h('div', { class: 'card' }, h('div', {}, n.text), h('div', { class: 'row', style: 'margin-top:6px' }, h('div', { class: 'grow sub' }, `${n.at.slice(0, 16).replace('T', ' ')} · ${n.where} · v${n.version}`),
+        btn('✕', () => { S.notes = S.notes.filter(x => x !== n); save(); render(); }, 'sm'))))
+        : h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin:0' }, 'Nessuna nota. Usa "Nota" nella barra in basso (o nella sessione in corso) quando qualcosa non ti torna.'))];
+  }
+
+  /* ---------- Diagnostica: cosa funziona davvero su questo dispositivo ---------- */
+  let diag = null;
+  async function runDiag() {
+    const out = [], add = (name, ok, detail) => out.push({ name, ok, detail });
+    try { localStorage.setItem(KEY + '.t', '1'); const v = localStorage.getItem(KEY + '.t'); localStorage.removeItem(KEY + '.t'); add('Salvataggio dei dati', v === '1', v === '1' ? 'lettura e scrittura riuscite' : 'il valore scritto non si rilegge'); }
+    catch (e) { add('Salvataggio dei dati', false, 'non disponibile: ' + e.message); }
+    try {
+      if (navigator.storage && navigator.storage.persist) { const p = await navigator.storage.persisted() || await navigator.storage.persist(); add('Dati protetti dalla pulizia automatica', p ? true : null, p ? 'il sistema si impegna a non cancellarli' : 'non concesso: apri l\'app regolarmente e tieni attivo il backup'); }
+      else add('Dati protetti dalla pulizia automatica', null, 'funzione non disponibile su questo browser');
+    } catch (e) { add('Dati protetti dalla pulizia automatica', null, 'richiesta non riuscita'); }
+    const standalone = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+    add('Installata sulla Home', standalone ? true : null, standalone ? 'aperta come app' : 'aperta nel browser: aggiungila alla schermata Home');
+    try {
+      const reg = 'serviceWorker' in navigator ? await navigator.serviceWorker.getRegistration() : null, hit = reg && window.caches ? await caches.match('./') : null;
+      add('Uso senza rete', reg && hit ? true : reg ? null : false, reg && hit ? 'copia dell\'app salvata sul dispositivo' : reg ? 'in preparazione: riapri l\'app una volta con la rete' : 'non disponibile in questa modalità');
+    } catch (e) { add('Uso senza rete', false, 'controllo non riuscito'); }
+    try { audioInit(); beep(880, 0.25); add('Segnali acustici', ac && ac.state === 'running' ? true : null, ac && ac.state === 'running' ? 'ho appena suonato un segnale: se non l\'hai sentito controlla volume e tasto silenzioso' : 'audio non avviato: riprova toccando "Esegui"'); }
+    catch (e) { add('Segnali acustici', false, 'audio non disponibile'); }
+    try {
+      if (navigator.wakeLock) { const l = await navigator.wakeLock.request('screen'); await l.release(); add('Schermo sempre acceso in sessione', true, 'concesso'); }
+      else add('Schermo sempre acceso in sessione', false, 'non supportato: lo schermo può spegnersi durante il timer');
+    } catch (e) { add('Schermo sempre acceso in sessione', false, 'rifiutato dal sistema (per esempio con il risparmio energetico attivo)'); }
+    add('Rete', navigator.onLine !== false ? true : null, navigator.onLine !== false ? 'online' : 'offline');
+    add('Backup', cloudOn() ? !S.settings.gh.error : null, cloudOn() ? (S.settings.gh.error ? 'ultimo tentativo non riuscito: ' + S.settings.gh.error : 'automatico su GitHub attivo') : S.settings.lastBackup ? 'manuale, ultimo il ' + fmtDate(S.settings.lastBackup) : 'nessun backup finora');
+    diag = out; log('diagnostica', 'eseguita', out.map(x => `${x.name}: ${x.ok === true ? 'ok' : x.ok === false ? 'no' : 'attenzione'}`));
+    render();
+  }
+  function viewDiag() {
+    const report = () => [`Allenamento v${VERSION}`, navigator.userAgent, ...(diag || []).map(x => `${x.ok === true ? 'OK ' : x.ok === false ? 'NO ' : '?? '} ${x.name}: ${x.detail}`)].join('\n');
+    return [h('div', { class: 'row' }, btn('‹ Altro', () => go('altro'), 'sm')), h('h1', { style: 'margin-top:10px' }, 'Diagnostica'),
+      h('div', { class: 'sub' }, 'Controlla su questo dispositivo le cose che non si possono provare in laboratorio. Fallo dall\'app aperta dalla schermata Home.'),
+      h('div', { class: 'btns' }, btn('Esegui i controlli', runDiag, 'pri'), diag ? btn('Copia rapporto', () => exportSheet('Rapporto', 'allenamento-diagnostica.txt', report()), '') : null),
+      diag ? h('div', { class: 'card' }, diag.map(x => h('div', { class: 'blk' }, h('span', { class: 'tag ' + (x.ok === true ? 'ok' : x.ok === false ? 'bad' : 'ac') }, x.ok === true ? 'OK' : x.ok === false ? 'No' : 'Attenzione'),
+        h('div', { class: 'grow' }, h('div', { class: 'n' }, x.name), h('div', { class: 'p' }, x.detail))))) : null,
+      h('div', { class: 'sub', style: 'margin-top:14px' }, 'Versione ' + VERSION)];
+  }
+  /** Aggiornamenti: confronta la versione in uso con quella pubblicata (solo con rete; in anteprima il file non c'è). */
+  let newVersion = null;
+  async function checkUpdate(force) {
+    if (force !== true && !/^https?:$/.test(location.protocol)) return; // file locale o anteprima: niente da confrontare
+    try {
+      const r = await fetch('version.json', { cache: 'no-store' });
+      if (!r.ok) return;
+      const v = (await r.json()).version;
+      if (v && v !== VERSION && v !== newVersion) { newVersion = v; if (!R && !P) render(); }
+    } catch (e) { /* offline o anteprima: nessun controllo */ }
+  }
+
   function viewMore() {
     const pr = S.settings.prog, progOn = h('input', { type: 'checkbox', checked: pr.on }), progStep = numInp(pr.step), progRpe = numInp(pr.rpe);
     const prep = numInp(S.settings.prep), sound = h('input', { type: 'checkbox', checked: S.settings.sound, onchange: () => { S.settings.sound = sound.checked; save(); } });
     const sfNew = h('input', { class: 'inp', style: 'margin:0', placeholder: 'Nuova superficie' });
     return [h('h1', {}, 'Altro'),
       h('div', { class: 'card tap row', onclick: () => { location.hash = 'libreria'; } }, h('div', { class: 'grow' }, h('div', { class: 'n', style: 'font-weight:600' }, 'Libreria esercizi'), h('div', { class: 'sub' }, (C.LIBRARY.length + S.custom.length) + ' esercizi')), '›'),
+      h('div', { class: 'card tap row', onclick: () => go('taccuino') }, h('div', { class: 'grow' }, h('div', { class: 'n', style: 'font-weight:600' }, 'Taccuino'), h('div', { class: 'sub' }, S.notes.length ? `${S.notes.length} note` : 'Annota cosa non va mentre usi l\'app')), '›'),
+      h('div', { class: 'card tap row', onclick: () => go('diagnostica') }, h('div', { class: 'grow' }, h('div', { class: 'n', style: 'font-weight:600' }, 'Diagnostica'), h('div', { class: 'sub' }, 'Audio, schermo acceso, offline e salvataggio su questo dispositivo · v' + VERSION)), '›'),
       h('h2', {}, 'Programmi'), h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin-top:0' }, 'Un programma è un insieme di sessioni: lo importi, scegli da quando parte e lo ritrovi nel calendario.'),
         S.plans.map(p => h('div', { class: 'blk', style: 'cursor:pointer', onclick: () => planSheet(p) }, h('div', { class: 'grow' }, h('div', { class: 'n' }, p.title),
           h('div', { class: 'p' }, `${fmtDate(p.startDate)} – ${fmtDate(C.dateOf(p, p.weeks.length - 1, 6))} · ${p.weeks.length} settimane`)), h('div', { class: 'm' }, '›'))),
@@ -1835,7 +1899,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
     };
     $('runner').hidden = false;
     $('runner').replaceChildren(h('div', { class: 'in' },
-      h('div', { class: 'row' }, h('div', { class: 'grow' }, h('div', { class: 'sub' }, 'Sessione in corso'), h('h1', {}, s.title || 'Sessione')), btn('Esci', quit, 'sm')),
+      h('div', { class: 'row' }, h('div', { class: 'grow' }, h('div', { class: 'sub' }, 'Sessione in corso'), h('h1', {}, s.title || 'Sessione')), btn('Nota', noteSheet, 'sm'), btn('Esci', quit, 'sm')),
       h('div', { class: 'card' }, s.blocks.map(row), s.blocks.length ? null : h('p', { class: 'sub', style: 'margin:0' }, 'Nessun esercizio: aggiungine uno per iniziare.')),
       h('div', { class: 'btns' }, btn('+ Esercizio', () => pickExercise(tpl => { addBlock(s, tpl); save(); drawRunner(); }), ''), btn('+ Test', () => pickTest(tpl => { addBlock(s, tpl); save(); drawRunner(); }), ''),
         btn('Termina sessione', finishSession, nextB ? '' : 'pri'))));
@@ -1965,7 +2029,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
   }
 
   /* ---------- Router ---------- */
-  const VIEWS = { home: viewHome, calendario: viewCalendar, analisi: viewAnalytics, progressi: viewProgress, altro: viewMore, libreria: viewLibrary };
+  const VIEWS = { home: viewHome, calendario: viewCalendar, analisi: viewAnalytics, progressi: viewProgress, altro: viewMore, libreria: viewLibrary, taccuino: viewNotes, diagnostica: viewDiag };
   function render() {
     const [name, ...args] = (location.hash.slice(1) || 'home').split('-');
     const fn = VIEWS[name] || viewHome;
@@ -1973,7 +2037,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
     try { nodes = fn(args); }
     catch (e) { console.error('[ui] errore nella vista ' + name, e); nodes = [h('h1', {}, 'Qualcosa è andato storto'), h('p', { class: 'sub' }, String(e.message || e)), btn('Torna alla Home', () => go('home'))]; }
     $('view').replaceChildren(...[nodes].flat(Infinity).filter(n => n != null && n !== false));
-    const tab = { libreria: 'altro', progressi: 'analisi' }[name] || (VIEWS[name] ? name : 'home');
+    const tab = { libreria: 'altro', taccuino: 'altro', diagnostica: 'altro', progressi: 'analisi' }[name] || (VIEWS[name] ? name : 'home');
     for (const el of document.querySelectorAll('#tabs a')) el.classList.toggle('on', el.getAttribute('href') === '#' + tab);
   }
   let lastView = (location.hash.slice(1) || 'home').split('-')[0];
@@ -1985,9 +2049,14 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
     render();
   });
   wirePlayer();
+  $('tab-note').addEventListener('click', e => { e.preventDefault(); noteSheet(); });
   render();
   cloudRetry();
-  window.__app = { get state() { return S; }, render, cloudBackup }; // utile per debug dalla console
+  checkUpdate();
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkUpdate(); });
+  // Chiede al sistema di non cancellare i dati quando lo spazio scarseggia (dove supportato); l'esito si vede in Diagnostica.
+  if (S.logs.length && navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+  window.__app = { get state() { return S; }, render, cloudBackup, checkUpdate }; // utile per debug dalla console
 })();
 </script>
 <script>if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(e=>console.warn('[sw] registrazione fallita',e));</script>

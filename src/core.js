@@ -362,13 +362,6 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
   const sessionMinutes = s => s.blocks.reduce((t, b) => t + (b.minutes || 0), 0);
   // Le copie hanno id nuovi: una sessione copiata non eredita lo stato "fatta" dell'originale.
   const cloneSession = s => ({ ...s, id: uid(), blocks: s.blocks.map(b => ({ ...b, id: uid() })) });
-  const cloneDay = day => ({ sessions: day.sessions.map(cloneSession) });
-  const emptyWeek = () => Array.from({ length: 7 }, () => ({ sessions: [] }));
-  function usage(plans, exId) {
-    let n = 0;
-    for (const p of plans) for (const w of p.weeks) for (const d of w) for (const s of d.sessions) for (const b of s.blocks) if (b.exId === exId) n++;
-    return n;
-  }
   /** Validazione minima di un backup completo. */
   function validState(s) {
     return !!s && typeof s === 'object' && Array.isArray(s.plans) && s.exercises && typeof s.exercises === 'object' &&
@@ -419,16 +412,6 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
     const avg = k => { const a = inR.filter(l => l[k] != null); return a.length ? a.reduce((t, l) => t + l[k], 0) / a.length : null; };
     return { sessions: inR.length, minutes: inR.reduce((t, l) => t + (l.minutes || 0), 0), rpe: avg('rpe'), rpeN: inR.filter(l => l.rpe != null).length, feel: avg('feel'),
       due: due.length, dueDone: due.filter(s => done.has(s.sid)).length };
-  }
-  /** Minuti e sessioni per tipo di sessione, dal più grande. */
-  function minutesByType(logs, from, to) {
-    const m = new Map();
-    for (const l of logs || []) {
-      if (l.date < from || l.date > to) continue;
-      const k = DAY_TYPES[l.type] ? l.type : 'other', o = m.get(k) || { type: k, minutes: 0, sessions: 0 };
-      o.minutes += l.minutes || 0; o.sessions++; m.set(k, o);
-    }
-    return [...m.values()].sort((a, b) => b.minutes - a.minutes || a.type.localeCompare(b.type));
   }
   /** "SX 15 kg · DX 18 kg" → [{side:'SX',kg:15},{side:'DX',kg:18}]; "+4,5 kg" → [{side:null,kg:4.5}]. */
   function parseLoads(text) {
@@ -557,7 +540,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
     GROUPS, SECTION_GROUP, blockSection, timeBySection, weeklyGroups, describe, leftoverNote, splitCues, fmtRest, PAIRS, refKeys, recordsOf, lastRecord, nextLoad, TEST_TEMPLATES, testLabel, SECTIONS, LIBRARY, STD, stdVariant, matchStd,
     DAY_TYPES, PERIODS, SLOTS, GRADES, GRADE_SCALES, gradeIdx, fmtGrade, DEFAULT_SURFACES, inferSurface, validISO, uid, toISO, fromISO, todayISO, addDays, diffDays, appleToISO, isoToApple, mondayOf,
     inferLoad, loadKey, loadKg, latestMaxes, fmtKg, cycle, cueAt, intervalMinutes, buildSteps, normInterval,
-    importBlokplan, exportBlokplan, locate, dateOf, sessionMinutes, cloneSession, cloneDay, emptyWeek, usage, validState,
-    niceRange, scheduled, weeklyStats, summary, minutesByType, parseLoads, loadSeries, surfaceStats, weeklyTopGrades,
+    importBlokplan, exportBlokplan, locate, dateOf, sessionMinutes, cloneSession, validState,
+    niceRange, scheduled, weeklyStats, summary, parseLoads, loadSeries, surfaceStats, weeklyTopGrades,
   };
 });

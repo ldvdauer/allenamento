@@ -1,38 +1,47 @@
-# Allenamento — clone personalizzabile di Blok Sessions
+# Allenamento
 
-PWA offline per piani di allenamento di arrampicata: piano settimanale, player guidato con timer,
-editor completo, sessioni libere su qualsiasi data (calendario), diario con carichi in kg e logbook per superficie,
-analisi con grafici, test e massimali, import ed export `.blokplan`.
-Al primo avvio l'app è vuota: ogni utente importa o crea i propri piani. Nessun backend e nessun account: i dati stanno nel `localStorage` del dispositivo (backup da *Altro*).
+PWA offline per pianificare e registrare l'allenamento di arrampicata: calendario, sessioni con un timer per esercizio,
+test e massimali, progressione dei carichi, analisi. Nessun backend e nessun account: i dati stanno sul dispositivo,
+con backup su file o automatico su un repository GitHub privato.
 
-## Struttura
+App: https://ldvdauer.github.io/allenamento/ · Guida all'uso: [GUIDA.md](GUIDA.md)
+
+## Come è fatta
 | File | Contenuto |
 |---|---|
-| `src/core.js` | Logica pura (date, carichi, passi del player, import/export). Unico file coperto da unit test. |
-| `src/charts.js` | Grafici SVG senza dipendenze (colonne, linee, barre orizzontali) con tooltip e vista tabella. |
-| `src/app.js` | Interfaccia: Home, calendario, sessione in corso (un esercizio alla volta), diario, analisi. |
+| `src/core.js` | Logica pura, senza DOM: date, libreria standard, carichi e progressione, passi del timer, import/export `.blokplan`, aggregazioni per l'analisi. È l'unico file coperto da unit test. |
+| `src/charts.js` | Grafici SVG senza dipendenze (colonne, colonne impilate, linee, barre orizzontali) con tooltip e tabella. |
+| `src/app.js` | Interfaccia: Home, calendario, sessione in corso, test, analisi, impostazioni, backup, taccuino, diagnostica. |
 | `src/style.css`, `src/index.html` | Stile e scheletro della pagina. |
-| `public/` | Manifest, service worker e icona per la versione installabile. |
-| `build.mjs` | Produce `dist/index.html` (file unico) e `docs/` (installabile). |
+| `public/` | Manifest, service worker e icona. |
+| `build.mjs` | Produce `dist/index.html` (file unico per l'anteprima) e `docs/` (versione installabile pubblicata da GitHub Pages). |
+| `test/` | `core.test.js` (unit test), `e2e.mjs` (smoke test in Chrome headless), `fixture.js` (programma di esempio). |
+
+## Modello dei dati (in breve)
+- **Libreria**: 50 esercizi standard con solo nome e sezione (`LIBRARY` in `core.js`), più quelli creati dall'utente.
+- **Sessione**: legata a una data (creata a mano) oppure a un programma importato. Contiene blocchi.
+- **Blocco**: un esercizio *in quella sessione*, con i suoi parametri (round, secondi o ripetizioni, recuperi, SX/DX, test di riferimento e %, superficie, nota). Niente è condiviso tra sessioni.
+- **Test**: definizioni con parametri propri; l'ultimo risultato è il massimale usato per i kg.
+- **Registrazione**: sessione fatta, con minuti, RPE e, per ogni esercizio, minuti, carico, RPE, superficie/grado.
+- Lo stato ha una versione (`v`) e `migrate()` in `app.js` porta avanti i dati vecchi a ogni apertura.
 
 ## Comandi
 ```bash
-npm test            # unit test della logica (node --test, nessuna dipendenza)
-npm run build       # genera dist/
-npm i --no-save puppeteer-core && node test/e2e.mjs   # smoke test in Chrome headless (dopo la build)
+npm test            # unit test (node --test, nessuna dipendenza)
+npm run build       # genera dist/ e docs/
+npm i --no-save puppeteer-core && node test/e2e.mjs   # smoke test end-to-end, dopo la build
 ```
+Il test end-to-end usa un programma personale non versionato (`private/Karma-8A+.blokplan`); se manca viene saltato.
 
-## Installazione su iPhone
-Serve un indirizzo HTTPS. Il modo più semplice è GitHub Pages:
-1. `npm run build` e push su `main` (la cartella `docs/` è quella pubblicata);
-2. Settings → Pages → Deploy from a branch → `main` / `/docs`;
-3. apri l'indirizzo in Safari → Condividi → **Aggiungi alla schermata Home**.
-
-Limiti iOS: il timer non gira a schermo spento (l'app tiene lo schermo acceso durante la sessione);
-i dati di una PWA possono essere rimossi da iOS se non la apri per settimane → fai il backup.
+## Pubblicare un aggiornamento
+`npm run build`, commit e push su `main`: GitHub Pages pubblica la cartella `docs/`. Ogni build ha una versione
+(data e ora); l'app la confronta con `docs/version.json` e mostra "È disponibile una versione aggiornata".
 
 ## Personalizzare
-- Nuovi tipi di giorno, periodi o test predefiniti: costanti in cima a `core.js`.
-- Regole per riconoscere il massimale dal nome dell'esercizio: `inferLoad` in `core.js`.
-- Formula dei kg: `loadKg` (zavorra = `round(((peso + max) × % − peso) × 2) / 2`).
-- Colori: variabili CSS in cima a `style.css`.
+- Esercizi standard e sezioni: `LIBRARY` e `SECTIONS` in `core.js`. Riconoscimento dei nomi all'import: `STD_RULES`.
+- Modelli dei test: `TEST_TEMPLATES`. Formula dei kg: `loadKg`. Regola di progressione: `nextLoad`.
+- Colori: variabili CSS in cima a `style.css`. I tre colori dei gruppi nei grafici sono validati per il daltonismo: se li cambi, rifai la verifica.
+
+## Limiti noti
+- iOS: nessun timer a schermo spento, nessun backup con l'app chiusa, dati rimovibili dal sistema se l'app non viene aperta per settimane.
+- Gradi solo in scala Font.
