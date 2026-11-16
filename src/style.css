@@ -1,4 +1,4 @@
-:root{--v1:#3987e5;--v1h:#6da7ec;--vref:#8e969f;--vgrid:#262b31;--vaxis:#3d444c;--bg:#0e1012;--card:#181b1f;--line:#2a2f35;--tx:#eceef0;--mu:#8e969f;--ac:#ff7a45;--rest:#4cc2ff;--ok:#56d364;--warn:#f2cc60;--bad:#ff6b6b;
+:root{--v1:#3987e5;--v1h:#6da7ec;--vref:#8e969f;--vgrid:#262b31;--vaxis:#3d444c;--bg:#0e1012;--card:#181b1f;--line:#2a2f35;--tx:#eceef0;--mu:#8e969f;--ac:#3df27c;--rest:#4cc2ff;--ok:#3df27c;--warn:#f2cc60;--bad:#ff6b6b;
   --st:env(safe-area-inset-top,0px);--sb:env(safe-area-inset-bottom,0px)}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 /* iOS, app installata: con pagine corte e height:100% l'area di layout finisce sopra la zona della barra Home e gli
@@ -12,12 +12,12 @@ h1{font-size:26px;margin:0 0 2px;letter-spacing:-.02em}h2{font-size:17px;margin:
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin:10px 0}
 .card.tap{cursor:pointer}.card.tap:active{background:#1f2328}
 .tag{display:inline-block;font-size:12px;padding:2px 8px;border-radius:99px;background:#252a30;color:var(--mu);white-space:nowrap}
-.tag.ok{background:#173322;color:var(--ok)}.tag.ac{background:#3a2218;color:var(--ac)}
+.tag.ok,.tag.ac{background:#0f2e1b;color:var(--ac)}
 .blk{display:flex;gap:10px;padding:9px 0;border-top:1px solid var(--line);align-items:baseline}
 .blk:first-of-type{border-top:0}.blk .n{font-weight:600}.blk .p{color:var(--mu);font-size:13px}.blk .kg{color:var(--ac);font-size:13px;font-weight:600}
 .blk .m{margin-left:auto;color:var(--mu);font-size:13px;white-space:nowrap}
 .btn{border:1px solid var(--line);background:#22262b;border-radius:11px;padding:10px 14px;font-weight:600;cursor:pointer;min-height:44px}
-.btn:active{filter:brightness(1.25)}.btn.pri{background:var(--ac);border-color:var(--ac);color:#17100c}.btn.danger{color:var(--bad)}
+.btn:active{filter:brightness(1.25)}.btn.pri{background:var(--ac);border-color:var(--ac);color:#04170b}.btn.danger{color:var(--bad)}
 .btn.sm{min-height:36px;padding:6px 10px;font-size:14px}.btn.block{display:block;width:100%;margin-top:8px}.btn[disabled]{opacity:.4}
 .btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 label.f{display:block;margin:10px 0;font-size:13px;color:var(--mu)}
@@ -44,7 +44,7 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
 .cal-d{border:1px solid transparent;background:var(--card);border-radius:10px;min-height:50px;padding:6px 0 5px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;cursor:pointer;font-size:15px;font-variant-numeric:tabular-nums}
 .cal-d.out{background:none;color:var(--mu)}.cal-d.today{border-color:var(--ac)}.cal-d.sel{background:#2f363e;border-color:#6b7480}
 .dots{display:flex;gap:3px;height:6px}.dots i,.cal-key i{width:6px;height:6px;border-radius:50%;background:#6b7480;display:inline-block}
-.dots i.ok,.cal-key i.ok{background:var(--ok)}.dots i.ex,.cal-key i.ex{background:var(--ac)}
+.dots i.ok,.cal-key i.ok{background:var(--ok)}
 .cal-key{display:flex;gap:14px;margin-top:8px;font-size:12px}.cal-key i{margin-right:5px;vertical-align:1px}
 .climb{border-top:1px solid var(--line);padding-top:8px;margin-top:8px}.climb:first-child{border-top:0;margin-top:0;padding-top:0}.climb .n{font-weight:600}
 /* Analisi: riquadri e grafici */
@@ -97,7 +97,7 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
 #runner .in{max-width:640px;margin:0 auto}
 .run-r{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line)}.run-r:first-child{border-top:0}
 .run-r .st{width:26px;height:26px;border-radius:50%;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--mu);flex:none}
-.run-r.done .st{background:#173322;border-color:#173322;color:var(--ok)}.run-r.done .n{color:var(--mu)}
+.run-r.done .st{background:#0f2e1b;border-color:#0f2e1b;color:var(--ok)}.run-r.done .n{color:var(--mu)}
 /* Riordino per trascinamento */
 .grip{touch-action:none;cursor:grab;color:var(--mu);font-size:20px;line-height:1;padding:10px 10px 10px 2px;margin:-10px 0;user-select:none;-webkit-user-select:none;align-self:center}
 .blk.drag{background:#22262b;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.45);position:relative;z-index:1}
