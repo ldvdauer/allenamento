@@ -110,6 +110,14 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
 .grip{touch-action:none;cursor:grab;color:var(--mu);font-size:20px;line-height:1;padding:10px 10px 10px 2px;margin:-10px 0;user-select:none;-webkit-user-select:none;align-self:center}
 .blk.drag{background:#22262b;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.45);position:relative;z-index:1}
 .sec{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mu);padding:14px 0 4px;border-top:1px solid var(--line)}.sec:first-child{border-top:0;padding-top:4px}.sec+.blk{border-top:0}
+/* Tre gruppi con colori fissi (validati per daltonismo sulla superficie scura) + grigio per il non classificato */
+:root{--g-wall:#3987e5;--g-strength:#d95926;--g-other:#199e70}
+.viz .seg.g-wall,.viz-legend .sw.g-wall,.viz-key.g-wall,.viz-hb-t i.g-wall{fill:var(--g-wall);background:var(--g-wall)}
+.viz .seg.g-strength,.viz-legend .sw.g-strength,.viz-key.g-strength,.viz-hb-t i.g-strength{fill:var(--g-strength);background:var(--g-strength)}
+.viz .seg.g-other,.viz-legend .sw.g-other,.viz-key.g-other,.viz-hb-t i.g-other{fill:var(--g-other);background:var(--g-other)}
+.viz .seg.g-none,.viz-legend .sw.g-none,.viz-key.g-none,.viz-hb-t i.g-none{fill:#5b636d;background:#5b636d}
+.viz-key.none{visibility:hidden}.viz-legend{flex-wrap:wrap;row-gap:4px}
+.hero{font-size:44px;font-weight:700;letter-spacing:-.03em;line-height:1.05}.hero small{font-size:17px;font-weight:600;color:var(--mu);letter-spacing:0;margin-left:6px}
 </style>
 </head>
 <body>
@@ -620,6 +628,48 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
     const base = mode === 'hang' && bw != null && !isNaN(bw) ? bw : 0;
     return { kg: Math.round(((base + kg) * (1 + dir * rule.step / 100) - base) * 2) / 2, dir };
   }
+  /* Tempo per categoria: le categorie sono le sezioni della libreria; i gruppi servono al grafico nel tempo. */
+  const GROUPS = { wall: 'Sul muro', strength: 'Forza', other: 'Mobilità e altro' };
+  const SECTION_GROUP = { wall: 'wall', fingers: 'strength', pull: 'strength', strength: 'strength', core: 'strength', warmup: 'other', mobility: 'other', mental: 'other', other: 'other' };
+  /** Sezione di un esercizio registrato: quella salvata, altrimenti ricavata dallo standard o dal nome. */
+  function blockSection(b) {
+    if (b.sec && SECTION_GROUP[b.sec]) return b.sec;
+    const k = String(b.key || '').split('|')[0], std = STD[k] ? k : k === 'test' ? 'test' : matchStd(b.name);
+    return std === 'test' ? 'fingers' : STD[std] ? STD[std].section : 'other';
+  }
+  /** Minuti di un log divisi per sezione. Ciò che non è attribuito a un esercizio (sessioni registrate a mano, o
+      tempo oltre la somma degli esercizi) resta in `unclassified`. */
+  function logSections(l) {
+    const out = {}; let sum = 0;
+    for (const b of l.blocks || []) { const m = b.minutes || 0; if (!m) continue; const sec = blockSection(b); out[sec] = (out[sec] || 0) + m; sum += m; }
+    return { sections: out, unclassified: Math.max(0, (l.minutes || 0) - sum) };
+  }
+  /** Tempo per categoria nel periodo: righe ordinate, quota di arrampicata sul tempo classificato, non classificato. */
+  function timeBySection(logs, from, to) {
+    const m = {}; let un = 0;
+    for (const l of logs || []) {
+      if (l.date < from || l.date > to) continue;
+      const r = logSections(l);
+      for (const k in r.sections) m[k] = (m[k] || 0) + r.sections[k];
+      un += r.unclassified;
+    }
+    const rows = Object.entries(m).map(([section, minutes]) => ({ section, minutes })).sort((a, b) => b.minutes - a.minutes || a.section.localeCompare(b.section));
+    const classified = rows.reduce((t, r) => t + r.minutes, 0), wall = rows.filter(r => SECTION_GROUP[r.section] === 'wall').reduce((t, r) => t + r.minutes, 0);
+    return { rows, classified, unclassified: un, wall, wallShare: classified ? wall / classified : null };
+  }
+  /** Minuti per settimana divisi nei tre gruppi (più il non classificato). */
+  function weeklyGroups(logs, from, to) {
+    const start = mondayOf(from), acc = [];
+    for (let d = start; d <= to; d = addDays(d, 7)) acc.push({ week: d, wall: 0, strength: 0, other: 0, unclassified: 0 });
+    for (const l of logs || []) {
+      const i = acc.length && l.date >= start && l.date <= addDays(acc[acc.length - 1].week, 6) ? Math.floor(diffDays(l.date, start) / 7) : -1;
+      if (i < 0) continue;
+      const r = logSections(l);
+      for (const k in r.sections) acc[i][SECTION_GROUP[k]] += r.sections[k];
+      acc[i].unclassified += r.unclassified;
+    }
+    return acc;
+  }
   /** Per superficie: minuti, sessioni, blocchi chiusi e grado massimo chiuso nel periodo. */
   function surfaceStats(logs, from, to) {
     const m = new Map();
@@ -655,7 +705,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
   }
 
   return {
-    describe, leftoverNote, splitCues, fmtRest, PAIRS, refKeys, recordsOf, lastRecord, nextLoad, TEST_TEMPLATES, testLabel, SECTIONS, LIBRARY, STD, stdVariant, matchStd,
+    GROUPS, SECTION_GROUP, blockSection, timeBySection, weeklyGroups, describe, leftoverNote, splitCues, fmtRest, PAIRS, refKeys, recordsOf, lastRecord, nextLoad, TEST_TEMPLATES, testLabel, SECTIONS, LIBRARY, STD, stdVariant, matchStd,
     DAY_TYPES, PERIODS, SLOTS, GRADES, GRADE_SCALES, gradeIdx, fmtGrade, DEFAULT_SURFACES, inferSurface, validISO, uid, toISO, fromISO, todayISO, addDays, diffDays, appleToISO, isoToApple, mondayOf,
     inferLoad, loadKey, loadKg, latestMaxes, fmtKg, cycle, cueAt, intervalMinutes, buildSteps, normInterval,
     importBlokplan, exportBlokplan, locate, dateOf, sessionMinutes, cloneSession, cloneDay, emptyWeek, usage, validState,
@@ -775,6 +825,47 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
     return box;
   }
 
+  /** Colonne impilate: poche serie con colori fissi per entità (mai riassegnati), 2 px di stacco tra i segmenti,
+      legenda sempre presente, riferimento opzionale come tacca grigia. o.series: [{ name, cls, values }]. */
+  function stacked(o) {
+    const H = 172, g = { l: 34, r: 6, t: 14, b: 20 }, n = o.labels.length, f = frame(H, o.aria);
+    const hasT = !!(o.targets && o.targets.some(v => v > 0)), tot = o.labels.map((_, i) => o.series.reduce((t, s) => t + s.values[i], 0));
+    const dom = Core.niceRange(0, Math.max(0, ...tot, ...(hasT ? o.targets : [])));
+    const y = yAxis(f.svg, g, H, dom), band = (W - g.l - g.r) / n, bw = Math.max(2, Math.min(24, band - 2, band * 0.62));
+    const cx = i => g.l + band * (i + 0.5), unit = o.unit ? ' ' + o.unit : '';
+    o.labels.forEach((_, i) => {
+      const x = cx(i) - bw / 2, live = o.series.filter(s => s.values[i] > 0);
+      let base = 0;
+      live.forEach((s, k) => {
+        const yb = y(base) - (k ? 1 : 0), yt = y(base + s.values[i]) + (k < live.length - 1 ? 1 : 0), top = k === live.length - 1;
+        base += s.values[i];
+        if (yb - yt < 0.5) return;
+        const r = top ? Math.min(4, bw / 2, yb - yt) : 0; // solo l'estremità in cima è arrotondata
+        f.svg.append(svgEl('path', { class: 'seg ' + s.cls, d: `M${x},${yb}V${yt + r}Q${x},${yt} ${x + r},${yt}H${x + bw - r}Q${x + bw},${yt} ${x + bw},${yt + r}V${yb}Z` }));
+      });
+      if (hasT && o.targets[i] > 0) f.svg.append(svgEl('line', { class: 'tick', x1: x - 3, x2: x + bw + 3, y1: y(o.targets[i]), y2: y(o.targets[i]) }));
+    });
+    xLabels(f.svg, o.labels, cx, H, band);
+    o.labels.forEach((_, i) => {
+      const title = (o.longLabels || o.labels)[i];
+      const rows = o.series.filter(s => s.values[i] > 0).map(s => ({ key: s.cls, value: fmtNum(s.values[i]) + unit, label: s.name.toLowerCase() })).reverse();
+      rows.unshift({ key: 'none', value: fmtNum(tot[i]) + unit, label: 'in totale' });
+      if (hasT) rows.push({ key: 'ref', value: fmtNum(o.targets[i]) + unit, label: o.targetName.toLowerCase() });
+      const hit = svgEl('rect', { class: 'hit', x: g.l + band * i, y: g.t, width: band, height: H - g.t - g.b, tabindex: 0, 'aria-label': `${title}: ${rows.map(r => r.value + ' ' + r.label).join(', ')}` });
+      const on = () => f.show(cx(i), title, rows);
+      hit.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') on(); });
+      hit.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') f.hide(); });
+      hit.addEventListener('click', on); hit.addEventListener('focus', on); hit.addEventListener('blur', f.hide);
+      f.svg.append(hit);
+    });
+    const box = el('div'), lg = el('div', 'viz-legend');
+    for (const s of o.series) { const a = el('span'); a.append(el('i', 'sw ' + s.cls), document.createTextNode(s.name)); lg.append(a); }
+    if (hasT) { const b = el('span'); b.append(el('i', 'lk'), document.createTextNode(o.targetName)); lg.append(b); }
+    box.append(lg, f.wrap, tableView(['Settimana'].concat(o.series.map(s => s.name), ['Totale'], hasT ? [o.targetName] : []),
+      o.labels.map((_, i) => [(o.longLabels || o.labels)[i]].concat(o.series.map(s => fmtNum(s.values[i])), [fmtNum(tot[i]) + unit], hasT ? [fmtNum(o.targets[i]) + unit] : []))));
+    return box;
+  }
+
   /** Linea (una serie) con valori mancanti ammessi (null).
       o: { labels, longLabels, values, name, unit?, digits?, domain?: {min,max,step}, fmt?, height?, colLabel?, aria } */
   function line(o) {
@@ -840,6 +931,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
       const row = el('div', 'viz-hb-r'), track = el('span', 'viz-hb-t'), bar = el('i');
       bar.style.width = (r.value > 0 ? Math.max(1, r.value / max * 100) : 0) + '%';
       track.append(bar);
+      if (r.cls) bar.className = r.cls;
       row.append(el('span', 'viz-hb-l', r.label), track, el('span', 'viz-hb-v', r.text));
       box.append(row);
     }
@@ -856,7 +948,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
       svgEl('circle', { cx: pts[pts.length - 1][0].toFixed(1), cy: pts[pts.length - 1][1].toFixed(1), r: 4 }));
   }
 
-  root.Charts = { columns, line, hbars, spark, fmtNum };
+  root.Charts = { columns, stacked, line, hbars, spark, fmtNum };
 })(typeof self !== 'undefined' ? self : this);
 </script>
 <script>/* Interfaccia: viste, editor, player. Tutta la logica testabile sta in core.js, i grafici in charts.js. */
@@ -1512,6 +1604,9 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
   /* ---------- Analisi ---------- */
   const anHead = cur => [h('h1', {}, 'Analisi'), seg([['analisi', 'Grafici'], ['progressi', 'Test e massimali']], cur, k => { location.hash = k; })];
   const chartCard = (title, sub, ...nodes) => h('div', { class: 'card' }, h('div', { class: 'ct' }, title), sub ? h('div', { class: 'sub' }, sub) : null, nodes);
+  /** Sezione della libreria a cui appartiene un esercizio (per il tempo per categoria). */
+  const exSection = e => (e.std === 'test' ? 'fingers' : e.std && C.STD[e.std] ? C.STD[e.std].section : ({ warmup: 'warmup', wall: 'wall', mobility: 'mobility' }[e.slot] || 'strength'));
+  const hm = m => (m < 120 ? m + ' min' : dec(Math.round(m / 6) / 10) + ' h');
   const tile = (label, value, sub) => h('div', { class: 'tile' }, h('div', { class: 'l' }, label), h('div', { class: 'v' }, value), h('div', { class: 's' }, sub || ' '));
   let anWeeks = 8;
   function viewAnalytics() {
@@ -1535,8 +1630,20 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
     if (!sum.sessions && !wk.some(w => w.plannedMinutes))
       return out.concat(h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin:0' }, 'Nessun dato in questo periodo. I grafici si riempiono quando completi una sessione o ne registri una dalla Home.')));
 
-    if (wk.some(w => w.minutes || w.plannedMinutes)) out.push(chartCard('Volume settimanale', 'Minuti registrati, confrontati con quelli in programma.',
-      Charts.columns({ labels, longLabels: long, values: wk.map(w => w.minutes), targets: wk.map(w => w.plannedMinutes), unit: 'min', name: 'Fatti', targetName: 'In programma', aria: 'Minuti di allenamento per settimana' })));
+    // Tempo per categoria: quota di arrampicata in evidenza, poi le sezioni ordinate (colore = gruppo)
+    const cat = C.timeBySection(S.logs, from, to), grp = C.weeklyGroups(S.logs, from, to), SEC = { ...C.SECTIONS, strength: 'Forza generale', mobility: 'Mobilità', other: 'Altro' };
+    if (cat.classified || cat.unclassified) {
+      const pct = m => Math.round(m / cat.classified * 100) + '%'; // stessa base della cifra in evidenza: il tempo classificato
+      const rows = cat.rows.map(r => ({ label: SEC[r.section], value: r.minutes, text: `${hm(r.minutes)} · ${pct(r.minutes)}`, cls: 'g-' + C.SECTION_GROUP[r.section] }));
+      if (cat.unclassified) rows.push({ label: 'Non classificato', value: cat.unclassified, text: hm(cat.unclassified), cls: 'g-none' });
+      out.push(chartCard('Tempo per categoria', cat.classified ? 'Dai minuti registrati per ogni esercizio.' : 'Servono sessioni fatte con il timer: solo lì i minuti sono per esercizio.',
+        cat.wallShare == null ? null : [h('div', { class: 'hero', style: 'margin-top:4px' }, Math.round(cat.wallShare * 100) + '%', h('small', {}, 'sul muro')), h('div', { class: 'sub', style: 'margin-bottom:10px' }, `${hm(cat.wall)} su ${hm(cat.classified)} classificati`)],
+        Charts.hbars(rows),
+        cat.unclassified ? h('p', { class: 'sub', style: 'margin-bottom:0' }, 'Non classificato: sessioni registrate a mano, o tempo non attribuito a un esercizio. Resta fuori dalle percentuali.') : null));
+    }
+    if (wk.some(w => w.minutes || w.plannedMinutes)) out.push(chartCard('Volume settimanale', 'Minuti registrati per gruppo, confrontati con quelli in programma.',
+      Charts.stacked({ labels, longLabels: long, unit: 'min', targets: wk.map(w => w.plannedMinutes), targetName: 'In programma', aria: 'Minuti di allenamento per settimana, divisi per gruppo',
+        series: [['wall', C.GROUPS.wall], ['strength', C.GROUPS.strength], ['other', C.GROUPS.other], ['unclassified', 'Non classificato']].map(([k, name]) => ({ name, cls: k === 'unclassified' ? 'g-none' : 'g-' + k, values: grp.map(w => w[k]) })).filter(x => x.values.some(v => v > 0)) })));
     if (wk.some(w => w.load)) out.push(chartCard('Carico settimanale', 'Somma di minuti × RPE delle sessioni con RPE (unità arbitrarie).',
       Charts.columns({ labels, longLabels: long, values: wk.map(w => Math.round(w.load)), name: 'Carico', aria: 'Carico di allenamento sRPE per settimana' })));
     if (wk.some(w => w.rpe != null)) out.push(chartCard('Sforzo percepito', 'RPE medio delle sessioni della settimana (scala 1–10).',
@@ -1822,7 +1929,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
       load && prop && planned ? h('p', { class: 'sub' }, `Proposto: ${prop.text} (${prop.why}).`) : null,
       isClimb ? [h('div', { class: 'cols' }, field('Superficie', sf), field('Grado max chiuso', gr)), field('Blocchi chiusi', sends)] : null,
       field('Nota', note),
-      btn('Salva', () => put({ name: ex.name, minutes: Math.max(0, Math.round(val(min) || 0)), note: note.value.trim().slice(0, 200), load: load ? load.value.trim() : '',
+      btn('Salva', () => put({ name: ex.name, minutes: Math.max(0, Math.round(val(min) || 0)), note: note.value.trim().slice(0, 200), load: load ? load.value.trim() : '', sec: exSection(ex),
         key: exKey(ex), label: exLabel(ex), kgs: load ? C.parseLoads(load.value) : [], rpe: rpe ? val(rpe) : null, mode: ex.load ? ex.load.mode : 'lift',
         tests: tests.map(x => ({ key: x.def.key, value: val(x.inp) })).filter(x => x.value != null),
         climb: isClimb && sf.value ? { name: ex.name, surface: sf.value, top: gr.value || null, sends: val(sends) == null ? null : Math.max(0, Math.round(val(sends))), minutes: Math.max(0, Math.round(val(min) || 0)) } : null }), 'pri block'),
@@ -1840,7 +1947,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
         const date = C.todayISO();
         S.logs.push({ id: C.uid(), date, sid: s.id, type: s.type || 'wall', title: autoTitle(s), minutes: Math.max(0, Math.round(val(min) || 0)), rpe: val(rpe), feel: feel.value ? +feel.value : null, notes: notes.value.trim(),
           loads: recs.filter(x => x.load).map(x => ({ name: x.name, kg: x.load })), climbs: recs.map(x => x.climb).filter(Boolean),
-          blocks: recs.map(x => ({ name: x.name, minutes: x.minutes || 0, note: x.note || '', key: x.key, label: x.label, kgs: x.kgs && x.kgs.length ? x.kgs : undefined, rpe: x.rpe == null ? undefined : x.rpe, mode: x.mode })) });
+          blocks: recs.map(x => ({ name: x.name, minutes: x.minutes || 0, note: x.note || '', key: x.key, label: x.label, sec: x.sec, kgs: x.kgs && x.kgs.length ? x.kgs : undefined, rpe: x.rpe == null ? undefined : x.rpe, mode: x.mode })) });
         log('sessione', 'registrata', { esercizi: recs.length });
         end();
       }, 'pri block'), btn('Chiudi senza salvare', end, 'block')]);

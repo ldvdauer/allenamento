@@ -477,6 +477,48 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
     const base = mode === 'hang' && bw != null && !isNaN(bw) ? bw : 0;
     return { kg: Math.round(((base + kg) * (1 + dir * rule.step / 100) - base) * 2) / 2, dir };
   }
+  /* Tempo per categoria: le categorie sono le sezioni della libreria; i gruppi servono al grafico nel tempo. */
+  const GROUPS = { wall: 'Sul muro', strength: 'Forza', other: 'Mobilità e altro' };
+  const SECTION_GROUP = { wall: 'wall', fingers: 'strength', pull: 'strength', strength: 'strength', core: 'strength', warmup: 'other', mobility: 'other', mental: 'other', other: 'other' };
+  /** Sezione di un esercizio registrato: quella salvata, altrimenti ricavata dallo standard o dal nome. */
+  function blockSection(b) {
+    if (b.sec && SECTION_GROUP[b.sec]) return b.sec;
+    const k = String(b.key || '').split('|')[0], std = STD[k] ? k : k === 'test' ? 'test' : matchStd(b.name);
+    return std === 'test' ? 'fingers' : STD[std] ? STD[std].section : 'other';
+  }
+  /** Minuti di un log divisi per sezione. Ciò che non è attribuito a un esercizio (sessioni registrate a mano, o
+      tempo oltre la somma degli esercizi) resta in `unclassified`. */
+  function logSections(l) {
+    const out = {}; let sum = 0;
+    for (const b of l.blocks || []) { const m = b.minutes || 0; if (!m) continue; const sec = blockSection(b); out[sec] = (out[sec] || 0) + m; sum += m; }
+    return { sections: out, unclassified: Math.max(0, (l.minutes || 0) - sum) };
+  }
+  /** Tempo per categoria nel periodo: righe ordinate, quota di arrampicata sul tempo classificato, non classificato. */
+  function timeBySection(logs, from, to) {
+    const m = {}; let un = 0;
+    for (const l of logs || []) {
+      if (l.date < from || l.date > to) continue;
+      const r = logSections(l);
+      for (const k in r.sections) m[k] = (m[k] || 0) + r.sections[k];
+      un += r.unclassified;
+    }
+    const rows = Object.entries(m).map(([section, minutes]) => ({ section, minutes })).sort((a, b) => b.minutes - a.minutes || a.section.localeCompare(b.section));
+    const classified = rows.reduce((t, r) => t + r.minutes, 0), wall = rows.filter(r => SECTION_GROUP[r.section] === 'wall').reduce((t, r) => t + r.minutes, 0);
+    return { rows, classified, unclassified: un, wall, wallShare: classified ? wall / classified : null };
+  }
+  /** Minuti per settimana divisi nei tre gruppi (più il non classificato). */
+  function weeklyGroups(logs, from, to) {
+    const start = mondayOf(from), acc = [];
+    for (let d = start; d <= to; d = addDays(d, 7)) acc.push({ week: d, wall: 0, strength: 0, other: 0, unclassified: 0 });
+    for (const l of logs || []) {
+      const i = acc.length && l.date >= start && l.date <= addDays(acc[acc.length - 1].week, 6) ? Math.floor(diffDays(l.date, start) / 7) : -1;
+      if (i < 0) continue;
+      const r = logSections(l);
+      for (const k in r.sections) acc[i][SECTION_GROUP[k]] += r.sections[k];
+      acc[i].unclassified += r.unclassified;
+    }
+    return acc;
+  }
   /** Per superficie: minuti, sessioni, blocchi chiusi e grado massimo chiuso nel periodo. */
   function surfaceStats(logs, from, to) {
     const m = new Map();
@@ -512,7 +554,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
   }
 
   return {
-    describe, leftoverNote, splitCues, fmtRest, PAIRS, refKeys, recordsOf, lastRecord, nextLoad, TEST_TEMPLATES, testLabel, SECTIONS, LIBRARY, STD, stdVariant, matchStd,
+    GROUPS, SECTION_GROUP, blockSection, timeBySection, weeklyGroups, describe, leftoverNote, splitCues, fmtRest, PAIRS, refKeys, recordsOf, lastRecord, nextLoad, TEST_TEMPLATES, testLabel, SECTIONS, LIBRARY, STD, stdVariant, matchStd,
     DAY_TYPES, PERIODS, SLOTS, GRADES, GRADE_SCALES, gradeIdx, fmtGrade, DEFAULT_SURFACES, inferSurface, validISO, uid, toISO, fromISO, todayISO, addDays, diffDays, appleToISO, isoToApple, mondayOf,
     inferLoad, loadKey, loadKg, latestMaxes, fmtKg, cycle, cueAt, intervalMinutes, buildSteps, normInterval,
     importBlokplan, exportBlokplan, locate, dateOf, sessionMinutes, cloneSession, cloneDay, emptyWeek, usage, validState,

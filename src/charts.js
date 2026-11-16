@@ -110,6 +110,47 @@
     return box;
   }
 
+  /** Colonne impilate: poche serie con colori fissi per entità (mai riassegnati), 2 px di stacco tra i segmenti,
+      legenda sempre presente, riferimento opzionale come tacca grigia. o.series: [{ name, cls, values }]. */
+  function stacked(o) {
+    const H = 172, g = { l: 34, r: 6, t: 14, b: 20 }, n = o.labels.length, f = frame(H, o.aria);
+    const hasT = !!(o.targets && o.targets.some(v => v > 0)), tot = o.labels.map((_, i) => o.series.reduce((t, s) => t + s.values[i], 0));
+    const dom = Core.niceRange(0, Math.max(0, ...tot, ...(hasT ? o.targets : [])));
+    const y = yAxis(f.svg, g, H, dom), band = (W - g.l - g.r) / n, bw = Math.max(2, Math.min(24, band - 2, band * 0.62));
+    const cx = i => g.l + band * (i + 0.5), unit = o.unit ? ' ' + o.unit : '';
+    o.labels.forEach((_, i) => {
+      const x = cx(i) - bw / 2, live = o.series.filter(s => s.values[i] > 0);
+      let base = 0;
+      live.forEach((s, k) => {
+        const yb = y(base) - (k ? 1 : 0), yt = y(base + s.values[i]) + (k < live.length - 1 ? 1 : 0), top = k === live.length - 1;
+        base += s.values[i];
+        if (yb - yt < 0.5) return;
+        const r = top ? Math.min(4, bw / 2, yb - yt) : 0; // solo l'estremità in cima è arrotondata
+        f.svg.append(svgEl('path', { class: 'seg ' + s.cls, d: `M${x},${yb}V${yt + r}Q${x},${yt} ${x + r},${yt}H${x + bw - r}Q${x + bw},${yt} ${x + bw},${yt + r}V${yb}Z` }));
+      });
+      if (hasT && o.targets[i] > 0) f.svg.append(svgEl('line', { class: 'tick', x1: x - 3, x2: x + bw + 3, y1: y(o.targets[i]), y2: y(o.targets[i]) }));
+    });
+    xLabels(f.svg, o.labels, cx, H, band);
+    o.labels.forEach((_, i) => {
+      const title = (o.longLabels || o.labels)[i];
+      const rows = o.series.filter(s => s.values[i] > 0).map(s => ({ key: s.cls, value: fmtNum(s.values[i]) + unit, label: s.name.toLowerCase() })).reverse();
+      rows.unshift({ key: 'none', value: fmtNum(tot[i]) + unit, label: 'in totale' });
+      if (hasT) rows.push({ key: 'ref', value: fmtNum(o.targets[i]) + unit, label: o.targetName.toLowerCase() });
+      const hit = svgEl('rect', { class: 'hit', x: g.l + band * i, y: g.t, width: band, height: H - g.t - g.b, tabindex: 0, 'aria-label': `${title}: ${rows.map(r => r.value + ' ' + r.label).join(', ')}` });
+      const on = () => f.show(cx(i), title, rows);
+      hit.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') on(); });
+      hit.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') f.hide(); });
+      hit.addEventListener('click', on); hit.addEventListener('focus', on); hit.addEventListener('blur', f.hide);
+      f.svg.append(hit);
+    });
+    const box = el('div'), lg = el('div', 'viz-legend');
+    for (const s of o.series) { const a = el('span'); a.append(el('i', 'sw ' + s.cls), document.createTextNode(s.name)); lg.append(a); }
+    if (hasT) { const b = el('span'); b.append(el('i', 'lk'), document.createTextNode(o.targetName)); lg.append(b); }
+    box.append(lg, f.wrap, tableView(['Settimana'].concat(o.series.map(s => s.name), ['Totale'], hasT ? [o.targetName] : []),
+      o.labels.map((_, i) => [(o.longLabels || o.labels)[i]].concat(o.series.map(s => fmtNum(s.values[i])), [fmtNum(tot[i]) + unit], hasT ? [fmtNum(o.targets[i]) + unit] : []))));
+    return box;
+  }
+
   /** Linea (una serie) con valori mancanti ammessi (null).
       o: { labels, longLabels, values, name, unit?, digits?, domain?: {min,max,step}, fmt?, height?, colLabel?, aria } */
   function line(o) {
@@ -175,6 +216,7 @@
       const row = el('div', 'viz-hb-r'), track = el('span', 'viz-hb-t'), bar = el('i');
       bar.style.width = (r.value > 0 ? Math.max(1, r.value / max * 100) : 0) + '%';
       track.append(bar);
+      if (r.cls) bar.className = r.cls;
       row.append(el('span', 'viz-hb-l', r.label), track, el('span', 'viz-hb-v', r.text));
       box.append(row);
     }
@@ -191,5 +233,5 @@
       svgEl('circle', { cx: pts[pts.length - 1][0].toFixed(1), cy: pts[pts.length - 1][1].toFixed(1), r: 4 }));
   }
 
-  root.Charts = { columns, line, hbars, spark, fmtNum };
+  root.Charts = { columns, stacked, line, hbars, spark, fmtNum };
 })(typeof self !== 'undefined' ? self : this);

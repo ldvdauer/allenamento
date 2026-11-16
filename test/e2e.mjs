@@ -207,6 +207,11 @@ await setVal('.sheet input[type=date]', '2026-11-25'); await clickText('Salva', 
 ok(await pg.evaluate(() => __app.state.plans[0].startDate === '2026-11-23'), 'programma: la nuova data viene portata al lunedì');
 await shot('9-altro');
 await go('analisi'); ok((await txt('#view')).includes('Volume settimanale') && !(await txt('#view')).includes('tipo di sessione'), 'Analisi: grafici presenti, niente "tipo di sessione"');
+const an = await txt('#view'); if (process.env.DBG) console.log(an.slice(0, 900));
+ok(an.includes('Tempo per categoria') && /\d+%\s*sul muro/.test(an) && an.includes('Non classificato') && an.includes('Sul muro') && an.includes('6 min · 23%') && an.includes('Mobilità e altro'), 'Analisi: tempo per categoria con quota sul muro, volume settimanale per gruppo');
+ok(!an.includes('esercizi con più tempo'), 'nessuna classifica dei dieci esercizi');
+await pg.evaluate(() => { const hit = [...document.querySelectorAll('#view .viz')][0].querySelectorAll('.hit'); hit[hit.length - 1].dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+ok(/in totale/.test(await pg.$eval('#view .viz-tip', e => e.innerText)), 'grafico impilato: tocco su una settimana → totale e gruppi');
 await shot('10-analisi', true);
 
 // Backup automatico su GitHub (rete simulata): primo backup, file senza token, errore di autenticazione

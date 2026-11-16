@@ -651,6 +651,9 @@
   /* ---------- Analisi ---------- */
   const anHead = cur => [h('h1', {}, 'Analisi'), seg([['analisi', 'Grafici'], ['progressi', 'Test e massimali']], cur, k => { location.hash = k; })];
   const chartCard = (title, sub, ...nodes) => h('div', { class: 'card' }, h('div', { class: 'ct' }, title), sub ? h('div', { class: 'sub' }, sub) : null, nodes);
+  /** Sezione della libreria a cui appartiene un esercizio (per il tempo per categoria). */
+  const exSection = e => (e.std === 'test' ? 'fingers' : e.std && C.STD[e.std] ? C.STD[e.std].section : ({ warmup: 'warmup', wall: 'wall', mobility: 'mobility' }[e.slot] || 'strength'));
+  const hm = m => (m < 120 ? m + ' min' : dec(Math.round(m / 6) / 10) + ' h');
   const tile = (label, value, sub) => h('div', { class: 'tile' }, h('div', { class: 'l' }, label), h('div', { class: 'v' }, value), h('div', { class: 's' }, sub || ' '));
   let anWeeks = 8;
   function viewAnalytics() {
@@ -674,8 +677,20 @@
     if (!sum.sessions && !wk.some(w => w.plannedMinutes))
       return out.concat(h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin:0' }, 'Nessun dato in questo periodo. I grafici si riempiono quando completi una sessione o ne registri una dalla Home.')));
 
-    if (wk.some(w => w.minutes || w.plannedMinutes)) out.push(chartCard('Volume settimanale', 'Minuti registrati, confrontati con quelli in programma.',
-      Charts.columns({ labels, longLabels: long, values: wk.map(w => w.minutes), targets: wk.map(w => w.plannedMinutes), unit: 'min', name: 'Fatti', targetName: 'In programma', aria: 'Minuti di allenamento per settimana' })));
+    // Tempo per categoria: quota di arrampicata in evidenza, poi le sezioni ordinate (colore = gruppo)
+    const cat = C.timeBySection(S.logs, from, to), grp = C.weeklyGroups(S.logs, from, to), SEC = { ...C.SECTIONS, strength: 'Forza generale', mobility: 'Mobilità', other: 'Altro' };
+    if (cat.classified || cat.unclassified) {
+      const pct = m => Math.round(m / cat.classified * 100) + '%'; // stessa base della cifra in evidenza: il tempo classificato
+      const rows = cat.rows.map(r => ({ label: SEC[r.section], value: r.minutes, text: `${hm(r.minutes)} · ${pct(r.minutes)}`, cls: 'g-' + C.SECTION_GROUP[r.section] }));
+      if (cat.unclassified) rows.push({ label: 'Non classificato', value: cat.unclassified, text: hm(cat.unclassified), cls: 'g-none' });
+      out.push(chartCard('Tempo per categoria', cat.classified ? 'Dai minuti registrati per ogni esercizio.' : 'Servono sessioni fatte con il timer: solo lì i minuti sono per esercizio.',
+        cat.wallShare == null ? null : [h('div', { class: 'hero', style: 'margin-top:4px' }, Math.round(cat.wallShare * 100) + '%', h('small', {}, 'sul muro')), h('div', { class: 'sub', style: 'margin-bottom:10px' }, `${hm(cat.wall)} su ${hm(cat.classified)} classificati`)],
+        Charts.hbars(rows),
+        cat.unclassified ? h('p', { class: 'sub', style: 'margin-bottom:0' }, 'Non classificato: sessioni registrate a mano, o tempo non attribuito a un esercizio. Resta fuori dalle percentuali.') : null));
+    }
+    if (wk.some(w => w.minutes || w.plannedMinutes)) out.push(chartCard('Volume settimanale', 'Minuti registrati per gruppo, confrontati con quelli in programma.',
+      Charts.stacked({ labels, longLabels: long, unit: 'min', targets: wk.map(w => w.plannedMinutes), targetName: 'In programma', aria: 'Minuti di allenamento per settimana, divisi per gruppo',
+        series: [['wall', C.GROUPS.wall], ['strength', C.GROUPS.strength], ['other', C.GROUPS.other], ['unclassified', 'Non classificato']].map(([k, name]) => ({ name, cls: k === 'unclassified' ? 'g-none' : 'g-' + k, values: grp.map(w => w[k]) })).filter(x => x.values.some(v => v > 0)) })));
     if (wk.some(w => w.load)) out.push(chartCard('Carico settimanale', 'Somma di minuti × RPE delle sessioni con RPE (unità arbitrarie).',
       Charts.columns({ labels, longLabels: long, values: wk.map(w => Math.round(w.load)), name: 'Carico', aria: 'Carico di allenamento sRPE per settimana' })));
     if (wk.some(w => w.rpe != null)) out.push(chartCard('Sforzo percepito', 'RPE medio delle sessioni della settimana (scala 1–10).',
@@ -961,7 +976,7 @@
       load && prop && planned ? h('p', { class: 'sub' }, `Proposto: ${prop.text} (${prop.why}).`) : null,
       isClimb ? [h('div', { class: 'cols' }, field('Superficie', sf), field('Grado max chiuso', gr)), field('Blocchi chiusi', sends)] : null,
       field('Nota', note),
-      btn('Salva', () => put({ name: ex.name, minutes: Math.max(0, Math.round(val(min) || 0)), note: note.value.trim().slice(0, 200), load: load ? load.value.trim() : '',
+      btn('Salva', () => put({ name: ex.name, minutes: Math.max(0, Math.round(val(min) || 0)), note: note.value.trim().slice(0, 200), load: load ? load.value.trim() : '', sec: exSection(ex),
         key: exKey(ex), label: exLabel(ex), kgs: load ? C.parseLoads(load.value) : [], rpe: rpe ? val(rpe) : null, mode: ex.load ? ex.load.mode : 'lift',
         tests: tests.map(x => ({ key: x.def.key, value: val(x.inp) })).filter(x => x.value != null),
         climb: isClimb && sf.value ? { name: ex.name, surface: sf.value, top: gr.value || null, sends: val(sends) == null ? null : Math.max(0, Math.round(val(sends))), minutes: Math.max(0, Math.round(val(min) || 0)) } : null }), 'pri block'),
@@ -979,7 +994,7 @@
         const date = C.todayISO();
         S.logs.push({ id: C.uid(), date, sid: s.id, type: s.type || 'wall', title: autoTitle(s), minutes: Math.max(0, Math.round(val(min) || 0)), rpe: val(rpe), feel: feel.value ? +feel.value : null, notes: notes.value.trim(),
           loads: recs.filter(x => x.load).map(x => ({ name: x.name, kg: x.load })), climbs: recs.map(x => x.climb).filter(Boolean),
-          blocks: recs.map(x => ({ name: x.name, minutes: x.minutes || 0, note: x.note || '', key: x.key, label: x.label, kgs: x.kgs && x.kgs.length ? x.kgs : undefined, rpe: x.rpe == null ? undefined : x.rpe, mode: x.mode })) });
+          blocks: recs.map(x => ({ name: x.name, minutes: x.minutes || 0, note: x.note || '', key: x.key, label: x.label, sec: x.sec, kgs: x.kgs && x.kgs.length ? x.kgs : undefined, rpe: x.rpe == null ? undefined : x.rpe, mode: x.mode })) });
         log('sessione', 'registrata', { esercizi: recs.length });
         end();
       }, 'pri block'), btn('Chiudi senza salvare', end, 'block')]);

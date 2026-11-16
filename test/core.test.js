@@ -310,3 +310,21 @@ test('cue importati → interruttore SX/DX + nota', () => {
   assert.deepEqual(C.splitCues([]), { sided: false, note: '' });
   assert.deepEqual(C.splitCues(undefined), { sided: false, note: '' });
 });
+
+test('tempo per categoria: sezioni, quota di arrampicata, gruppi settimanali', () => {
+  const logs = [
+    { date: '2026-11-16', minutes: 100, blocks: [{ name: 'Riscaldamento', sec: 'warmup', minutes: 20 }, { name: 'Half-crimp', key: 'max-hang|hc', minutes: 10 }, { name: 'Limit Karma', key: 'limit|', minutes: 50 }, { name: 'Nordic curl', minutes: 5 }] },
+    { date: '2026-11-18', minutes: 60 }, // registrata a mano: nessun esercizio
+    { date: '2026-11-24', minutes: 30, blocks: [{ name: 'Test: Half-crimp', key: 'test|hc', minutes: 10 }, { name: 'Volume', key: 'volume|', minutes: 30 }] },
+    { date: '2026-10-01', minutes: 500, blocks: [{ name: 'Volume', key: 'volume|', minutes: 500 }] },
+  ];
+  assert.equal(C.blockSection({ name: 'Qualcosa di mio' }), 'other');
+  assert.equal(C.blockSection({ name: 'x', sec: 'core' }), 'core');
+  const t = C.timeBySection(logs, '2026-11-16', '2026-11-29');
+  assert.deepEqual(t.rows, [{ section: 'wall', minutes: 80 }, { section: 'fingers', minutes: 20 }, { section: 'warmup', minutes: 20 }, { section: 'strength', minutes: 5 }]);
+  assert.deepEqual([t.classified, t.unclassified, t.wall, t.wallShare], [125, 15 + 60, 80, 0.64]); // 15 min della prima sessione non attribuiti a un esercizio
+  assert.equal(C.timeBySection([], '2026-11-16', '2026-11-29').wallShare, null);
+  assert.deepEqual(C.weeklyGroups(logs, '2026-11-16', '2026-11-29'), [
+    { week: '2026-11-16', wall: 50, strength: 15, other: 20, unclassified: 75 },
+    { week: '2026-11-23', wall: 30, strength: 10, other: 0, unclassified: 0 }]); // se gli esercizi superano il totale, il non classificato resta 0
+});
