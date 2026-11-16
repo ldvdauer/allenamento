@@ -225,7 +225,7 @@ test('libreria standard: voci valide, versioni e abbinamento dei nomi', () => {
     if (x.interval) assert.deepEqual(C.normInterval(x.interval), x.interval, x.key); // già in forma normalizzata
   }
   assert.deepEqual(C.STD['max-hang'].interval, { rounds: 4, workSeconds: 7, restSeconds: 180, cues: [] });
-  assert.deepEqual(C.STD.flash.interval, { rounds: 18, workSeconds: 45, restSeconds: 120, selfPaced: true, roundsPerSet: 3, setRestSeconds: 300, cues: ['Lettura', 'Piedi', 'Lentezza'] });
+  assert.deepEqual(C.STD.flash.interval, { rounds: 18, workSeconds: 45, restSeconds: 120, selfPaced: true, roundsPerSet: 3, setRestSeconds: 300, cues: [] });
   const v = C.stdVariant('limit');
   assert.deepEqual([v.std, v.base, v.name, v.slot, v.interval, v.minutes], ['limit', true, 'Limit bouldering', 'wall', null, 40]);
   C.stdVariant('max-hang').interval.rounds = 9;
@@ -296,4 +296,17 @@ test('parametri → riga descrittiva; dalle prescrizioni importate resta solo la
   const ex = { e1: { id: 'e1', name: 'Max hang', slot: 'strength', location: 'off_wall', domain: 'x', intensity: 'max', risk: 'low', interval: { rounds: 4, workSeconds: 7, restSeconds: 180, cues: [] }, load: { ref: 'hc', pct: 85 } } };
   const plan = { title: 'P', startDate: '2026-11-16', weeks: [[{ sessions: [{ id: 's', type: 'wall', period: 'base', blocks: [{ id: 'b', exId: 'e1', minutes: 10, note: 'margine 2"' }] }] }, ...Array.from({ length: 6 }, () => ({ sessions: [] }))]] };
   assert.equal(C.exportBlokplan(plan, ex).weeks[0][0].plannedBlocks[0].block.prescription, '4 × 7" · rec. 3\' · 85% · margine 2"');
+});
+
+test('cue importati → interruttore SX/DX + nota', () => {
+  assert.deepEqual(C.splitCues(['SX · 75% max', 'DX · 75% max']), { sided: true, note: '' });
+  assert.deepEqual(C.splitCues(['SX · carico crescente', 'DX · carico crescente']), { sided: true, note: 'carico crescente' });
+  assert.deepEqual(C.splitCues(['Lato SX', 'Lato DX']), { sided: true, note: '' });
+  assert.deepEqual(C.splitCues(['Lato Karma', 'Lato opposto']), { sided: true, note: 'Lato Karma → Lato opposto' });
+  assert.deepEqual(C.splitCues(['85% max']), { sided: false, note: '' });
+  assert.deepEqual(C.splitCues(['6-8 rip. per braccio']), { sided: false, note: '6-8 rip. per braccio' });
+  assert.deepEqual(C.splitCues(['Lettura (flash)', 'Piedi e tecnica', 'Lentezza e controllo']), { sided: false, note: 'Lettura (flash) → Piedi e tecnica → Lentezza e controllo' });
+  assert.deepEqual(C.splitCues(['Tieni in compressione']), { sided: false, note: 'Tieni in compressione' });
+  assert.deepEqual(C.splitCues([]), { sided: false, note: '' });
+  assert.deepEqual(C.splitCues(undefined), { sided: false, note: '' });
 });

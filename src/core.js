@@ -71,9 +71,9 @@ plank|core|Plank|5|t:3/40/60
 limit|wall|Limit bouldering|40|
 project|wall|Progetto|45|
 board|wall|Board benchmark|40|
-flash|wall|Set al flash|60|r:18/0/120+3/300=Lettura~Piedi~Lentezza
+flash|wall|Set al flash|60|r:18/0/120+3/300
 volume|wall|Volume|40|
-technique|wall|Tecnica: movimento isolato|8|r:6/1/60=Lato A~Lato B
+technique|wall|Tecnica: movimento isolato|8|r:6/1/60=SX~DX
 four-by-four|wall|4x4|25|r:16/1/30+4/240
 circuit|wall|Circuiti di resistenza|30|
 outdoor|wall|Roccia|120|
@@ -255,6 +255,15 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
   /** Di una prescrizione testuale importata tiene solo ciò che non è un parametro (serie, recuperi, %): diventa la nota del blocco. */
   const leftoverNote = text => String(text || '').split(' · ').map(x => x.trim())
     .filter(x => x && !/^\d+\s*(×|x|blocchi|serie)\b/i.test(x) && !/^\d+ (×|x) /i.test(x) && !/\brec\./i.test(x) && !/\d\s*%/.test(x) && !/^test$/i.test(x)).join(' · ');
+
+  /** Dai cue per round (formato Blok) ricava le due cose che servono: se l'esercizio alterna SX/DX, e il testo
+      che non è un parametro, da mettere nella nota. I cue liberi non esistono più come campo a parte. */
+  function splitCues(cues) {
+    const list = (cues || []).map(c => String(c).trim()).filter(Boolean);
+    const sided = list.length > 0 && list.length % 2 === 0 && list.every((c, i) => (i % 2 ? /^(DX|lato dx|lato opposto|lato b)\b/i : /^(SX|lato sx|lato karma|lato a)\b/i).test(c) || /^lato\b/i.test(c));
+    const rest = [...new Set(list.map(c => leftoverNote(c.replace(/^(SX|DX)\b\s*·?\s*/i, '').replace(/^lato (sx|dx|a|b)$/i, ''))).filter(Boolean))];
+    return { sided, note: rest.join(' → ') };
+  }
 
   /* ---- Import / export .blokplan ---- */
   const str = (v, d) => (typeof v === 'string' ? v.slice(0, 200) : d);
@@ -503,7 +512,7 @@ review|mental|Analisi dei tentativi|10|`.split('\n').map(line => {
   }
 
   return {
-    describe, leftoverNote, fmtRest, PAIRS, refKeys, recordsOf, lastRecord, nextLoad, TEST_TEMPLATES, testLabel, SECTIONS, LIBRARY, STD, stdVariant, matchStd,
+    describe, leftoverNote, splitCues, fmtRest, PAIRS, refKeys, recordsOf, lastRecord, nextLoad, TEST_TEMPLATES, testLabel, SECTIONS, LIBRARY, STD, stdVariant, matchStd,
     DAY_TYPES, PERIODS, SLOTS, GRADES, GRADE_SCALES, gradeIdx, fmtGrade, DEFAULT_SURFACES, inferSurface, validISO, uid, toISO, fromISO, todayISO, addDays, diffDays, appleToISO, isoToApple, mondayOf,
     inferLoad, loadKey, loadKg, latestMaxes, fmtKg, cycle, cueAt, intervalMinutes, buildSteps, normInterval,
     importBlokplan, exportBlokplan, locate, dateOf, sessionMinutes, cloneSession, cloneDay, emptyWeek, usage, validState,

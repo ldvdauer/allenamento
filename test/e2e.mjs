@@ -50,6 +50,7 @@ let cal = await txt('#view');
 ok(cal.includes('TEST open hand') && cal.includes('KB press 1 braccio') && !/Fuori muro|Muro ·/.test(cal), 'una sola sessione al giorno, senza etichette Muro / Fuori muro');
 ok(await pg.evaluate(() => __app.state.plans[0].weeks.every(w => w.every(d => d.sessions.length <= 1))), 'ogni giorno del programma ha al massimo una sessione');
 ok(await pg.evaluate(() => Object.values(__app.state.exercises).every(e => !('prescription' in e) && !('base' in e)) && new Set(__app.state.plans[0].weeks.flatMap(w => w.flatMap(d => d.sessions.flatMap(x => x.blocks.map(b => b.exId))))).size === Object.keys(__app.state.exercises).length), 'import: nessuna descrizione testuale negli esercizi; ogni blocco ha i suoi parametri (nessuna versione condivisa)');
+ok(await pg.evaluate(() => Object.values(__app.state.exercises).every(e => !e.interval || e.interval.cues.length === 0 || e.interval.cues.join() === 'SX,DX')), 'import: i cue diventano solo l\'alternanza SX/DX (il resto va nella nota)');
 await go('calendario-2026-11-25');
 ok((await txt('#view')).includes('4 × 7" · rec. 3\' · 82,5%') && (await txt('#view')).includes('margine 2-3"'), 'la riga dell\'esercizio nasce dai parametri; il testo non parametrico resta come nota della sessione');
 await shot('1-calendario');
@@ -162,6 +163,7 @@ await clickText('+ Esercizio', '#view'); await pg.type('.sheet input', 'max hang
 await clickText('+ Esercizio', '#view'); await pg.type('.sheet input', 'max hang'); await sleep(80); await clickText('Max hang', '.sheet', true);
 ok(await pg.evaluate(() => { const s = __app.state, x = s.extras[0], ids = x.blocks.slice(-2).map(b => b.exId); return ids[0] !== ids[1] && s.exercises[ids[0]].std === 'max-hang' && x.blocks[x.blocks.length - 1].minutes === 10; }), 'libreria: lo standard si aggiunge con i valori di base, come istanza separata');
 await pg.evaluate(() => { const r = [...document.querySelectorAll('#view .blk')].filter(x => x.innerText.includes('Max hang')); r[r.length - 1].click(); }); await sleep(60); // l'ultimo dei due
+ok(!/\bCue\b/.test(await txt('.sheet')) && (await txt('.sheet')).includes('Alterna SX/DX') && (await txt('.sheet')).includes('Nota'), 'parametri: un solo campo Nota e l\'interruttore SX/DX, nessun campo Cue');
 await pg.evaluate(() => { const l = [...document.querySelectorAll('.sheet label')]; const set = (t, v) => { const i = l.find(x => x.innerText.startsWith(t)).querySelector('input,select'); i.value = v; i.dispatchEvent(new Event('change')); };
   set('Round', '6'); set('Lavoro', '10'); set('Recupero (s)', '150'); set('Carico: test', 'hc'); set('% del', '90'); set('Minuti', ''); set('Nota', 'margine 1"'); });
 await clickText('Salva', '.sheet');
@@ -234,7 +236,7 @@ await pg.evaluate(() => { __app.state.settings.gh = null; });
 
 // Persistenza e migrazione di un backup v2 con due sessioni nello stesso giorno
 await pg.reload();
-ok(await pg.evaluate(() => __app.state.logs.length === 3 && __app.state.extras.length === 1 && __app.state.v === 5), 'i dati sopravvivono al ricaricamento');
+ok(await pg.evaluate(() => __app.state.logs.length === 3 && __app.state.extras.length === 1 && __app.state.v === 6), 'i dati sopravvivono al ricaricamento');
 const mig = await pg.evaluate(async () => {
   const mk = (id, ex) => ({ id, type: 'wall', period: 'base', blocks: [{ id: id + 'b', exId: ex, minutes: 5 }] });
   const old = { v: 2, plans: [{ id: 'p', title: 'Vecchio', startDate: '2026-11-23', weeks: [[{ sessions: [mk('s1', 'e1'), mk('s2', 'e2')] }, ...Array.from({ length: 6 }, () => ({ sessions: [] }))]] }],

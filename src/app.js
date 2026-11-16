@@ -15,7 +15,7 @@
 
   /* ---------- Stato e persistenza ---------- */
   // Primo avvio: nessun piano precaricato, ogni utente importa o crea i propri.
-  const fresh = () => migrate({ v: 5, plans: [], activePlan: null, exercises: {}, logs: [], tests: [] });
+  const fresh = () => migrate({ v: 6, plans: [], activePlan: null, exercises: {}, logs: [], tests: [] });
   /** I test da cui dipendono i kg degli esercizi (e il peso corporeo) devono esistere nella sezione Test. */
   function ensureTests(s) {
     const need = new Set(['bw'].concat(Object.values(s.exercises).filter(e => e.load).flatMap(e => C.refKeys(e.load.ref))));
@@ -24,6 +24,13 @@
   }
   /** Ogni esercizio di una sessione è un'istanza privata con i suoi parametri: niente è condiviso tra sessioni.
       Dal testo libero ereditato da un import resta solo ciò che non è un parametro, come nota del blocco. */
+  /** I cue liberi non esistono più: resta solo l'alternanza SX/DX; il testo non parametrico passa nella nota del blocco. */
+  function cuesToNote(e, b) {
+    if (!e.interval) return;
+    const { sided, note } = C.splitCues(e.interval.cues);
+    e.interval.cues = sided ? ['SX', 'DX'] : [];
+    if (note && !(b.note || '').toLowerCase().includes(note.toLowerCase())) b.note = [b.note, note].filter(Boolean).join(' · ').slice(0, 200);
+  }
   function privatize(st, sess) {
     for (const b of sess.blocks) {
       const e = st.exercises[b.exId];
@@ -32,6 +39,7 @@
       c.id = C.uid();
       if (c.prescription && !b.note) { const n = C.leftoverNote(c.prescription); if (n) b.note = n; }
       delete c.prescription; delete c.base; delete c.minutes;
+      cuesToNote(c, b);
       st.exercises[c.id] = c; b.exId = c.id;
     }
   }
@@ -79,7 +87,9 @@
     s.custom = Array.isArray(s.custom) ? s.custom : [];
     if (fromV < 5) for (const x of allSessions(s)) privatize(s, x);
     prune(s);
-    s.v = 5;
+    // v6: un solo campo Nota (mostrato anche nel timer) + interruttore SX/DX al posto dei cue
+    if (fromV === 5) for (const x of allSessions(s)) for (const b of x.blocks) if (s.exercises[b.exId]) cuesToNote(s.exercises[b.exId], b);
+    s.v = 6;
     return s;
   }
   function load() {
@@ -332,16 +342,17 @@
   /** Aggiunge alla sessione un'istanza nuova dell'esercizio, a partire da un modello (standard, personale o test). */
   function addBlock(s, tpl) {
     const e = { id: C.uid(), ...JSON.parse(JSON.stringify(tpl)) }, minutes = C.intervalMinutes(e.interval) || e.minutes || 10;
-    delete e.base; delete e.minutes; delete e.prescription;
+    const note = e.note || '';
+    delete e.base; delete e.minutes; delete e.prescription; delete e.note;
     S.exercises[e.id] = e;
-    s.blocks.push({ id: C.uid(), exId: e.id, minutes });
+    s.blocks.push({ id: C.uid(), exId: e.id, minutes, ...(note ? { note } : {}) });
   }
   /** Esercizio "test" per un test della sezione Test: a fine esercizio chiede il risultato, che aggiorna il massimale. */
   function testExercise(ref) {
     const two = !!C.PAIRS[ref], d = S.testDefs.find(t => t.key === (two ? ref + 'L' : ref));
     const interval = C.normInterval({ rounds: two ? 8 : 4, workSeconds: d.seconds || 45, restSeconds: two ? 90 : 180, selfPaced: !d.seconds, reps: d.reps || 0,
-      cues: two ? ['SX · carico crescente', 'DX · carico crescente'] : [d.mode === 'value' ? 'Al massimo' : 'Carico crescente'] });
-    return { std: 'test', name: 'Test: ' + (two ? C.PAIRS[ref] : d.name), slot: 'strength', location: 'off_wall', domain: 'finger_strength',
+      cues: two ? ['SX', 'DX'] : [] });
+    return { std: 'test', note: d.mode === 'value' ? 'Al massimo' : 'Carico crescente', name: 'Test: ' + (two ? C.PAIRS[ref] : d.name), slot: 'strength', location: 'off_wall', domain: 'finger_strength',
       intensity: 'max', risk: 'moderate', equipment: [], interval, load: { ref, mode: d.mode === 'lift' ? 'lift' : 'hang', pct: null, test: true }, surface: '' };
   }
   function pickTest(cb) {
@@ -518,19 +529,20 @@
     const close = () => { save(); ov.remove(); render(); };
     if (!e) { const ov0 = openSheet('Esercizio rimosso', btn('Togli dalla sessione', () => { s.blocks.splice(bi, 1); save(); ov0.remove(); render(); }, 'danger block')); return; }
     const iv = e.interval || {}, ld = e.load || {};
-    const name = h('input', { value: e.name }), min = numInp(b.minutes), note = h('input', { value: b.note || '', placeholder: 'Facoltativa: indicazioni per questa sessione' });
+    const name = h('input', { value: e.name }), min = numInp(b.minutes), note = h('input', { value: b.note || '', placeholder: 'Facoltativa: si vede anche nel timer' });
     const sfSel = opts(surfOpts().concat([['+new', '＋ Aggiungi nuova…']]), e.surface || '', { onchange: () => sync() }), sfNew = h('input', { placeholder: 'Es. Spray wall' });
     const sfNewField = field('Nome della nuova superficie', sfNew);
     const mode = opts([['none', 'Solo durata'], ['timed', 'A tempo (countdown)'], ['reps', 'A ripetizioni (tocco "Fatto")']], !e.interval ? 'none' : iv.selfPaced ? 'reps' : 'timed', { onchange: () => sync() });
     const rounds = numInp(iv.rounds || 3), work = numInp(iv.workSeconds || 7), rest = numInp(iv.restSeconds == null ? 180 : iv.restSeconds);
     const reps = numInp(iv.reps), perSet = numInp(iv.roundsPerSet), setRest = numInp(iv.setRestSeconds);
-    const cues = h('textarea', { placeholder: 'Uno per riga, a rotazione sui round\nSX\nDX' }); cues.value = (iv.cues || []).join('\n');
+    const sides = h('input', { type: 'checkbox', checked: (iv.cues || []).length > 0 });
     const pairs = pairsPresent();
     const refs = [['', 'Nessuno']].concat(S.testDefs.filter(t => t.key !== 'bw' && !inPair(t.key, pairs)).map(t => [t.key, t.name]), pairs.map(k => [k, C.PAIRS[k] + ' (SX/DX dal cue)']));
     const ref = opts(refs, ld.ref || ''), pct = numInp(ld.pct);
     const workF = field('Lavoro (s)', work), repsF = field('Ripetizioni', reps);
     const timer = h('div', {}, h('div', { class: 'cols3' }, field('Round', rounds), workF, repsF, field('Recupero (s)', rest)),
-      h('div', { class: 'cols' }, field('Round per serie (facolt.)', perSet), field('Recupero tra serie (s)', setRest)), field('Cue', cues));
+      h('div', { class: 'cols' }, field('Round per serie (facolt.)', perSet), field('Recupero tra serie (s)', setRest)),
+      h('label', { class: 'f' }, 'Lati', h('div', { style: 'margin-top:8px;color:var(--tx)' }, sides, ' Alterna SX/DX (i round contano entrambi i lati: 6 round = 3 per lato)')));
     const sync = () => { timer.hidden = mode.value === 'none'; workF.hidden = mode.value !== 'timed'; repsF.hidden = mode.value !== 'reps'; sfNewField.hidden = sfSel.value !== '+new'; };
     const isTest = !!ld.test;
     const ov = openSheet(e.std && C.STD[e.std] ? C.STD[e.std].name : e.name, [h('p', { class: 'sub' }, 'Parametri di questo esercizio in questa sessione.'),
@@ -544,7 +556,7 @@
         if (sf === '+new') { const nm = sfNew.value.trim().slice(0, 40); if (!nm) return toast('Scrivi il nome della nuova superficie.'); sf = addSurface(nm); }
         e.name = name.value.trim().slice(0, 80); e.surface = sf;
         e.interval = mode.value === 'none' ? null : C.normInterval({ rounds: Math.max(1, val(rounds) || 1), workSeconds: mode.value === 'timed' ? val(work) || 0 : 45, restSeconds: val(rest) || 0, selfPaced: mode.value === 'reps',
-          reps: mode.value === 'reps' ? val(reps) || 0 : 0, roundsPerSet: val(perSet) || 0, setRestSeconds: val(setRest) || 0, cues: cues.value.split('\n').map(x => x.trim()).filter(Boolean) });
+          reps: mode.value === 'reps' ? val(reps) || 0 : 0, roundsPerSet: val(perSet) || 0, setRestSeconds: val(setRest) || 0, cues: sides.checked ? ['SX', 'DX'] : [] });
         if (!isTest) { const d = S.testDefs.find(t => t.key === C.refKeys(ref.value)[0]); e.load = ref.value ? { ref: ref.value, mode: d && d.mode === 'hang' ? 'hang' : 'lift', pct: val(pct), test: false } : null; }
         const m = val(min); b.minutes = m == null ? C.intervalMinutes(e.interval) || b.minutes : Math.max(0, Math.round(m));
         b.note = note.value.trim().slice(0, 200);
@@ -909,7 +921,7 @@
     $('p-ph').textContent = { prep: 'PREPARATI', work: st.selfPaced ? 'ESEGUI' : 'LAVORO', rest: 'RECUPERO', free: 'IN CORSO' }[ph];
     $('p-name').textContent = st.name;
     $('p-round').textContent = st.kind === 'free' ? (ex && ex.surface ? surfName(ex.surface) : '') : `Round ${st.round} di ${st.rounds}`;
-    $('p-cue').textContent = st.cue;
+    $('p-cue').textContent = [st.cue, P.b.note].filter(Boolean).join(' · ');
     const kg = ex && st.kind !== 'free' ? C.loadKg(ex.load, st.cue, maxes()) : null;
     $('p-kg').textContent = kg == null ? '' : (ex.load.mode === 'hang' ? C.fmtKg(kg) : dec(kg) + ' kg');
     $('p-next').textContent = nx ? 'Poi: ' + (nx.kind === 'rest' ? `recupero ${mmss(nx.seconds)}` : (nx.cue || `round ${nx.round}`)) : 'Ultimo passo dell\'esercizio';
