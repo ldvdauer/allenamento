@@ -437,3 +437,16 @@ test('nomi: la libreria è in inglese, i nomi italiani delle versioni precedenti
   assert.equal(C.normSide('DX'), 'R');
   assert.equal(C.normSide('sx'), 'L');
 });
+
+test('guida: l\'esempio del formato nella guida si importa senza errori', () => {
+  const guide = fs.readFileSync(require.resolve('../GUIDE.md'), 'utf8');
+  const example = guide.split('```yaml\n')[1].split('```')[0];
+  const r = C.importYaml(example);
+  assert.equal(r.firstSession, '2026-11-18');
+  assert.equal(r.plan.weeks.flat().filter(d => d.sessions.length).length, 3); // week: 1-3, un giorno
+});
+
+test('programma nel repository: Karma - Fase 1.yaml è valido', () => {
+  const r = C.importYaml(fs.readFileSync(require.resolve('../Karma - Fase 1.yaml'), 'utf8'));
+  assert.equal(r.plan.weeks.length, 4);
+});
