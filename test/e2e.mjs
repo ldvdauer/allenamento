@@ -1,3 +1,4 @@
+import fs from 'fs';
 // Smoke test end-to-end in Chrome headless (viewport iPhone).
 // Uso: node test/e2e.mjs  — richiede private/Karma-8A+.blokplan (programma personale, non versionato).
 import { existsSync } from 'node:fs';
@@ -204,7 +205,7 @@ ok(await pg.evaluate(() => __app.state.logs.length === 2), 'registrazione manual
 // Programmi: gestione da Altro, spostare la data di inizio sposta le sessioni nel calendario
 await go('more'); await clickText('Karma 8A+', '#view', true);
 await setVal('.sheet input[type=date]', '2026-11-25'); await clickText('Save', '.sheet');
-ok(await pg.evaluate(() => __app.state.plans[0].startDate === '2026-11-23'), 'programma: la nuova data viene portata al lunedì');
+ok(await pg.evaluate(() => __app.state.plans[0].startDate === '2026-11-25'), 'programma: la prima sessione cade nel giorno scelto, anche se non è lunedì');
 await shot('9-altro');
 await go('analytics'); ok((await txt('#view')).includes('Weekly volume') && !(await txt('#view')).includes('session type'), 'Analisi: grafici presenti, niente "tipo di sessione"');
 const an = await txt('#view'); if (process.env.DBG) console.log(an.slice(0, 900));
@@ -272,6 +273,28 @@ const mig = await pg.evaluate(async () => {
 await sleep(500);
 const m2 = await pg.evaluate(() => { const s = __app.state, d = s.plans[0].weeks[0][0]; return { n: d.sessions.length, blocks: d.sessions[0].blocks.length, log: s.logs[0].sid, live: s.live }; });
 ok(m2.n === 1 && m2.blocks === 2 && m2.log === 's1' && m2.live.sid === 's1' && m2.live.done, 'backup v2 migrato: sessioni del giorno unite, diario e sessione in corso ricollegati');
+// Dati illeggibili: si tiene una copia, la Home lo segnala e permette di esportarla
+await pg.evaluate(() => { localStorage.setItem('allenamento.v1', '{"v":7,"plans":'); location.reload(); });
+await sleep(500);
+const resc = await pg.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith('allenamento.v1.rescue-')).map(k => localStorage.getItem(k)));
+ok(resc.length === 1 && resc[0] === '{"v":7,"plans":', 'dati illeggibili: copia intatta messa da parte prima di ripartire da zero');
+ok((await txt('#view')).includes('could not be read') && (await txt('#view')).includes('Export old data'), 'la Home avvisa e propone di esportare i vecchi dati');
+await pg.evaluate(() => { for (const k of Object.keys(localStorage)) if (k.includes('.rescue-')) localStorage.removeItem(k); });
+
+// Backup reale di Leo (se presente): programma che apre con un giorno di riposo, prima sessione spostata a mercoledì 18
+const REAL = new URL('../private/backup-2026-11-17.json', import.meta.url);
+if (fs.existsSync(REAL)) {
+  await pg.evaluate(t => { localStorage.setItem('allenamento.v1', t); location.reload(); }, fs.readFileSync(REAL, 'utf8'));
+  await sleep(500);
+  await go('more'); await clickText('Karma - Fase 1', '#view', true);
+  ok(await pg.$eval('.sheet input[type=date]', e => e.value) === '2026-11-17', 'backup reale: la data mostrata è quella della prima sessione (mar 17)');
+  await setVal('.sheet input[type=date]', '2026-11-18'); await clickText('Save', '.sheet');
+  ok(await pg.evaluate(() => __app.state.plans[0].startDate === '2026-11-17'), 'backup reale: prima sessione mercoledì 18');
+  await go('calendar-2026-11-17'); const d17 = await txt('#view');
+  await go('calendar-2026-11-18'); const d18 = await txt('#view');
+  ok(d17.includes('No session planned') && !d18.includes('No session planned'), 'calendario: nulla il 17, la prima sessione il 18');
+}
+
 // Dati salvati con l'interfaccia in italiano (v6): nomi predefiniti e lati passano all'inglese, quello che ha scritto l'utente resta
 await pg.evaluate(() => {
   const old = { v: 6, plans: [], activePlan: null, extras: [{ id: 'x1', date: '2026-11-25', title: 'Dita a casa', blocks: [{ id: 'b1', exId: 'e1', minutes: 7, note: 'lento' }, { id: 'b2', exId: 'e2', minutes: 8 }, { id: 'b3', exId: 'e3', minutes: 5 }] }],

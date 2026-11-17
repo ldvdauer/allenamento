@@ -364,6 +364,12 @@ review|mental|Attempt review|10|`.split('\n').map(line => {
     return { w: Math.floor(n / 7), d: n % 7 };
   }
   const dateOf = (plan, w, d) => addDays(plan.startDate, w * 7 + d);
+  /** Giorni tra l'inizio del programma e la sua prima sessione (i programmi spesso aprono con un giorno di riposo). */
+  const firstOffset = plan => { for (let i = 0; i < plan.weeks.length * 7; i++) if (plan.weeks[Math.floor(i / 7)][i % 7].sessions.length) return i; return 0; };
+  /** Data della prima sessione, e l'inizio che la fa cadere su `iso`. L'inizio può essere un giorno qualsiasi:
+      le sessioni tengono il loro ordine e gli intervalli tra loro, i giorni della settimana si spostano con la data. */
+  const firstSessionDate = plan => addDays(plan.startDate, firstOffset(plan));
+  const startForFirst = (plan, iso) => addDays(iso, -firstOffset(plan));
   const sessionMinutes = s => s.blocks.reduce((t, b) => t + (b.minutes || 0), 0);
   // Le copie hanno id nuovi: una sessione copiata non eredita lo stato "fatta" dell'originale.
   const cloneSession = s => ({ ...s, id: uid(), blocks: s.blocks.map(b => ({ ...b, id: uid() })) });
@@ -543,7 +549,7 @@ review|mental|Attempt review|10|`.split('\n').map(line => {
   }
 
   return {
-    GROUPS, SECTION_GROUP, blockSection, timeBySection, weeklyGroups, describe, leftoverNote, splitCues, fmtRest, PAIRS, refKeys, LEGACY_NAMES, normSide, recordsOf, lastRecord, nextLoad, TEST_TEMPLATES, testLabel, SECTIONS, LIBRARY, STD, stdVariant, matchStd,
+    GROUPS, SECTION_GROUP, blockSection, timeBySection, weeklyGroups, describe, leftoverNote, splitCues, fmtRest, PAIRS, refKeys, LEGACY_NAMES, normSide, firstOffset, firstSessionDate, startForFirst, recordsOf, lastRecord, nextLoad, TEST_TEMPLATES, testLabel, SECTIONS, LIBRARY, STD, stdVariant, matchStd,
     DAY_TYPES, PERIODS, SLOTS, GRADES, GRADE_SCALES, gradeIdx, fmtGrade, DEFAULT_SURFACES, inferSurface, validISO, uid, toISO, fromISO, todayISO, addDays, diffDays, appleToISO, isoToApple, mondayOf,
     inferLoad, loadKey, loadKg, latestMaxes, fmtKg, cycle, cueAt, intervalMinutes, buildSteps, normInterval,
     importBlokplan, exportBlokplan, locate, dateOf, sessionMinutes, cloneSession, validState,

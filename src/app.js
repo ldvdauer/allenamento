@@ -109,10 +109,16 @@
     s.v = 7;
     return s;
   }
+  let rescued = false;
   function load() {
     try {
       const raw = localStorage.getItem(KEY);
-      if (raw) { const s = JSON.parse(raw); if (C.validState(s)) return migrate(s); log('store', 'saved data is invalid, starting from scratch'); }
+      if (raw) {
+        try { const s = JSON.parse(raw); if (C.validState(s)) return migrate(s); console.warn('[store] saved data is invalid'); }
+        catch (e) { console.warn('[store] saved data cannot be read', e); }
+        // Mai sovrascrivere dati che non si riescono a leggere: si mette da parte una copia prima di ripartire da zero.
+        try { localStorage.setItem(KEY + '.rescue-' + Date.now(), raw); rescued = true; } catch (e) { console.warn('[store] rescue copy failed', e); }
+      }
     } catch (e) { console.warn('[store] read failed', e); }
     return fresh();
   }
@@ -410,6 +416,9 @@
         h('div', { class: 'btns' }, btn('Resume', () => startSession(lr), 'pri'), btn('Discard', () => { S.live = null; save(); render(); }))));
       else S.live = null;
     }
+    if (rescued) out.push(h('div', { class: 'card' }, h('div', { class: 'sub' }, 'The saved data could not be read, so the app started empty. A copy of the old data was kept: export it and send it to whoever develops the app.'),
+      h('div', { class: 'btns' }, btn('Export old data', () => { const k = Object.keys(localStorage).filter(x => x.startsWith(KEY + '.rescue-')).sort().pop(); if (k) exportSheet('Old data', 'allenamento-rescue.json', localStorage.getItem(k)); }, 'sm'),
+        btn('Hide', () => { rescued = false; render(); }, 'sm'))));
     if (newVersion) out.push(h('div', { class: 'card row' }, h('div', { class: 'grow sub' }, 'A newer version of the app is available.'), btn('Update', () => location.reload(), 'sm pri')));
     const since = S.settings.lastBackup ? C.diffDays(t, S.settings.lastBackup) : null;
     if (cloudOn() && S.settings.gh.error) out.push(h('div', { class: 'card', style: 'border-color:var(--bad)' }, h('div', { class: 'sub' }, 'Automatic backup failed: ' + S.settings.gh.error + '.'),
@@ -481,11 +490,11 @@
 
   /* ---------- Programmi: insiemi di sessioni importati, visibili solo nel calendario ---------- */
   function planSheet(p) {
-    const title = h('input', { value: p.title }), start = h('input', { type: 'date', value: p.startDate });
+    const title = h('input', { value: p.title }), start = h('input', { type: 'date', value: C.firstSessionDate(p) });
     const done = () => { save(); ov.remove(); render(); };
-    const ov = openSheet('Programme', [field('Name', title), field('Start (moved to the Monday of that week)', start),
+    const ov = openSheet('Programme', [field('Name', title), field('First session on', start),
       h('p', { class: 'sub' }, `${p.weeks.length} weeks · until ${fmtDate(C.dateOf(p, p.weeks.length - 1, 6))}. Sessions are edited from the calendar.`),
-      btn('Save', () => { p.title = title.value.trim().slice(0, 80) || p.title; if (C.validISO(start.value)) p.startDate = C.mondayOf(start.value); done(); }, 'pri block'),
+      btn('Save', () => { p.title = title.value.trim().slice(0, 80) || p.title; if (C.validISO(start.value)) p.startDate = C.startForFirst(p, start.value); done(); }, 'pri block'),
       h('div', { class: 'btns' }, btn('Export .blokplan', () => exportSheet('Export programme', p.title.replace(/[^\w+-]+/g, '_') + '.blokplan', JSON.stringify(C.exportBlokplan(p, S.exercises))), 'sm'),
         btn('Delete programme', async () => { if (await confirmDlg(`Delete "${p.title}"? Its sessions disappear from the calendar, logged sessions stay.`, 'Delete')) { S.plans = S.plans.filter(x => x !== p); done(); } }, 'sm danger'))]);
   }
@@ -507,20 +516,21 @@
       return;
     }
     const r = C.importBlokplan(obj, {}); // lancia se non valido: lo stato non viene toccato
-    const title = h('input', { value: r.plan.title }), start = h('input', { type: 'date', value: r.plan.startDate });
+    const title = h('input', { value: r.plan.title }), start = h('input', { type: 'date', value: C.firstSessionDate(r.plan) });
     const ov = openSheet('Import programme', [h('p', { class: 'sub' }, `${r.plan.weeks.length} weeks. Choose when it starts: sessions appear in the calendar.`),
-      field('Name', title), field('Start (moved to the Monday of that week)', start),
+      field('Name', title), field('First session on', start),
+      h('p', { class: 'sub' }, 'The other sessions keep their order and the days between them.'),
       btn('Import', () => {
         const iso = C.validISO(start.value);
         if (!iso) return toast('Pick a valid date.');
-        r.plan.title = title.value.trim().slice(0, 80) || r.plan.title; r.plan.startDate = C.mondayOf(iso);
+        r.plan.title = title.value.trim().slice(0, 80) || r.plan.title; r.plan.startDate = C.startForFirst(r.plan, iso);
         for (const e of r.exercises) S.exercises[e.id] = e;
         ensureTests(S);
         S.plans.push(r.plan);
         for (const w of r.plan.weeks) for (const d of w) for (const x of d.sessions) privatize(S, x); // i parametri diventano di ogni sessione
         prune(S); save(); ov.remove();
         toast(`Imported ${r.plan.title}.`); log('import', 'programme imported', { title: r.plan.title, weeks: r.plan.weeks.length, newExercises: r.exercises.length });
-        go('calendar-' + r.plan.startDate);
+        go('calendar-' + C.firstSessionDate(r.plan));
       }, 'pri block')]);
   }
 
@@ -917,7 +927,7 @@
       h('div', { class: 'card tap row', onclick: () => go('diagnostics') }, h('div', { class: 'grow' }, h('div', { class: 'n', style: 'font-weight:600' }, 'Diagnostics'), h('div', { class: 'sub' }, 'Audio, screen on, offline and storage on this device · v' + VERSION)), '›'),
       h('h2', {}, 'Programmes'), h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin-top:0' }, 'A programme is a set of sessions: import it, choose when it starts and find it in the calendar.'),
         S.plans.map(p => h('div', { class: 'blk', style: 'cursor:pointer', onclick: () => planSheet(p) }, h('div', { class: 'grow' }, h('div', { class: 'n' }, p.title),
-          h('div', { class: 'p' }, `${fmtDate(p.startDate)} – ${fmtDate(C.dateOf(p, p.weeks.length - 1, 6))} · ${p.weeks.length} weeks`)), h('div', { class: 'm' }, '›'))),
+          h('div', { class: 'p' }, `${fmtDate(C.firstSessionDate(p))} – ${fmtDate(C.dateOf(p, p.weeks.length - 1, 6))} · ${p.weeks.length} weeks`)), h('div', { class: 'm' }, '›'))),
         h('div', { class: 'btns' }, fileBtn('Import programme (.blokplan)'))),
       h('h2', {}, 'Climbing surfaces'), h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin-top:0' }, 'Assigned to exercises and log entries, to compare progress in the charts. Tap to rename.'),
         h('div', { class: 'btns', style: 'margin-top:0' }, S.surfaces.map(x => btn(x.name, () => surfaceSheet(x), 'sm'))),
