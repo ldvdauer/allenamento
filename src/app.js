@@ -849,7 +849,7 @@
   /* ---------- Taccuino: note al volo durante la prova dell'app, con il contesto per poterle riprodurre ---------- */
   const VERSION = '__APP_VERSION__';
   function noteSheet() {
-    const text = h('textarea', { placeholder: 'What is wrong, or what would you like to be different?' });
+    const text = h('textarea', { class: 'inp', placeholder: 'What is wrong, or what would you like to be different?' });
     const where = P ? 'timer: ' + P.steps[P.idx].name : R ? 'session in progress' : (location.hash.slice(1) || 'home');
     const ov = openSheet('Note a problem', [h('p', { class: 'sub' }, `Saved with screen (${where}), date and version. You find it in More → Notebook.`), text,
       btn('Save note', () => {

@@ -232,6 +232,7 @@ await shot('10-analisi', true);
 
 // Taccuino: nota al volo dalla barra, con contesto; elenco esportabile
 await go('analytics'); await pg.click('#tab-note');
+await shot('12-nota'); ok(await pg.$eval('.sheet textarea', e => getComputedStyle(e).backgroundColor) === 'rgb(16, 19, 22)', 'Nota: campo di testo scuro, testo chiaro leggibile');
 await pg.type('.sheet textarea', 'Il grafico del volume è poco leggibile'); await clickText('Save note', '.sheet');
 await go('notebook');
 const nt = await txt('#view');
