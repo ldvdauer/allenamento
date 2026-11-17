@@ -371,13 +371,8 @@
     s.blocks.push({ id: C.uid(), exId: e.id, minutes, ...(note ? { note } : {}) });
   }
   /** Esercizio "test" per un test della sezione Test: a fine esercizio chiede il risultato, che aggiorna il massimale. */
-  function testExercise(ref) {
-    const two = !!C.PAIRS[ref], d = S.testDefs.find(t => t.key === (two ? ref + 'L' : ref));
-    const interval = C.normInterval({ rounds: two ? 8 : 4, workSeconds: d.seconds || 45, restSeconds: two ? 90 : 180, selfPaced: !d.seconds, reps: d.reps || 0,
-      cues: two ? ['L', 'R'] : [] });
-    return { std: 'test', note: d.mode === 'value' ? 'All out' : 'Increasing load', name: 'Test: ' + (two ? C.PAIRS[ref] : d.name), slot: 'strength', location: 'off_wall', domain: 'finger_strength',
-      intensity: 'max', risk: 'moderate', equipment: [], interval, load: { ref, mode: d.mode === 'lift' ? 'lift' : 'hang', pct: null, test: true }, surface: '' };
-  }
+  const testExercise = ref => C.testExercise(ref, S.testDefs);
+
   function pickTest(cb) {
     const pairs = pairsPresent();
     const items = S.testDefs.filter(t => t.key !== 'bw' && !inPair(t.key, pairs)).map(t => [t.key, t.name, C.testLabel(t)]).concat(pairs.map(k => [k, C.PAIRS[k], 'L and R']));
@@ -495,28 +490,37 @@
     const ov = openSheet('Programme', [field('Name', title), field('First session on', start),
       h('p', { class: 'sub' }, `${p.weeks.length} weeks · until ${fmtDate(C.dateOf(p, p.weeks.length - 1, 6))}. Sessions are edited from the calendar.`),
       btn('Save', () => { p.title = title.value.trim().slice(0, 80) || p.title; if (C.validISO(start.value)) p.startDate = C.startForFirst(p, start.value); done(); }, 'pri block'),
-      h('div', { class: 'btns' }, btn('Export .blokplan', () => exportSheet('Export programme', p.title.replace(/[^\w+-]+/g, '_') + '.blokplan', JSON.stringify(C.exportBlokplan(p, S.exercises))), 'sm'),
+      h('div', { class: 'btns' }, btn('Export .yaml', () => exportSheet('Export programme', p.title.replace(/[^\w+-]+/g, '_') + '.yaml', C.exportYaml(p, S.exercises)), 'sm'),
         btn('Delete programme', async () => { if (await confirmDlg(`Delete "${p.title}"? Its sessions disappear from the calendar, logged sessions stay.`, 'Delete')) { S.plans = S.plans.filter(x => x !== p); done(); } }, 'sm danger'))]);
   }
 
   function fileBtn(label, after) {
-    const inp = h('input', { type: 'file', accept: '.blokplan,.json,application/json', hidden: '', onchange: async () => {
+    const inp = h('input', { type: 'file', accept: '.yaml,.yml,.json,application/json,application/yaml,text/yaml,text/plain', hidden: '', onchange: async () => {
       const f = inp.files[0]; inp.value = '';
       if (!f) return;
       try { await importText(await f.text()); if (after) after(); }
-      catch (e) { console.warn('[import] failed', e); toast(e instanceof SyntaxError ? 'The file is not valid JSON.' : e.message); }
+      catch (e) { console.warn('[import] failed', e); importErrors(e); }
     } });
     return h('span', {}, inp, btn(label, () => inp.click(), 'sm'));
   }
+  /** Errori di un file di programma: tutti, in un foglio, così si correggono in una volta sola. */
+  function importErrors(e) {
+    const list = e.errors || [e.message];
+    openSheet('The programme was not imported', [h('p', { class: 'sub' }, list.length === 1 ? 'Fix this in the file and import it again:' : `Fix these ${list.length} points in the file and import it again:`),
+      h('ul', { class: 'errs' }, list.slice(0, 30).map(x => h('li', {}, x))), list.length > 30 ? h('p', { class: 'sub' }, `…and ${list.length - 30} more.`) : null,
+      h('div', { class: 'btns' }, btn('Copy the list', async () => { try { await navigator.clipboard.writeText(list.join('\n')); toast('Copied.'); } catch (_) { toast('Copy not available.'); } }, 'sm'))]);
+  }
   async function importText(text) {
-    const obj = JSON.parse(text);
-    if (C.validState(obj)) { // backup completo
+    // Un backup è JSON con lo stato completo; tutto il resto si legge come programma YAML (anche il JSON lo è).
+    let obj = null;
+    try { obj = JSON.parse(text); } catch (_) { /* non è JSON: è YAML */ }
+    if (obj && C.validState(obj)) {
       if (!await confirmDlg('This is a full backup: replace ALL current data?', 'Replace')) return;
       S = migrate(obj); calSel = calMonth = null; save(); render(); toast('Backup restored.'); log('import', 'backup restored');
       return;
     }
-    const r = C.importBlokplan(obj, {}); // lancia se non valido: lo stato non viene toccato
-    const title = h('input', { value: r.plan.title }), start = h('input', { type: 'date', value: C.firstSessionDate(r.plan) });
+    const r = C.importYaml(text, { surfaces: S.surfaces, testDefs: S.testDefs }); // lancia con tutti gli errori: lo stato non viene toccato
+    const title = h('input', { value: r.plan.title }), start = h('input', { type: 'date', value: r.firstSession || C.todayISO() });
     const ov = openSheet('Import programme', [h('p', { class: 'sub' }, `${r.plan.weeks.length} weeks. Choose when it starts: sessions appear in the calendar.`),
       field('Name', title), field('First session on', start),
       h('p', { class: 'sub' }, 'The other sessions keep their order and the days between them.'),
@@ -524,15 +528,15 @@
         const iso = C.validISO(start.value);
         if (!iso) return toast('Pick a valid date.');
         r.plan.title = title.value.trim().slice(0, 80) || r.plan.title; r.plan.startDate = C.startForFirst(r.plan, iso);
-        for (const e of r.exercises) S.exercises[e.id] = e;
+        for (const e of r.exercises) S.exercises[e.id] = e; // già un'istanza per ogni esercizio di ogni sessione
         ensureTests(S);
         S.plans.push(r.plan);
-        for (const w of r.plan.weeks) for (const d of w) for (const x of d.sessions) privatize(S, x); // i parametri diventano di ogni sessione
-        prune(S); save(); ov.remove();
-        toast(`Imported ${r.plan.title}.`); log('import', 'programme imported', { title: r.plan.title, weeks: r.plan.weeks.length, newExercises: r.exercises.length });
+        save(); ov.remove();
+        toast(`Imported ${r.plan.title}.`); log('import', 'programme imported', { title: r.plan.title, weeks: r.plan.weeks.length, exercises: r.exercises.length });
         go('calendar-' + C.firstSessionDate(r.plan));
       }, 'pri block')]);
   }
+
 
   function sessionSheet(r) {
     const s = sessOf(r), title = h('input', { value: s.title || '', placeholder: 'Session' }), date = r.x ? h('input', { type: 'date', value: r.x.date }) : null;
@@ -928,7 +932,7 @@
       h('h2', {}, 'Programmes'), h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin-top:0' }, 'A programme is a set of sessions: import it, choose when it starts and find it in the calendar.'),
         S.plans.map(p => h('div', { class: 'blk', style: 'cursor:pointer', onclick: () => planSheet(p) }, h('div', { class: 'grow' }, h('div', { class: 'n' }, p.title),
           h('div', { class: 'p' }, `${fmtDate(C.firstSessionDate(p))} – ${fmtDate(C.dateOf(p, p.weeks.length - 1, 6))} · ${p.weeks.length} weeks`)), h('div', { class: 'm' }, '›'))),
-        h('div', { class: 'btns' }, fileBtn('Import programme (.blokplan)'))),
+        h('div', { class: 'btns' }, fileBtn('Import programme (.yaml)'))),
       h('h2', {}, 'Climbing surfaces'), h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin-top:0' }, 'Assigned to exercises and log entries, to compare progress in the charts. Tap to rename.'),
         h('div', { class: 'btns', style: 'margin-top:0' }, S.surfaces.map(x => btn(x.name, () => surfaceSheet(x), 'sm'))),
         h('div', { class: 'row', style: 'margin-top:10px' }, h('div', { class: 'grow' }, sfNew), btn('Add', () => { const n = sfNew.value.trim().slice(0, 40); if (!n) return toast('Type a name.'); addSurface(n); save(); render(); }, 'sm')),

@@ -15,8 +15,9 @@
 ## Planning
 - **Calendar**: tap a day to view, create or edit sessions. Drag "≡" to reorder exercises.
 - Tap an exercise to set its parameters *in that session*: rounds, seconds or reps, rests, L/R, reference test and %, surface, note.
-- **Programmes** (More): import a `.blokplan` file, choose when it starts and find it in the calendar.
+- **Programmes** (More): import a `.yaml` file (see [Programme files](#programme-files)), choose the day of the first session and find it in the calendar. Any day of the week works: the other sessions keep their order and the days between them.
 - "Copy to a date" duplicates a session on another day.
+- A programme can be exported as `.yaml` (More → the programme → Export .yaml), edited and imported again.
 
 ## Loads and tests
 - An exercise linked to a test with a % shows the kg computed from the latest result.
@@ -38,3 +39,60 @@ Tap a chart to see the values; the table is underneath.
 - The timer does not run with the screen off: during a session the app keeps the screen on.
 - Numbers use a decimal point (4.5 kg); a comma is still accepted when typing.
 - Data is on the phone only. Without a backup, losing the phone means losing the data.
+
+## Programme files
+
+A programme is a YAML text file: easy to read, to review and to change. Lines starting with `#` are comments.
+
+```yaml
+title: Karma - Fase 1
+weeks: 4                     # how many weeks the programme lasts
+first_session: "2026-11-18"  # optional: suggested date of the first session
+
+sessions:
+  - week: 1-3                # 2, "1-3", "1,3", "1-2,4" or all
+    day: tue                 # mon tue wed thu fri sat sun
+    title: Fingers           # optional
+    exercises:
+      - name: Wall warm-up
+        minutes: 20
+      - name: Sloper hang
+        sets: 4
+        work: 7s
+        rest: 3min
+        load: 82.5% sloper
+        note: 2-3" in reserve
+      - name: Pinch block
+        sets: 6              # with sides, sets count both sides: 6 = 3 per side
+        work: 7s
+        rest: 1min15s
+        sides: L/R
+        load: 75% pinch
+      - name: Flash sets
+        minutes: 60
+        sets: 6
+        rounds: 3            # rounds in each set
+        work: done           # no countdown: tap Done at the end of each round
+        rest: 2min           # between rounds
+        set_rest: 5min       # between sets
+      - name: KB press
+        sets: 3
+        reps: 6              # counted instead of timed
+        rest: 2min
+      - name: Limit bouldering
+        minutes: 30
+        surface: moonboard
+      - test: open-hand      # a test: the result updates the max
+```
+
+**Rules**
+- One session per day. The same session in several weeks is written once, with a range in `week`.
+- `name` is free text. Names of the standard exercises (Exercise library) are recognised, so time is counted in the right category in Analytics.
+- Timer: `sets` plus either `work` (a time, or `done`) or `reps`. `rest`, `rounds` + `set_rest` and `sides: L/R` are optional.
+- `minutes` is calculated from the timer when missing. It is required for exercises without a timer, unless they are standard exercises.
+- Durations: `7s`, `45s`, `3min`, `1min30s` (also `3'` and `1'30"`).
+- `load`: a percentage of one of your tests: `open-hand`, `half-crimp`, `sloper`, `pinch`, `lift`, `wrist`, `pull-up`, `one-arm`. The kg are calculated from the latest result. `test:` uses the same names.
+- `surface`: one of your surfaces (More → Climbing surfaces), by key or by name.
+- If something is wrong the programme is not imported, and the app lists every problem with the session and exercise it refers to.
+
+Blok Sessions files (`.blokplan`) are no longer supported.

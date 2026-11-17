@@ -1,10 +1,10 @@
 import fs from 'fs';
 // Smoke test end-to-end in Chrome headless (viewport iPhone).
-// Uso: node test/e2e.mjs  — richiede private/Karma-8A+.blokplan (programma personale, non versionato).
-import { existsSync } from 'node:fs';
+// Uso: node test/e2e.mjs  — richiede private/Karma-8A+.yaml (programma personale, non versionato).
+import { existsSync, writeFileSync } from 'node:fs';
 import puppeteer from 'puppeteer-core';
 import { fileURLToPath } from 'node:url';
-const PLAN = fileURLToPath(new URL('../private/Karma-8A+.blokplan', import.meta.url));
+const PLAN = fileURLToPath(new URL('../private/Karma-8A+.yaml', import.meta.url));
 const url = 'file://' + fileURLToPath(new URL('../dist/index.html', import.meta.url));
 if (!existsSync(PLAN)) { console.log('E2E saltato: manca ' + PLAN); process.exit(0); }
 const b = await puppeteer.launch({ executablePath: '/usr/bin/google-chrome', args: ['--no-sandbox', '--autoplay-policy=no-user-gesture-required'] });
@@ -48,7 +48,7 @@ await clickText('Import', '.sheet');
 ok((await txt('#toast')).includes('Imported Karma 8A+'), 'programma importato');
 ok(await pg.evaluate(() => location.hash === '#calendar-2026-11-16'), 'dopo l\'import si apre il calendario sul primo giorno');
 let cal = await txt('#view');
-ok(cal.includes('TEST open hand') && cal.includes('KB press 1 braccio') && !/Off the wall|Wall ·/.test(cal), 'una sola sessione al giorno, senza etichette Muro / Fuori muro');
+ok(cal.includes('Test: Open hand') && cal.includes('KB press 1 braccio') && !/Off the wall|Wall ·/.test(cal), 'una sola sessione al giorno, senza etichette Muro / Fuori muro');
 ok(await pg.evaluate(() => __app.state.plans[0].weeks.every(w => w.every(d => d.sessions.length <= 1))), 'ogni giorno del programma ha al massimo una sessione');
 ok(await pg.evaluate(() => Object.values(__app.state.exercises).every(e => !('prescription' in e) && !('base' in e)) && new Set(__app.state.plans[0].weeks.flatMap(w => w.flatMap(d => d.sessions.flatMap(x => x.blocks.map(b => b.exId))))).size === Object.keys(__app.state.exercises).length), 'import: nessuna descrizione testuale negli esercizi; ogni blocco ha i suoi parametri (nessuna versione condivisa)');
 ok(await pg.evaluate(() => Object.values(__app.state.exercises).every(e => !e.interval || e.interval.cues.length === 0 || e.interval.cues.join() === 'L,R')), 'import: i cue diventano solo l\'alternanza SX/DX (il resto va nella nota)');
@@ -207,6 +207,21 @@ await go('more'); await clickText('Karma 8A+', '#view', true);
 await setVal('.sheet input[type=date]', '2026-11-25'); await clickText('Save', '.sheet');
 ok(await pg.evaluate(() => __app.state.plans[0].startDate === '2026-11-25'), 'programma: la prima sessione cade nel giorno scelto, anche se non è lunedì');
 await shot('9-altro');
+// Export YAML: il programma esce come testo leggibile, che l'app rilegge uguale
+await go('more'); await clickText('Karma 8A+', '#view', true); await clickText('Export .yaml', '.sheet');
+const yamlOut = await pg.$eval('.sheet textarea', e => e.value);
+ok(/^title: Karma 8A\+$/m.test(yamlOut) && /^first_session: "2026-11-25"$/m.test(yamlOut) && /\n  - week: [\d,-]+\n    day: (mon|tue|wed|thu|fri|sat|sun)\n/.test(yamlOut), 'export: programma in YAML con settimane, giorni e data della prima sessione');
+ok(await pg.evaluate(t => { const r = Core.importYaml(t); return r.plan.weeks.length === __app.state.plans[0].weeks.length; }, yamlOut), 'export: il testo esportato si reimporta');
+await pg.keyboard.press('Escape'); await pg.evaluate(() => document.querySelectorAll('.overlay').forEach(o => o.remove()));
+// Import di un file con errori: elenco completo, nessun programma aggiunto
+const BAD = '/tmp/e2e-bad.yaml';
+writeFileSync(BAD, 'title: Rotto\nweeks: 2\nsessions:\n  - week: 3\n    day: mon\n    exercises:\n      - name: Sloper hang\n        sets: 4\n        work: sette secondi\n');
+const nPlans = await pg.evaluate(() => __app.state.plans.length);
+await go('more'); await (await pg.$('#view input[type=file]')).uploadFile(BAD); await sleep(400);
+const errTxt = await txt('.sheet'); await shot('11-errori');
+ok(errTxt.includes('The programme was not imported') && errTxt.includes('week: "3" is not valid') && errTxt.includes('"sette secondi" is not a duration'), 'import con errori: tutti gli errori elencati, con sessione ed esercizio');
+ok(await pg.evaluate(n => __app.state.plans.length === n, nPlans), 'import con errori: nessun programma aggiunto');
+await pg.evaluate(() => document.querySelectorAll('.overlay').forEach(o => o.remove()));
 await go('analytics'); ok((await txt('#view')).includes('Weekly volume') && !(await txt('#view')).includes('session type'), 'Analisi: grafici presenti, niente "tipo di sessione"');
 const an = await txt('#view'); if (process.env.DBG) console.log(an.slice(0, 900));
 ok(an.includes('Time by category') && /\d+%\s*on the wall/.test(an) && an.includes('Unclassified') && an.includes('On the wall') && an.includes('6 min · 23%') && an.includes('Mobility and other'), 'Analisi: tempo per categoria con quota sul muro, volume settimanale per gruppo');

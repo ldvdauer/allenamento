@@ -1,15 +1,14 @@
-/* Logica pura dell'app (nessun DOM): modello dati, import/export .blokplan, passi del player, carichi.
+/* Logica pura dell'app (nessun DOM): modello dati, programmi in YAML, passi del player, carichi.
    Funziona sia nel browser (window.Core) sia in Node (module.exports) per i test. */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory();
-  else root.Core = factory();
-})(typeof self !== 'undefined' ? self : this, function () {
+  if (typeof module === 'object' && module.exports) module.exports = factory(() => require('./vendor/js-yaml.min.js'));
+  else root.Core = factory(() => root.jsyaml);
+})(typeof self !== 'undefined' ? self : this, function (YAML_LIB) {
   'use strict';
 
   const DAY_TYPES = { wall: 'Wall', strength: 'Off the wall', skills: 'Technique', activeRest: 'Active rest', setting: 'Setting', rest: 'Rest' };
   const PERIODS = { base: 'Base', strength: 'Strength', power: 'Power', powerEndurance: 'Power endurance', endurance: 'Endurance', performance: 'Performance', deload: 'Deload' };
   const SLOTS = { warmup: 'Warm-up', strength: 'Strength', wall: 'On the wall', mobility: 'Mobility' };
-  const APPLE_EPOCH_MS = Date.UTC(2001, 0, 1);
   // Massimali/test predefiniti. `mode: hang` = zavorra aggiunta al peso corporeo, `lift` = carico sollevato.
   /* Test: ogni test ha i suoi parametri. `mode`: hang = zavorra aggiunta al peso corporeo, lift = carico sollevato,
      value = valore libero (secondi, kg di peso corporeo…). L'ultimo risultato è il massimale usato per calcolare i kg. */
@@ -150,8 +149,6 @@ review|mental|Attempt review|10|`.split('\n').map(line => {
   const todayISO = () => toISO(new Date());
   const addDays = (iso, n) => { const d = fromISO(iso); d.setDate(d.getDate() + n); return toISO(d); };
   const diffDays = (a, b) => Math.round((fromISO(a) - fromISO(b)) / 864e5);
-  const appleToISO = sec => toISO(new Date(APPLE_EPOCH_MS + sec * 1000));
-  const isoToApple = iso => Math.round((fromISO(iso).getTime() - APPLE_EPOCH_MS) / 1000);
   /** Data ISO valida e normalizzata, oppure null. */
   const validISO = s => (/^\d{4}-\d{2}-\d{2}$/.test(s || '') && toISO(fromISO(s)) === s ? s : null); // rifiuta anche date inesistenti (30 febbraio)
   const mondayOf = iso => { const d = fromISO(iso); return addDays(iso, -((d.getDay() + 6) % 7)); };
@@ -270,7 +267,7 @@ review|mental|Attempt review|10|`.split('\n').map(line => {
     return { sided, note: rest.join(' → ') };
   }
 
-  /* ---- Import / export .blokplan ---- */
+  /* ---- Valori letti da file ---- */
   const str = (v, d) => (typeof v === 'string' ? v.slice(0, 200) : d);
   const int = v => (Number.isFinite(+v) && +v >= 0 ? Math.round(+v) : 0);
   function normInterval(iv) {
@@ -282,79 +279,7 @@ review|mental|Attempt review|10|`.split('\n').map(line => {
     out.cues = Array.isArray(iv.cues) ? cycle(iv.cues.map(c => str(c, ''))) : [];
     return out;
   }
-  function normExercise(b) {
-    const name = str(b.name, 'Exercise');
-    const prescription = str(b.prescription, str(b.summary, ''));
-    return {
-      name, prescription,
-      slot: SLOTS[b.slot] ? b.slot : 'strength',
-      location: b.location === 'wall' ? 'wall' : 'off_wall',
-      domain: str(b.domain, 'other'), intensity: str(b.intensity, 'moderate'), risk: str(b.risk, 'low'),
-      equipment: Array.isArray(b.equipment) ? b.equipment.map(e => str(e, '')).filter(Boolean) : [],
-      interval: normInterval(b.interval),
-      load: inferLoad(name, prescription),
-      surface: inferSurface(name),
-      std: matchStd(name),
-    };
-  }
-  /** Converte un .blokplan in { plan, exercises }. Lancia Error se il file non è valido.
-      Gli esercizi identici vengono deduplicati; `existing` (id → esercizio) permette di riusare la libreria. */
-  function importBlokplan(obj, existing) {
-    if (!obj || typeof obj !== 'object' || !Array.isArray(obj.weeks) || !obj.weeks.length) throw new Error('The file is not a valid Blok Sessions plan.');
-    const byKey = new Map(), exercises = [];
-    const keyOf = e => JSON.stringify([e.name, e.prescription, e.slot, e.location, e.interval]);
-    for (const e of Object.values(existing || {})) byKey.set(keyOf(e), e.id);
-    const blocksOf = list => (Array.isArray(list) ? list : []).filter(pb => pb && pb.block).map(pb => {
-      const e = normExercise(pb.block), k = keyOf(e);
-      if (!byKey.has(k)) { e.id = uid(); byKey.set(k, e.id); exercises.push(e); }
-      return { id: uid(), exId: byKey.get(k), minutes: int(pb.selectedDurationMinutes || pb.block.defaultMinutes) };
-    });
-    const weeks = obj.weeks.map(w => {
-      if (!Array.isArray(w)) throw new Error('Invalid week in the file.');
-      const days = w.slice(0, 7).map(d => {
-        const sessions = [];
-        if (d && DAY_TYPES[d.type] && d.type !== 'rest')
-          sessions.push({ id: uid(), type: d.type, period: PERIODS[d.period] ? d.period : 'base', blocks: blocksOf(d.plannedBlocks) });
-        if (d && d.secondType && DAY_TYPES[d.secondType])
-          sessions.push({ id: uid(), type: d.secondType, period: PERIODS[d.secondPeriod] ? d.secondPeriod : 'base', blocks: blocksOf(d.secondPlannedBlocks) });
-        // Un giorno = una sessione: la seconda sessione di Blok (es. il conditioning) si accoda alla prima.
-        return { sessions: sessions.length > 1 ? [{ ...sessions[0], blocks: sessions.flatMap(x => x.blocks) }] : sessions };
-      });
-      while (days.length < 7) days.push({ sessions: [] });
-      return days;
-    });
-    const startDate = Number.isFinite(obj.startDate) ? mondayOf(appleToISO(obj.startDate)) : mondayOf(todayISO());
-    return { plan: { id: uid(), title: str(obj.title, 'Imported programme'), startDate, weeks }, exercises };
-  }
-  function exportBlokplan(plan, exMap) {
-    const allPeriods = Object.keys(PERIODS);
-    const pb = b => {
-      const e = exMap[b.exId];
-      if (!e) return null;
-      // I parametri stanno nel blocco: la riga descrittiva del file si genera da quelli, più l'eventuale nota.
-      const presc = e.prescription != null ? e.prescription : [describe(e), b.note].filter(Boolean).join(' · ').slice(0, 200);
-      const block = {
-        id: 'custom-' + e.id.toUpperCase(), sourceName: 'Climber', name: e.name, slot: e.slot, location: e.location,
-        domain: e.domain, goals: [], equipment: e.equipment || [], durations: [b.minutes], defaultMinutes: b.minutes,
-        intensity: e.intensity, risk: e.risk, periodTags: allPeriods, summary: presc, prescription: presc,
-        source: 'Custom', reviewNeeded: false,
-      };
-      if (e.interval) {
-        const iv = { ...e.interval };
-        iv.cues = iv.cues && iv.cues.length ? Array.from({ length: Math.min(iv.rounds, 20) }, (_, i) => cueAt(e.interval, i)) : [];
-        block.interval = iv;
-      }
-      return { id: uid().toUpperCase(), selectedDurationMinutes: b.minutes, block };
-    };
-    const weeks = plan.weeks.map(w => w.map(d => {
-      const [a, b] = d.sessions; // Blok supporta al massimo due sessioni al giorno
-      if (!a) return { type: 'rest' };
-      const out = { type: a.type, period: a.period, plannedBlocks: a.blocks.map(pb).filter(Boolean) };
-      if (b) Object.assign(out, { secondType: b.type, secondPeriod: b.period, secondPlannedBlocks: b.blocks.map(pb).filter(Boolean) });
-      return out;
-    }));
-    return { title: plan.title, isForSelf: true, athleteName: 'Climber', startDate: isoToApple(plan.startDate), weeks };
-  }
+
 
   /* ---- Piano ---- */
   /** Posizione di una data nel piano: { w, d } oppure null se fuori dal piano. */
@@ -370,6 +295,205 @@ review|mental|Attempt review|10|`.split('\n').map(line => {
       le sessioni tengono il loro ordine e gli intervalli tra loro, i giorni della settimana si spostano con la data. */
   const firstSessionDate = plan => addDays(plan.startDate, firstOffset(plan));
   const startForFirst = (plan, iso) => addDays(iso, -firstOffset(plan));
+
+  /* ---- Programmi in YAML ----
+     Un file di testo che una persona può rileggere e correggere: una voce per sessione, settimane come intervalli ("1-3"),
+     parametri espliciti per ogni esercizio. Nel modello interno ogni esercizio di una sessione resta un'istanza privata. */
+  const YAML_DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+  // Nomi leggibili dei test nel file → chiavi interne (vale anche la chiave interna stessa).
+  const YAML_REFS = { 'open-hand': 'oh', 'half-crimp': 'hc', sloper: 'sl', pinch: 'pinch', lift: 'lift', wrist: 'wrist', 'pull-up': 'pull', 'one-arm': 'onearm' };
+  const yamlRefName = ref => Object.keys(YAML_REFS).find(k => YAML_REFS[k] === ref) || ref;
+  const PROGRAMME_FIELDS = ['title', 'weeks', 'first_session', 'sessions'];
+  const SESSION_FIELDS = ['week', 'day', 'title', 'exercises'];
+  const EXERCISE_FIELDS = ['name', 'test', 'minutes', 'sets', 'rounds', 'work', 'reps', 'rest', 'set_rest', 'sides', 'load', 'surface', 'note'];
+
+  /** "7s", "45 s", "3min", "3 min", "1min30s", "2'", "1'30\"", oppure un numero (secondi). Restituisce i secondi o null. */
+  function parseDuration(v) {
+    if (typeof v === 'number') return Number.isInteger(v) && v >= 0 ? v : null;
+    if (typeof v !== 'string') return null;
+    const t = v.trim().toLowerCase();
+    let m = /^(\d+)\s*(?:min|m|')\s*(?:(\d+)\s*(?:s|sec|")?)?$/.exec(t);
+    if (m) return +m[1] * 60 + (m[2] ? +m[2] : 0);
+    m = /^(\d+)\s*(?:s|sec|")?$/.exec(t);
+    return m ? +m[1] : null;
+  }
+  const fmtDuration = s => (s < 60 ? s + 's' : Math.floor(s / 60) + 'min' + (s % 60 ? (s % 60) + 's' : ''));
+  /** "1-3", "1,3", "1-2,4", 2, "all" → [1, 2, 3]. Restituisce null se non valido o fuori da 1..weeks. */
+  function parseWeeks(v, weeks) {
+    if (v === 'all') return Array.from({ length: weeks }, (_, i) => i + 1);
+    const parts = typeof v === 'number' ? [String(v)] : typeof v === 'string' ? v.split(',').map(x => x.trim()) : null;
+    if (!parts) return null;
+    const out = new Set();
+    for (const p of parts) {
+      const m = /^(\d+)(?:\s*-\s*(\d+))?$/.exec(p);
+      if (!m) return null;
+      const a = +m[1], b = m[2] ? +m[2] : a;
+      if (a < 1 || b > weeks || a > b) return null;
+      for (let w = a; w <= b; w++) out.add(w);
+    }
+    return [...out].sort((x, y) => x - y);
+  }
+  /** [1, 2, 3, 5] → "1-3,5"; una settimana sola resta un numero. */
+  function fmtWeeks(list) {
+    if (list.length === 1) return list[0];
+    const runs = [];
+    for (const w of list) { const r = runs[runs.length - 1]; if (r && w === r[1] + 1) r[1] = w; else runs.push([w, w]); }
+    return runs.map(([a, b]) => (a === b ? String(a) : `${a}-${b}`)).join(',');
+  }
+  /** Esercizio "test": a fine esercizio chiede il risultato, che aggiorna il massimale. `defs`: definizioni dei test (per secondi e ripetizioni). */
+  function testExercise(ref, defs) {
+    const two = !!PAIRS[ref], key = two ? ref + 'L' : ref;
+    const d = (defs || []).find(t => t.key === key) || TEST_TEMPLATES.find(t => t.key === key);
+    if (!d) return null;
+    const interval = normInterval({ rounds: two ? 8 : 4, workSeconds: d.seconds || 45, restSeconds: two ? 90 : 180, selfPaced: !d.seconds, reps: d.reps || 0, cues: two ? ['L', 'R'] : [] });
+    return { std: 'test', note: d.mode === 'value' ? 'All out' : 'Increasing load', name: 'Test: ' + (two ? PAIRS[ref] : d.name), slot: 'strength', location: 'off_wall', domain: 'finger_strength',
+      intensity: 'max', risk: 'moderate', equipment: [], interval, load: { ref, mode: d.mode === 'lift' ? 'lift' : 'hang', pct: null, test: true }, surface: '' };
+  }
+  const refMode = (ref, defs) => { const d = (defs || []).concat(TEST_TEMPLATES).find(t => t.key === (PAIRS[ref] ? ref + 'L' : ref)); return d && d.mode === 'lift' ? 'lift' : 'hang'; };
+
+  /** Legge un programma YAML. `opts`: { surfaces: [{key, name}], testDefs }.
+      Restituisce { plan, exercises, firstSession } oppure lancia un Error con `errors` (tutti gli errori trovati, non solo il primo). */
+  function importYaml(text, opts) {
+    opts = opts || {};
+    const yaml = YAML_LIB();
+    let doc;
+    try { doc = yaml.load(String(text), { schema: yaml.CORE_SCHEMA }); }
+    catch (e) {
+      const at = e.mark ? `line ${e.mark.line + 1}: ` : '';
+      throw Object.assign(new Error('The file is not valid YAML.'), { errors: [at + (e.reason || e.message)] });
+    }
+    const errors = [], err = (where, msg) => errors.push(where ? `${where}: ${msg}` : msg);
+    const fail = () => Object.assign(new Error(errors.length === 1 ? errors[0] : `The programme has ${errors.length} errors.`), { errors });
+    const isObj = v => !!v && typeof v === 'object' && !Array.isArray(v);
+    const unknown = (o, allowed, where) => { for (const k of Object.keys(o)) if (!allowed.includes(k)) err(where, `unknown field "${k}"`); };
+    if (!isObj(doc)) { err('', 'the file must start with "title:", "weeks:" and "sessions:"'); throw fail(); }
+    if (Array.isArray(doc.weeks) && doc.weeks.length && doc.isForSelf !== undefined) { err('', 'Blok Sessions plans are no longer supported: use the YAML format described in the guide'); throw fail(); }
+    unknown(doc, PROGRAMME_FIELDS, '');
+    const title = typeof doc.title === 'string' && doc.title.trim() ? doc.title.trim().slice(0, 80) : (err('title', 'required'), 'Programme');
+    const nWeeks = Number.isInteger(doc.weeks) && doc.weeks >= 1 && doc.weeks <= 52 ? doc.weeks : (err('weeks', 'must be a whole number from 1 to 52'), 0);
+    let firstSession = null;
+    if (doc.first_session !== undefined) { firstSession = typeof doc.first_session === 'string' ? validISO(doc.first_session) : null; if (!firstSession) err('first_session', 'must be a date like 2026-11-18'); }
+    if (!Array.isArray(doc.sessions) || !doc.sessions.length) err('sessions', 'required: a list of sessions');
+    const surfaces = opts.surfaces || DEFAULT_SURFACES;
+    const weeks = Array.from({ length: nWeeks }, () => Array.from({ length: 7 }, () => ({ sessions: [] })));
+    const taken = new Map(), exercises = [];
+    (Array.isArray(doc.sessions) ? doc.sessions : []).forEach((s, si) => {
+      const label = isObj(s) && s.day ? `session ${si + 1} (week ${s.week}, ${s.day})` : `session ${si + 1}`;
+      if (!isObj(s)) return err(label, 'must be a block with week, day and exercises');
+      unknown(s, SESSION_FIELDS, label);
+      const ws = nWeeks ? parseWeeks(s.week, nWeeks) : null;
+      if (!ws && nWeeks) err(label, `week: "${s.week}" is not valid (examples: 2, "1-3", "1,3", all; weeks go from 1 to ${nWeeks})`);
+      const day = YAML_DAYS.indexOf(String(s.day).toLowerCase().slice(0, 3));
+      if (day < 0) err(label, `day: "${s.day}" is not valid (mon, tue, wed, thu, fri, sat, sun)`);
+      if (s.title !== undefined && typeof s.title !== 'string') err(label, 'title must be text');
+      if (!Array.isArray(s.exercises) || !s.exercises.length) return err(label, 'exercises: required, at least one');
+      const items = s.exercises.map((x, xi) => yamlExercise(x, `${label}, exercise ${xi + 1}${isObj(x) && (x.name || x.test) ? ` "${x.name || x.test}"` : ''}`));
+      if (!ws || day < 0) return;
+      for (const w of ws) {
+        const k = (w - 1) * 7 + day;
+        if (taken.has(k)) { err(label, `week ${w}, ${YAML_DAYS[day]} already has a session (${taken.get(k)}): one session per day`); continue; }
+        taken.set(k, label);
+        if (items.some(x => !x)) continue;
+        const blocks = items.map(({ e, minutes, note }) => {
+          const c = JSON.parse(JSON.stringify(e)); c.id = uid(); exercises.push(c);
+          return Object.assign({ id: uid(), exId: c.id, minutes }, note ? { note } : {});
+        });
+        weeks[w - 1][day].sessions.push(Object.assign({ id: uid(), type: 'wall', period: 'base', blocks }, s.title ? { title: String(s.title).slice(0, 80) } : {}));
+      }
+    });
+    if (errors.length) throw fail();
+    return { plan: { id: uid(), title, startDate: todayISO(), weeks }, exercises, firstSession };
+
+    function yamlExercise(x, where) {
+      if (!isObj(x)) { err(where, 'must be a block with name (or test) and its parameters'); return null; }
+      const n0 = errors.length;
+      unknown(x, EXERCISE_FIELDS, where);
+      let e;
+      if (x.test !== undefined) {
+        if (x.name !== undefined) err(where, 'use either name or test, not both');
+        if (x.load !== undefined) err(where, 'a test has no load: the result becomes the new max');
+        const ref = YAML_REFS[x.test] || x.test;
+        e = typeof ref === 'string' ? testExercise(ref, opts.testDefs) : null;
+        if (!e) { err(where, `test: "${x.test}" is not a known test (${Object.keys(YAML_REFS).join(', ')})`); return null; }
+      } else {
+        if (typeof x.name !== 'string' || !x.name.trim()) { err(where, 'name: required'); return null; }
+        const name = x.name.trim().slice(0, 80), std = matchStd(name), v = std && std !== 'test' ? stdVariant(std) : null;
+        e = { std, name, slot: v ? v.slot : 'strength', location: v ? v.location : 'off_wall', domain: 'other', intensity: 'moderate', risk: 'low', equipment: [], interval: null, load: null, surface: inferSurface(name) };
+      }
+      // Timer: sets (round in tutto, i due lati contano entrambi) × rounds per set, lavoro a tempo o a ripetizioni.
+      const has = k => x[k] !== undefined, posInt = k => (Number.isInteger(x[k]) && x[k] > 0 ? x[k] : (err(where, `${k}: must be a whole number greater than 0`), null));
+      const dur = k => { const s = parseDuration(x[k]); if (s == null) err(where, `${k}: "${x[k]}" is not a duration (examples: 7s, 3min, 1min30s)`); return s; };
+      if (['sets', 'rounds', 'work', 'reps', 'rest', 'set_rest', 'sides'].some(has)) {
+        if (!has('sets')) err(where, 'sets: required when the exercise has a timer (work, reps, rest…)');
+        if (has('work') === has('reps')) err(where, has('work') ? 'use either work (timed) or reps (counted), not both' : 'give work (a time like 7s, or done) or reps (e.g. 6)');
+        if (has('set_rest') && !has('rounds')) err(where, 'set_rest needs rounds (rounds per set)');
+        if (has('sides') && x.sides !== 'L/R') err(where, 'sides: the only value is L/R');
+        if (has('sides') && has('rounds')) err(where, 'sides and rounds cannot be combined');
+        const sets = has('sets') ? posInt('sets') : null, per = has('rounds') ? posInt('rounds') : null;
+        const untilDone = x.work === 'done', work = has('work') && !untilDone ? dur('work') : 45, reps = has('reps') ? posInt('reps') : null, rest = has('rest') ? dur('rest') : 0;
+        const setRest = has('set_rest') ? dur('set_rest') : null;
+        if (errors.length === n0) {
+          e.interval = normInterval({ rounds: sets * (per || 1), workSeconds: work, restSeconds: rest, selfPaced: !!reps || untilDone, reps: reps || 0,
+            roundsPerSet: per || 0, setRestSeconds: setRest || 0, cues: has('sides') ? ['L', 'R'] : [] });
+        }
+      }
+      if (has('load')) {
+        const m = /^\s*(?:(\d+(?:\.\d+)?)\s*%\s*)?([a-z-]+)\s*$/i.exec(String(x.load)), ref = m ? YAML_REFS[m[2].toLowerCase()] || m[2] : null;
+        if (!m || !ref || !(PAIRS[ref] || TEST_TEMPLATES.some(t => t.key === ref) || (opts.testDefs || []).some(t => t.key === ref)))
+          err(where, `load: "${x.load}" should look like "82.5% sloper" (tests: ${Object.keys(YAML_REFS).join(', ')})`);
+        else e.load = { ref, mode: refMode(ref, opts.testDefs), pct: m[1] ? +m[1] : null, test: false };
+      }
+      if (has('surface')) {
+        const sf = surfaces.find(s => s.key === x.surface || s.name.toLowerCase() === String(x.surface).toLowerCase());
+        if (!sf) err(where, `surface: "${x.surface}" is not one of your surfaces (${surfaces.map(s => s.key).join(', ')})`); else e.surface = sf.key;
+      }
+      let minutes = null;
+      if (has('minutes')) minutes = posInt('minutes');
+      else if (e.interval) minutes = intervalMinutes(e.interval);
+      else if (e.std && STD[e.std] && STD[e.std].minutes) minutes = STD[e.std].minutes;
+      else err(where, 'minutes: required for an exercise without a timer');
+      if (has('note') && typeof x.note !== 'string' && typeof x.note !== 'number') err(where, 'note must be text');
+      const note = (has('note') ? String(x.note).trim() : e.note || '').slice(0, 200); // la nota predefinita del test vale solo se il file non ne dà una
+      delete e.note;
+      return errors.length === n0 ? { e, minutes, note } : null;
+    }
+  }
+
+  /** Programma → testo YAML. Le sessioni identiche in più settimane (stesso giorno) diventano una sola voce con "week: 1-3". */
+  function exportYaml(plan, exMap) {
+    const yaml = YAML_LIB();
+    const item = b => {
+      const e = exMap[b.exId];
+      if (!e) return null;
+      const o = {}, iv = e.interval;
+      if (e.load && e.load.test) o.test = yamlRefName(e.load.ref); else o.name = e.name;
+      o.minutes = b.minutes || 1;
+      if (iv && iv.rounds) {
+        const sided = iv.cues && iv.cues.length === 2 && iv.cues[0] === 'L' && iv.cues[1] === 'R';
+        if (iv.roundsPerSet && iv.rounds % iv.roundsPerSet === 0 && !sided) { o.sets = iv.rounds / iv.roundsPerSet; o.rounds = iv.roundsPerSet; } else o.sets = iv.rounds;
+        // A ripetizioni o "fino a Fatto" il lavoro non ha durata: i minuti del blocco sono già scritti a parte.
+        if (iv.selfPaced) { if (iv.reps) o.reps = iv.reps; else o.work = 'done'; } else o.work = fmtDuration(iv.workSeconds);
+        if (iv.restSeconds) o.rest = fmtDuration(iv.restSeconds);
+        if (o.rounds && iv.setRestSeconds) o.set_rest = fmtDuration(iv.setRestSeconds);
+        if (sided) o.sides = 'L/R';
+      }
+      if (e.load && !e.load.test) o.load = (e.load.pct != null ? e.load.pct + '% ' : '') + yamlRefName(e.load.ref);
+      if (e.surface) o.surface = e.surface;
+      if (b.note) o.note = b.note;
+      return o;
+    };
+    const groups = [];
+    plan.weeks.forEach((wk, w) => wk.forEach((d, day) => d.sessions.forEach(s => {
+      const body = Object.assign(s.title ? { title: s.title } : {}, { exercises: s.blocks.map(item).filter(Boolean) });
+      const key = day + '|' + JSON.stringify(body), g = groups.find(x => x.key === key);
+      if (g) g.weeks.push(w + 1); else groups.push({ key, day, weeks: [w + 1], body });
+    })));
+    groups.sort((a, b) => a.weeks[0] - b.weeks[0] || a.day - b.day);
+    const doc = { title: plan.title, weeks: plan.weeks.length, first_session: firstSessionDate(plan),
+      sessions: groups.map(g => Object.assign({ week: fmtWeeks(g.weeks), day: YAML_DAYS[g.day] }, g.body)) };
+    return '# Allenamento programme. Format: https://github.com/ldvdauer/allenamento/blob/main/GUIDE.md#programme-files\n' +
+      yaml.dump(doc, { lineWidth: -1, noRefs: true, quotingType: '"' }).replace(/\n  - week:/g, '\n\n  - week:');
+  }
   const sessionMinutes = s => s.blocks.reduce((t, b) => t + (b.minutes || 0), 0);
   // Le copie hanno id nuovi: una sessione copiata non eredita lo stato "fatta" dell'originale.
   const cloneSession = s => ({ ...s, id: uid(), blocks: s.blocks.map(b => ({ ...b, id: uid() })) });
@@ -550,9 +674,9 @@ review|mental|Attempt review|10|`.split('\n').map(line => {
 
   return {
     GROUPS, SECTION_GROUP, blockSection, timeBySection, weeklyGroups, describe, leftoverNote, splitCues, fmtRest, PAIRS, refKeys, LEGACY_NAMES, normSide, firstOffset, firstSessionDate, startForFirst, recordsOf, lastRecord, nextLoad, TEST_TEMPLATES, testLabel, SECTIONS, LIBRARY, STD, stdVariant, matchStd,
-    DAY_TYPES, PERIODS, SLOTS, GRADES, GRADE_SCALES, gradeIdx, fmtGrade, DEFAULT_SURFACES, inferSurface, validISO, uid, toISO, fromISO, todayISO, addDays, diffDays, appleToISO, isoToApple, mondayOf,
+    DAY_TYPES, PERIODS, SLOTS, GRADES, GRADE_SCALES, gradeIdx, fmtGrade, DEFAULT_SURFACES, inferSurface, validISO, uid, toISO, fromISO, todayISO, addDays, diffDays, mondayOf,
     inferLoad, loadKey, loadKg, latestMaxes, fmtKg, cycle, cueAt, intervalMinutes, buildSteps, normInterval,
-    importBlokplan, exportBlokplan, locate, dateOf, sessionMinutes, cloneSession, validState,
+    importYaml, exportYaml, parseDuration, parseWeeks, fmtWeeks, testExercise, YAML_REFS, locate, dateOf, sessionMinutes, cloneSession, validState,
     niceRange, scheduled, weeklyStats, summary, parseLoads, loadSeries, surfaceStats, weeklyTopGrades,
   };
 });

@@ -6,6 +6,7 @@ const esc = s => s.replace(/<\/script/g, '<\\/script');
 const VERSION = process.env.APP_VERSION || new Date().toISOString().slice(0, 16).replace(/[-:]/g, '').replace('T', '.');
 const page = extra => r('index.html')
   .replace('/*CSS*/', () => r('style.css'))
+  .replace('/*YAML*/', () => esc(r('vendor/js-yaml.min.js')))
   .replace('/*CORE*/', () => esc(r('core.js')))
   .replace('/*CHARTS*/', () => esc(r('charts.js')))
   .replace('/*APP*/', () => esc(r('app.js').replace('__APP_VERSION__', VERSION)))

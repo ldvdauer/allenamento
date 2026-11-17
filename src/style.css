@@ -111,3 +111,4 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
 .viz-key.none{visibility:hidden}.viz-legend{flex-wrap:wrap;row-gap:4px}
 .hero{font-size:44px;font-weight:700;letter-spacing:-.03em;line-height:1.05}.hero small{font-size:17px;font-weight:600;color:var(--mu);letter-spacing:0;margin-left:6px}
 .tag.bad{background:#3a1c1c;color:var(--bad)}
+.errs{margin:6px 0 10px;padding-left:18px;font-size:14px;line-height:1.45}.errs li{margin:4px 0;overflow-wrap:anywhere}

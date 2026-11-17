@@ -1,46 +1,145 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const C = require('../src/core.js');
-const Seed = require('./fixture.js');
+const fs = require('node:fs');
+const FIXTURE = fs.readFileSync(require.resolve('./fixture.yaml'), 'utf8');
 
-const imported = () => C.importBlokplan(Seed.blokplan());
+// Come fa l'app all'import: la prima sessione cade nella data indicata dal file.
+const imported = () => { const r = C.importYaml(FIXTURE); r.plan.startDate = C.startForFirst(r.plan, r.firstSession); return r; };
 const exMapOf = r => Object.fromEntries(r.exercises.map(e => [e.id, e]));
 const weekMinutes = w => w.reduce((t, d) => t + d.sessions.reduce((a, s) => a + C.sessionMinutes(s), 0), 0);
+const errorsOf = (text, opts) => { try { C.importYaml(text, opts); return []; } catch (e) { return e.errors || [e.message]; } };
 
-test('import: struttura del piano di esempio', () => {
+test('import YAML: struttura del piano di esempio', () => {
   const { plan, exercises } = imported();
   assert.equal(plan.title, 'Piano di esempio');
   assert.equal(plan.startDate, '2026-11-16');
   assert.equal(plan.weeks.length, 3);
-  assert.equal(exercises.length, 7); // 4 esercizi comuni + 3 varianti di hang (85/90/70%)
+  const blocks = plan.weeks.flat().flatMap(d => d.sessions.flatMap(s => s.blocks));
+  assert.equal(exercises.length, blocks.length); // ogni esercizio di ogni sessione è un'istanza privata
+  assert.equal(new Set(blocks.map(b => b.exId)).size, blocks.length);
   assert.deepEqual(plan.weeks.map(weekMinutes), [135, 135, 135]);
-  assert.deepEqual(plan.weeks[0].map(d => d.sessions.length), [1, 0, 1, 1, 0, 1, 0]); // la seconda sessione di Blok si accoda alla prima
+  assert.deepEqual(plan.weeks[0].map(d => d.sessions.length), [1, 0, 1, 1, 0, 1, 0]);
   assert.deepEqual(plan.weeks[0][0].sessions[0].blocks.map(b => b.minutes), [20, 7, 30, 4]);
-  assert.equal(plan.weeks[2][0].sessions[0].period, 'deload');
 });
 
-test('import: file non valido → errore, nessun risultato parziale', () => {
-  for (const bad of [null, {}, { weeks: [] }, { weeks: ['x'] }, 'ciao'])
-    assert.throws(() => C.importBlokplan(bad), /valid/);
+test('import YAML: parametri del timer, carico, lati, superficie, nota', () => {
+  const r = C.importYaml(`title: T
+weeks: 2
+sessions:
+  - week: all
+    day: Tuesday
+    title: Dita
+    exercises:
+      - name: Sloper hang
+        sets: 4
+        work: 7s
+        rest: 3min
+        load: 82.5% sloper
+        note: margine 2-3"
+      - name: Pinch block
+        sets: 6
+        work: 7
+        rest: 1'15"
+        sides: L/R
+        load: 75% pinch
+      - name: Set tecnici al flash
+        minutes: 60
+        sets: 6
+        rounds: 3
+        work: done
+        rest: 2min
+        set_rest: 5min
+      - name: Board
+        surface: MoonBoard
+      - test: half-crimp
+`);
+  const ex = exMapOf(r), s = r.plan.weeks[1][1].sessions[0], [a, b, c, d, t] = s.blocks.map(x => ex[x.exId]);
+  assert.equal(s.title, 'Dita');
+  assert.equal(r.plan.weeks[0][1].sessions.length, 1); // "all" = tutte le settimane
+  assert.deepEqual(a.interval, { rounds: 4, workSeconds: 7, restSeconds: 180, cues: [] });
+  assert.deepEqual(a.load, { ref: 'sl', mode: 'hang', pct: 82.5, test: false });
+  assert.equal(s.blocks[0].note, 'margine 2-3"');
+  assert.equal(s.blocks[0].minutes, C.intervalMinutes(a.interval)); // minuti calcolati dal timer se non scritti
+  assert.equal(a.std, 'sloper-hang');
+  assert.deepEqual(b.interval.cues, ['L', 'R']);
+  assert.equal(b.interval.restSeconds, 75);
+  assert.deepEqual(b.load, { ref: 'pinch', mode: 'lift', pct: 75, test: false });
+  assert.deepEqual(c.interval, { rounds: 18, workSeconds: 45, restSeconds: 120, selfPaced: true, roundsPerSet: 3, setRestSeconds: 300, cues: [] });
+  assert.equal(C.describe(c), '6 sets × 3 · rest 2\' / 5\' between sets');
+  assert.equal(d.surface, 'moonboard');
+  assert.equal(s.blocks[3].minutes, C.STD.board.minutes); // senza timer: minuti predefiniti dell'esercizio standard
+  assert.equal(t.name, 'Test: Half-crimp');
+  assert.equal(t.load.test, true);
+  assert.equal(s.blocks[4].note, 'Increasing load');
 });
 
-test('import: riusa gli esercizi già in libreria', () => {
-  const first = imported();
-  const again = C.importBlokplan(Seed.blokplan(), exMapOf(first));
-  assert.equal(again.exercises.length, 0);
+test('import YAML: tutti gli errori, con il punto esatto, e nessun risultato parziale', () => {
+  const errs = errorsOf(`title: Prova
+weeks: 3
+sessions:
+  - week: 1-4
+    day: tue
+    exercises:
+      - name: Sloper hang
+        sets: 4
+        work: 7 secondi
+        load: 80% slopr
+  - week: 2
+    day: lun
+    exercises:
+      - name: Board
+        minutez: 30
+  - week: 2
+    day: wed
+    exercises:
+      - test: pinch
+        load: 70% pinch
+  - week: 2
+    day: wed
+    exercises:
+      - name: Custom
+`);
+  const has = re => assert.ok(errs.some(e => re.test(e)), re + ' in\n' + errs.join('\n'));
+  has(/session 1 .*week: "1-4" is not valid/);
+  has(/exercise 1 "Sloper hang": work: "7 secondi" is not a duration/);
+  has(/load: "80% slopr" should look like/);
+  has(/day: "lun" is not valid/);
+  has(/"Board": unknown field "minutez"/);
+  has(/a test has no load/);
+  has(/week 2, wed already has a session/);
+  has(/"Custom": minutes: required/);
+  assert.equal(errs.length, 8);
+  assert.match(errorsOf('title: x\nweeks: 2\nsessions:\n  - week: 1\n   day: mon')[0], /^line \d+: /);
+  for (const bad of ['', 'ciao', '[]', 'title: x', '{"title":"x","isForSelf":true,"weeks":[[]]}'])
+    assert.ok(errorsOf(bad).length > 0, JSON.stringify(bad));
+  assert.match(errorsOf('{"title":"x","isForSelf":true,"weeks":[[]]}')[0], /Blok Sessions plans are no longer supported/);
+  assert.match(errorsOf('title: x\nweeks: 1\nsessions:\n  - week: 1\n    day: mon\n    exercises:\n      - name: X\n        sets: 2\n        work: 7s\n        reps: 3')[0], /either work .* or reps/);
 });
 
-test('export → import: round trip senza perdite', () => {
-  const a = imported();
-  const b = C.importBlokplan(C.exportBlokplan(a.plan, exMapOf(a)), exMapOf(a));
-  assert.equal(b.exercises.length, 0);
-  assert.equal(b.plan.startDate, a.plan.startDate);
-  const shape = p => p.weeks.map(w => w.map(d => d.sessions.map(s => [s.type, s.period, s.blocks.map(x => [x.exId, x.minutes])])));
-  assert.deepEqual(shape(b.plan), shape(a.plan));
+test('YAML: durate e settimane', () => {
+  for (const [v, s] of [['7s', 7], ['45 s', 45], ['3min', 180], ['3 min', 180], ['1min30s', 90], ['1m30', 90], ["2'", 120], ['1\'30"', 90], [90, 90], ['7"', 7]]) assert.equal(C.parseDuration(v), s, v);
+  for (const v of ['7 secondi', '-3', 'abc', 1.5, null]) assert.equal(C.parseDuration(v), null, String(v));
+  assert.deepEqual(C.parseWeeks('1-2,4', 4), [1, 2, 4]);
+  assert.deepEqual(C.parseWeeks(3, 4), [3]);
+  assert.deepEqual(C.parseWeeks('all', 3), [1, 2, 3]);
+  for (const v of ['0', '5', '3-1', 'x', '1-5']) assert.equal(C.parseWeeks(v, 4), null, v);
+  assert.equal(C.fmtWeeks([1, 2, 3, 5]), '1-3,5');
+  assert.equal(C.fmtWeeks([2]), 2);
 });
 
-test('date: epoca Apple e posizione nel piano', () => {
-  assert.equal(C.appleToISO(C.isoToApple('2026-11-16')), '2026-11-16');
+test('YAML: export → import senza perdite, sessioni uguali raggruppate', () => {
+  const a = imported(), text = C.exportYaml(a.plan, exMapOf(a));
+  assert.match(text, /\n  - week: 1-3\n    day: wed\n/); // la stessa sessione in tre settimane si scrive una volta
+  assert.match(text, /first_session: "2026-11-16"/);
+  const b = C.importYaml(text), shape = (r, m) => r.plan.weeks.map(w => w.map(d => d.sessions.map(s => [s.title || '', s.blocks.map(x => {
+    const e = m[x.exId]; return [e.name, e.std, x.minutes, x.note || '', e.interval, e.load, e.surface || ''];
+  })])));
+  assert.deepEqual(shape(b, exMapOf(b)), shape(a, exMapOf(a)));
+  assert.equal(b.firstSession, '2026-11-16');
+});
+
+test('date: posizione nel piano, prima sessione in un giorno qualsiasi', () => {
   assert.equal(C.mondayOf('2026-11-14'), '2026-11-09');
   assert.equal(C.addDays('2026-12-31', 1), '2027-01-01');
   const { plan } = imported();
@@ -49,6 +148,9 @@ test('date: epoca Apple e posizione nel piano', () => {
   assert.deepEqual(C.locate(plan, '2026-11-25'), { w: 1, d: 2 });
   assert.equal(C.locate(plan, '2026-12-07'), null);
   assert.equal(C.dateOf(plan, 2, 6), '2026-12-06');
+  const rest = { startDate: '2026-11-16', weeks: [[{ sessions: [] }, { sessions: [{ blocks: [] }] }, ...Array.from({ length: 5 }, () => ({ sessions: [] }))]] };
+  assert.equal(C.firstSessionDate(rest), '2026-11-17');
+  assert.equal(C.startForFirst(rest, '2026-11-18'), '2026-11-17'); // prima sessione mercoledì 18
 });
 
 test('carichi: formula del foglio Google', () => {
@@ -289,10 +391,6 @@ test('parametri → riga descrittiva; dalle prescrizioni importate resta solo la
   assert.equal(C.leftoverNote('≥ 3 tentativi per problema · stop quando cala la qualità'), '≥ 3 tentativi per problema · stop quando cala la qualità');
   assert.equal(C.leftoverNote('TEST · Carico crescente'), 'Carico crescente');
   assert.equal(C.leftoverNote(''), '');
-  // export: senza testo libero la riga del file nasce dai parametri e dalla nota del blocco
-  const ex = { e1: { id: 'e1', name: 'Max hang', slot: 'strength', location: 'off_wall', domain: 'x', intensity: 'max', risk: 'low', interval: { rounds: 4, workSeconds: 7, restSeconds: 180, cues: [] }, load: { ref: 'hc', pct: 85 } } };
-  const plan = { title: 'P', startDate: '2026-11-16', weeks: [[{ sessions: [{ id: 's', type: 'wall', period: 'base', blocks: [{ id: 'b', exId: 'e1', minutes: 10, note: 'margine 2"' }] }] }, ...Array.from({ length: 6 }, () => ({ sessions: [] }))]] };
-  assert.equal(C.exportBlokplan(plan, ex).weeks[0][0].plannedBlocks[0].block.prescription, '4 × 7" · rest 3\' · 85% · margine 2"');
 });
 
 test('cue importati → interruttore SX/DX + nota', () => {
