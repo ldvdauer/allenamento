@@ -1,4 +1,4 @@
-:root{--v1:#3987e5;--v1h:#6da7ec;--vref:#8e969f;--vgrid:#262b31;--vaxis:#3d444c;--bg:#0e1012;--card:#181b1f;--line:#2a2f35;--tx:#eceef0;--mu:#8e969f;--ac:#3df27c;--rest:#4cc2ff;--ok:#3df27c;--warn:#f2cc60;--bad:#ff6b6b;
+:root{--v1:#3987e5;--v1h:#6da7ec;--vref:#8e969f;--vgrid:#262b31;--vaxis:#3d444c;--bg:#0e1012;--card:#181b1f;--line:#2a2f35;--tx:#eceef0;--mu:#8e969f;--note:#c9ced3;--ac:#3df27c;--rest:#4cc2ff;--ok:#3df27c;--warn:#f2cc60;--bad:#ff6b6b;
   --st:env(safe-area-inset-top,0px);--sb:env(safe-area-inset-bottom,0px)}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 /* iOS, app installata: con pagine corte e height:100% l'area di layout finisce sopra la zona della barra Home e gli
@@ -112,3 +112,4 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
 .hero{font-size:44px;font-weight:700;letter-spacing:-.03em;line-height:1.05}.hero small{font-size:17px;font-weight:600;color:var(--mu);letter-spacing:0;margin-left:6px}
 .tag.bad{background:#3a1c1c;color:var(--bad)}
 .errs{margin:6px 0 10px;padding-left:18px;font-size:14px;line-height:1.45}.errs li{margin:4px 0;overflow-wrap:anywhere}
+.blk .p.note{color:var(--note)}

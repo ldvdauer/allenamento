@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="Allenamento">
 <title>Allenamento</title>
 <link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon.png">
-<style>:root{--v1:#3987e5;--v1h:#6da7ec;--vref:#8e969f;--vgrid:#262b31;--vaxis:#3d444c;--bg:#0e1012;--card:#181b1f;--line:#2a2f35;--tx:#eceef0;--mu:#8e969f;--ac:#3df27c;--rest:#4cc2ff;--ok:#3df27c;--warn:#f2cc60;--bad:#ff6b6b;
+<style>:root{--v1:#3987e5;--v1h:#6da7ec;--vref:#8e969f;--vgrid:#262b31;--vaxis:#3d444c;--bg:#0e1012;--card:#181b1f;--line:#2a2f35;--tx:#eceef0;--mu:#8e969f;--note:#c9ced3;--ac:#3df27c;--rest:#4cc2ff;--ok:#3df27c;--warn:#f2cc60;--bad:#ff6b6b;
   --st:env(safe-area-inset-top,0px);--sb:env(safe-area-inset-bottom,0px)}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 /* iOS, app installata: con pagine corte e height:100% l'area di layout finisce sopra la zona della barra Home e gli
@@ -123,6 +123,7 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
 .hero{font-size:44px;font-weight:700;letter-spacing:-.03em;line-height:1.05}.hero small{font-size:17px;font-weight:600;color:var(--mu);letter-spacing:0;margin-left:6px}
 .tag.bad{background:#3a1c1c;color:var(--bad)}
 .errs{margin:6px 0 10px;padding-left:18px;font-size:14px;line-height:1.45}.errs li{margin:4px 0;overflow-wrap:anywhere}
+.blk .p.note{color:var(--note)}
 </style>
 </head>
 <body>
@@ -1418,7 +1419,7 @@ review|mental|Attempt review|10|`.split('\n').map(line => {
     if (!ex) return h('div', { class: 'blk', 'data-id': b.id }, grip, h('span', { class: 'p' }, 'Exercise removed'));
     const hint = loadHint(ex);
     return h('div', { class: 'blk', 'data-id': b.id, onclick, style: onclick ? 'cursor:pointer' : null }, grip,
-      h('div', { class: 'grow' }, h('div', { class: 'n' }, ex.name), h('div', { class: 'p' }, exLine(ex)), hint ? h('div', { class: 'kg' }, hint) : null, propLine(ex), b.note ? h('div', { class: 'p' }, b.note) : null),
+      h('div', { class: 'grow' }, h('div', { class: 'n' }, ex.name), h('div', { class: 'p' }, exLine(ex)), hint ? h('div', { class: 'kg' }, hint) : null, propLine(ex), b.note ? h('div', { class: 'p note' }, b.note) : null),
       h('div', { class: 'm' }, b.minutes + ' min'));
   }
   /** Riordino per trascinamento dalla maniglia: la riga segue il dito, l'ordine si salva al rilascio. */
@@ -1928,7 +1929,7 @@ review|mental|Attempt review|10|`.split('\n').map(line => {
         cloudOn() ? [btn('Restore from GitHub', cloudRestore, 'sm'), btn('Disconnect', async () => { if (await confirmDlg('Disconnect GitHub? The token is deleted from this device; backups already uploaded stay in the repository.', 'Disconnect')) { S.settings.gh = null; clearTimeout(cloudTimer); save(); render(); } }, 'sm danger')] : null));
   }
   /* ---------- Taccuino: note al volo durante la prova dell'app, con il contesto per poterle riprodurre ---------- */
-  const VERSION = '20261117.1725';
+  const VERSION = '20261117.1730';
   function noteSheet() {
     const text = h('textarea', { placeholder: 'What is wrong, or what would you like to be different?' });
     const where = P ? 'timer: ' + P.steps[P.idx].name : R ? 'session in progress' : (location.hash.slice(1) || 'home');
