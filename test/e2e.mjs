@@ -240,7 +240,7 @@ await pg.evaluate(() => document.querySelectorAll('.overlay').forEach(o => o.rem
 await go('analytics'); ok((await txt('#view')).includes('Weekly volume') && !(await txt('#view')).includes('session type'), 'Analisi: grafici presenti, niente "tipo di sessione"');
 const an = await txt('#view'); if (process.env.DBG) console.log(an.slice(0, 900));
 ok(an.includes('Time by category') && an.includes('Strength\n36 min · 100%') && an.includes('Unclassified') && !/on the wall/i.test(an) && an.includes('Minutes logged by category'), 'Analisi: tempo e volume settimanale per categoria, niente "on the wall"');
-ok(await pg.evaluate(() => { const b = [...document.querySelectorAll('#view .viz-hb-t i')][0]; return b.className === 'c-strength' && getComputedStyle(b).backgroundColor === 'rgb(217, 89, 38)'; }), 'Analisi: barra della categoria con il suo colore (Strength = arancione)');
+ok(await pg.evaluate(() => { const b = [...document.querySelectorAll('#view .viz-hb-t i')][0]; return b.className === 'c-strength' && getComputedStyle(b).backgroundColor === 'rgb(213, 81, 129)'; }), 'Analisi: barra della categoria con il suo colore (Strength = magenta)');
 ok(!an.includes('most time'), 'nessuna classifica dei dieci esercizi');
 await pg.evaluate(() => { const hit = [...document.querySelectorAll('#view .viz')][0].querySelectorAll('.hit'); hit[hit.length - 1].dispatchEvent(new MouseEvent('click', { bubbles: true })); });
 ok(/in total/.test(await pg.$eval('#view .viz-tip', e => e.innerText)), 'grafico impilato: tocco su una settimana → totale e gruppi');

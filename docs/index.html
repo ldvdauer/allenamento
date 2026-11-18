@@ -129,9 +129,10 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
 .blk .p.note{color:var(--note)}
 input:not([type=checkbox]):not([type=radio]):not([type=file]),select,textarea{background:#101316;color:var(--tx);border:1px solid var(--line);border-radius:10px}
 label.f input[type=checkbox]{display:inline-block;width:auto;margin:0 8px 0 0;vertical-align:-2px}
-/* Categorie: palette categoriale scura validata per il daltonismo (dataviz validate_palette.js, superficie #181b1f:
-   CVD adiacente ≥ 8.4, visione normale ≥ 19.3, contrasto ≥ 3:1). Ordine fisso = ordine delle categorie. Other è grigio neutro. */
-:root{--c-fingers:#3987e5;--c-strength:#d95926;--c-powerEndurance:#199e70;--c-endurance:#c98500;--c-technique:#d55181;--c-conditioning:#9085e9;--c-mobility:#e66767;--c-other:#7d858e}
+/* Categorie: colori scelti da Leo (2026-11-18). Non superano tutti i controlli dataviz su ogni coppia:
+   Fingers/Power endurance poco distinti anche con visione normale (ΔE 9.8); Strength/Endurance quasi uguali per i daltonici
+   rosso-verde (ΔE 1.6). Scelta consapevole; il nome della categoria è nella libreria e nell'etichetta accessibile. */
+:root{--c-fingers:#3987e5;--c-strength:#d55181;--c-powerEndurance:#9085e9;--c-endurance:#199e70;--c-technique:#f29ac0;--c-conditioning:#a0714f;--c-mobility:#c98500;--c-other:#7d858e}
 .cb{display:inline-block;width:5px;height:1em;border-radius:3px;margin-right:9px;vertical-align:-2px;flex:none}
 .c-fingers{--c:var(--c-fingers)}.c-strength{--c:var(--c-strength)}.c-powerEndurance{--c:var(--c-powerEndurance)}.c-endurance{--c:var(--c-endurance)}
 .c-technique{--c:var(--c-technique)}.c-conditioning{--c:var(--c-conditioning)}.c-mobility{--c:var(--c-mobility)}.c-other{--c:var(--c-other)}
@@ -2019,7 +2020,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
         cloudOn() ? [btn('Restore from GitHub', cloudRestore, 'sm'), btn('Disconnect', async () => { if (await confirmDlg('Disconnect GitHub? The token is deleted from this device; backups already uploaded stay in the repository.', 'Disconnect')) { S.settings.gh = null; clearTimeout(cloudTimer); save(); render(); } }, 'sm danger')] : null));
   }
   /* ---------- Taccuino: note al volo durante la prova dell'app, con il contesto per poterle riprodurre ---------- */
-  const VERSION = '20261118.1203';
+  const VERSION = '20261118.1320';
   function noteSheet() {
     const text = h('textarea', { class: 'inp', placeholder: 'What is wrong, or what would you like to be different?' });
     const where = P ? 'timer: ' + P.steps[P.idx].name : R ? 'session in progress' : (location.hash.slice(1) || 'home');
