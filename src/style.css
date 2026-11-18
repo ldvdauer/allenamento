@@ -133,3 +133,13 @@ label.f input[type=checkbox]{display:inline-block;width:auto;margin:0 8px 0 0;ve
 .blk .m{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
 .play{width:40px;height:40px;border-radius:50%;border:none;background:var(--ac);color:#04170b;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0 0 0 2px}
 .play.done{background:#0f2e1b;color:var(--ac);padding:0}
+.viz-donut-in{fill:#0e1012!important;font-size:11px;font-weight:700;pointer-events:none}
+.viz-donut-c{font-size:22px!important;font-weight:700;fill:var(--tx)!important}
+.viz-donut-leg{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;margin-top:6px;font-size:13px}
+.viz-donut-li{display:flex;align-items:center;gap:6px;min-width:0}.viz-donut-li span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--mu)}.viz-donut-li b{font-weight:600}
+.viz .seg{cursor:pointer}
+.an-big{font-size:34px;font-weight:700;letter-spacing:-.02em;line-height:1.1}.an-big small{font-size:16px;color:var(--mu);font-weight:500;margin-left:6px}
+.an-sel{display:flex;gap:8px;margin-bottom:12px}.an-sel select{flex:1}
+.prog-r{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line);cursor:pointer}.prog-r:first-of-type{border-top:none}
+.prog-r .v{text-align:right;font-weight:600}.prog-r .d{font-size:12px;font-weight:600}.d.up{color:var(--ac)}.d.down{color:var(--bad)}.d.same{color:var(--mu)}
+.viz-donut-li .viz-key{width:10px;height:10px;border-radius:3px;flex:none}

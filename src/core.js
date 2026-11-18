@@ -699,6 +699,50 @@ review|other|Attempt review|10|`.split('\n').map(line => {
     return [...m.values()].map(o => ({ ...o, top: o.top >= 0 ? GRADES[o.top] : null })).sort((a, b) => b.minutes - a.minutes || a.surface.localeCompare(b.surface));
   }
   /** Grado massimo chiuso per settimana: { weeks, series: { superficie: [indice nella scala | null] } }. */
+  /** Minuti per categoria giorno per giorno (per i periodi brevi), come weeklyGroups ma senza raggruppare. */
+  function dailyGroups(logs, from, to) {
+    const acc = [];
+    for (let d = from; d <= to; d = addDays(d, 1)) acc.push(Object.assign({ date: d, unclassified: 0 }, Object.fromEntries(Object.keys(SECTIONS).map(k => [k, 0]))));
+    for (const l of logs || []) {
+      if (l.date < from || l.date > to) continue;
+      const day = acc[diffDays(l.date, from)], r = logSections(l);
+      for (const k in r.sections) day[k] += r.sections[k];
+      day.unclassified += r.unclassified;
+    }
+    return acc;
+  }
+  /** Serie completate sul totale previsto, dagli esercizi registrati con il timer o con "Sets done". */
+  function setsCompletion(logs, from, to) {
+    let done = 0, of = 0;
+    for (const l of logs || []) if (l.date >= from && l.date <= to) for (const b of l.blocks || []) if (b.sets && b.sets.of) { done += b.sets.done || 0; of += b.sets.of; }
+    return { done, of, share: of ? done / of : null };
+  }
+  /** Massimali: ultimo valore entro `to`, valore di riferimento all'inizio del periodo (l'ultimo prima, altrimenti il primo dentro), tutta la storia per il grafico. */
+  function testProgress(tests, from, to) {
+    const by = {};
+    for (const t of tests || []) if (t.date <= to) (by[t.key] = by[t.key] || []).push(t);
+    return Object.entries(by).map(([key, list]) => {
+      list.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+      const latest = list[list.length - 1], before = list.filter(t => t.date < from), inside = list.filter(t => t.date >= from);
+      const base = before.length ? before[before.length - 1] : inside.length > 1 ? inside[0] : null;
+      return { key, latest: latest.value, date: latest.date, delta: base && base !== latest ? latest.value - base.value : null, changed: inside.length > 0, points: list.map(t => ({ date: t.date, value: t.value })) };
+    });
+  }
+  /** Grado massimo chiuso per superficie nel periodo e nel periodo precedente (indici in GRADES). */
+  function gradeProgress(logs, from, to, prevFrom) {
+    const out = {};
+    for (const l of logs || []) {
+      if (l.date < prevFrom || l.date > to) continue;
+      for (const c of l.climbs || []) {
+        const g = gradeIdx(c.top);
+        if (!c.surface || g < 0) continue;
+        const o = out[c.surface] || (out[c.surface] = { surface: c.surface, top: null, prev: null });
+        const k = l.date >= from ? 'top' : 'prev';
+        o[k] = o[k] == null ? g : Math.max(o[k], g);
+      }
+    }
+    return Object.values(out).filter(o => o.top != null || o.prev != null);
+  }
   function weeklyTopGrades(logs, from, to) {
     const start = mondayOf(from), weeks = [], series = {};
     for (let w = start; w <= to; w = addDays(w, 7)) weeks.push(w);
@@ -721,6 +765,6 @@ review|other|Attempt review|10|`.split('\n').map(line => {
     DAY_TYPES, PERIODS, SLOTS, GRADES, GRADE_SCALES, gradeIdx, fmtGrade, DEFAULT_SURFACES, inferSurface, validISO, uid, toISO, fromISO, todayISO, addDays, diffDays, mondayOf,
     inferLoad, loadKey, loadKg, latestMaxes, fmtKg, cycle, cueAt, intervalMinutes, buildSteps, normInterval,
     importYaml, exportYaml, parseDuration, parseWeeks, fmtWeeks, testExercise, YAML_REFS, locate, dateOf, sessionMinutes, cloneSession, validState,
-    niceRange, scheduled, weeklyStats, summary, parseLoads, loadSeries, surfaceStats, weeklyTopGrades,
+    niceRange, scheduled, weeklyStats, summary, parseLoads, loadSeries, surfaceStats, weeklyTopGrades, dailyGroups, setsCompletion, testProgress, gradeProgress,
   };
 });

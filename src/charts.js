@@ -223,6 +223,36 @@
     return box;
   }
 
+  /** Ciambella delle parti di un totale (ispirata a Lattice). Fette nell'ordine dato, uno spazio sottile tra le fette,
+      valore scritto dentro le fette abbastanza grandi; la legenda sotto riporta sempre nome e valore di ogni parte,
+      così nessuna informazione dipende solo dal colore o dalla dimensione della fetta. Tocco su una fetta → tooltip. */
+  function donut(o) {
+    const H = 210, cx = W / 2, cy = 104, r1 = 92, r0 = 60, total = o.slices.reduce((t, x) => t + x.value, 0);
+    const f = frame(H, o.aria), wrap = f.wrap, legend = el('div', 'viz-donut-leg');
+    let a0 = -Math.PI / 2;
+    const P = (r, a) => [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+    for (const x of o.slices) {
+      if (!(x.value > 0)) continue;
+      const share = x.value / total, a1 = a0 + share * 2 * Math.PI, gap = share < 1 ? 0.012 : 0;
+      const [x1, y1] = P(r1, a0 + gap), [x2, y2] = P(r1, a1 - gap), [x3, y3] = P(r0, a1 - gap), [x4, y4] = P(r0, a0 + gap), big = a1 - a0 > Math.PI ? 1 : 0;
+      const d = share >= 0.999 ? `M${cx},${cy - r1}A${r1},${r1} 0 1 1 ${cx - 0.01},${cy - r1}L${cx - 0.01},${cy - r0}A${r0},${r0} 0 1 0 ${cx},${cy - r0}Z`
+        : `M${x1},${y1}A${r1},${r1} 0 ${big} 1 ${x2},${y2}L${x3},${y3}A${r0},${r0} 0 ${big} 0 ${x4},${y4}Z`;
+      const seg = svgEl('path', { d, class: 'seg ' + (x.cls || ''), tabindex: 0 });
+      const showIt = () => f.show(P(r1, (a0 + a1) / 2)[0], x.label, [{ key: x.cls, value: x.text, label: Math.round(share * 100) + '%' }]);
+      const mid = (a0 + a1) / 2;
+      seg.addEventListener('click', e => { e.stopPropagation(); showIt(); }); seg.addEventListener('focus', showIt); seg.addEventListener('mouseenter', showIt);
+      f.svg.append(seg);
+      if (share >= 0.07) { const [tx, ty] = P((r0 + r1) / 2, mid); const t = svgEl('text', { x: tx, y: ty + 4, 'text-anchor': 'middle', class: 'viz-donut-in' }); t.textContent = x.short || x.text; f.svg.append(t); }
+      const li = el('div', 'viz-donut-li'); li.append(el('i', 'viz-key ' + (x.cls || '')), el('span', '', x.label), el('b', '', x.text));
+      legend.append(li);
+      a0 = a1;
+    }
+    if (o.center) { const t1 = svgEl('text', { x: cx, y: cy + 2, 'text-anchor': 'middle', class: 'viz-donut-c' }); t1.textContent = o.center[0]; const t2 = svgEl('text', { x: cx, y: cy + 20, 'text-anchor': 'middle' }); t2.textContent = o.center[1]; f.svg.append(t1, t2); }
+    f.svg.addEventListener('mouseleave', () => f.hide()); wrap.addEventListener('click', () => f.hide());
+    wrap.append(legend);
+    return wrap;
+  }
+
   /** Andamento in miniatura per le righe di riepilogo (nessun asse: il valore è scritto a fianco). */
   function spark(vals) {
     if (vals.length < 2) return null;
@@ -233,5 +263,5 @@
       svgEl('circle', { cx: pts[pts.length - 1][0].toFixed(1), cy: pts[pts.length - 1][1].toFixed(1), r: 4 }));
   }
 
-  root.Charts = { columns, stacked, line, hbars, spark, fmtNum };
+  root.Charts = { columns, stacked, line, hbars, spark, donut, fmtNum };
 })(typeof self !== 'undefined' ? self : this);

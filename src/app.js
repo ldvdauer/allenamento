@@ -755,75 +755,86 @@
   const exSection = e => (!e ? 'other' : e.std === 'test' ? 'fingers' : e.std && C.STD[e.std] ? C.STD[e.std].section : C.SECTIONS[e.section] ? e.section : 'other');
   const hm = m => (m < 120 ? m + ' min' : dec(Math.round(m / 6) / 10) + ' h');
   const tile = (label, value, sub) => h('div', { class: 'tile' }, h('div', { class: 'l' }, label), h('div', { class: 'v' }, value), h('div', { class: 's' }, sub || ' '));
-  let anWeeks = 8;
+  // Periodo e metrica della pagina Analytics (ispirata a Lattice): restano per la durata della sessione dell'app
+  let anDays = 30, anMetric = 'time';
+  const PERIODS = [[7, 'Past week'], [30, 'Past month'], [90, 'Past 3 months'], [365, 'Past year']];
+  const hours = m => (m < 120 ? [String(Math.round(m)), 'min'] : [dec(Math.round(m / 6) / 10), 'hours']);
+  const shortH = m => (m < 60 ? Math.round(m) + 'm' : dec(Math.round(m / 6) / 10) + 'h');
+  const deltaTag = (d, fmt) => (d == null ? null : h('div', { class: 'd ' + (d > 0 ? 'up' : d < 0 ? 'down' : 'same') }, d === 0 ? 'no change' : (d > 0 ? '+' : '−') + fmt(Math.abs(d))));
   function viewAnalytics() {
-    const t = C.todayISO(), mon = C.mondayOf(t), to = C.addDays(mon, 6);
-    let from = C.addDays(mon, -7 * ((anWeeks || 1) - 1));
-    if (!anWeeks) { // "Tutto": dalla prima registrazione, al massimo due anni
-      const cap = C.addDays(mon, -7 * 103);
-      from = C.mondayOf(S.logs.reduce((m, l) => (l.date < m ? l.date : m), t));
-      if (from < cap) from = cap;
+    const t = C.todayISO(), P = anDays, prevFromFull = C.addDays(t, -(2 * P - 1));
+    // I conti partono dalla prima registrazione: prima l'app non c'era, non è un periodo senza allenamento
+    const first = S.logs.reduce((m, l) => (l.date < m ? l.date : m), t);
+    const from = C.addDays(t, -(P - 1)) < first ? first : C.addDays(t, -(P - 1)), days = C.diffDays(t, from) + 1;
+    const prevFrom = C.addDays(t, -(2 * P - 1)), prevTo = C.addDays(t, -P), hasPrev = first <= prevFromFull; // confronto solo con un periodo precedente intero
+    const sched = S.plans.flatMap(p => C.scheduled(p, [])).concat(C.scheduled(null, S.extras));
+    const sum = C.summary(S.logs, sched, from, t, t), prev = C.summary(S.logs, sched, prevFrom, prevTo, t);
+    const cat = C.timeBySection(S.logs, from, t), weekly = P > 30;
+    const metric = opts([['time', 'Training time'], ['days', 'Training days']], anMetric, { onchange: e => { anMetric = e.target.value; render(); } });
+    const period = opts(PERIODS.map(([k, l]) => [String(k), l]), String(P), { onchange: e => { anDays = +e.target.value; render(); } });
+    const out = [anHead('analytics')];
+    const main = [h('div', { class: 'an-sel' }, metric, period)];
+    const pctChange = (a, b) => (b ? Math.round((a - b) / b * 100) : null);
+    if (anMetric === 'time') {
+      const [v, u] = hours(sum.minutes), ch = pctChange(sum.minutes, prev.minutes);
+      main.push(h('div', { class: 'an-big' }, v, h('small', {}, u)), h('div', { class: 'sub' }, !hasPrev || ch == null ? `${fmtDate(from)} – ${fmtDate(t)}` : `${ch >= 0 ? '+' : '−'}${Math.abs(ch)}% vs the previous ${P} days`));
+    } else {
+      const d = sum.sessions - prev.sessions;
+      main.push(h('div', { class: 'an-big' }, String(sum.sessions), h('small', {}, sum.sessions === 1 ? 'training day' : 'training days')), h('div', { class: 'sub' }, hasPrev ? `${d >= 0 ? '+' : '−'}${Math.abs(d)} vs the previous ${P} days` : `${fmtDate(from)} – ${fmtDate(t)}`));
     }
-    const sched = S.plans.flatMap(p => C.scheduled(p, [])).concat(C.scheduled(null, S.extras)), wk = C.weeklyStats(S.logs, sched, from, to), sum = C.summary(S.logs, sched, from, to, t);
-    const labels = wk.map(w => fmtDate(w.week)), long = wk.map(w => `${fmtDate(w.week)} – ${fmtDate(C.addDays(w.week, 6))}`);
-    // Un solo filtro, sopra tutto quello che governa
-    const out = [anHead('analytics'), seg([[4, '4 wk'], [8, '8 wk'], [12, '12 wk'], [0, 'All']], anWeeks, k => { anWeeks = k; render(); }),
-      h('div', { class: 'sub' }, `${fmtDate(from)} – ${fmtDate(to)} · current week included`),
-      h('div', { class: 'tiles' },
-        tile('Training days', sum.sessions, sum.due ? `${sum.due} planned so far` : ''),
-        tile('Time', sum.minutes < 120 ? sum.minutes + ' min' : dec((sum.minutes / 60).toFixed(1)) + ' h', sum.sessions ? `${Math.round(sum.minutes / sum.sessions)} min per day` : ''),
-        tile('Average RPE', sum.rpe == null ? '—' : dec(sum.rpe.toFixed(1)), sum.rpeN ? `over ${sum.rpeN} ${sum.rpeN === 1 ? 'day' : 'days'}` : 'no RPE logged'),
-        tile('Adherence', sum.due ? Math.round(sum.dueDone / sum.due * 100) + '%' : '—', sum.due ? `${sum.dueDone} of ${sum.due} planned days trained` : 'nothing planned'))];
-    if (!sum.sessions && !wk.some(w => w.plannedMinutes))
-      return out.concat(h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin:0' }, 'No data in this period. Charts fill in as you log exercises.')));
+    if (!sum.sessions) return out.concat(h('div', { class: 'card' }, main, h('p', { class: 'sub' }, 'No exercises logged in this period. Charts fill in as you log exercises.')));
 
-    // Tempo per categoria, nell'ordine fisso delle categorie (colore = categoria, come le barrette degli esercizi)
-    const cat = C.timeBySection(S.logs, from, to), grp = C.weeklyGroups(S.logs, from, to), SEC = C.SECTIONS;
-    if (cat.classified || cat.unclassified) {
-      const pct = m => Math.round(m / cat.classified * 100) + '%'; // stessa base della cifra in evidenza: il tempo classificato
-      const rows = cat.rows.map(r => ({ label: SEC[r.section], value: r.minutes, text: `${hm(r.minutes)} · ${pct(r.minutes)}`, cls: 'c-' + r.section }));
-      if (cat.unclassified) rows.push({ label: 'Unclassified', value: cat.unclassified, text: hm(cat.unclassified), cls: 'g-none' });
-      out.push(chartCard('Time by category', cat.classified ? 'From the minutes logged for each exercise.' : 'Needs logged exercises: their minutes are counted by category.',
-        Charts.hbars(rows),
-        cat.unclassified ? h('p', { class: 'sub', style: 'margin-bottom:0' }, 'Unclassified: days logged by hand in earlier versions, or time not assigned to an exercise. Left out of the percentages.') : null));
+    // Ciambella: tempo per categoria; al centro la quota di arrampicata sul tempo classificato
+    const climb = cat.rows.filter(r => C.CLIMBING.includes(r.section)).reduce((a, r) => a + r.minutes, 0);
+    const slices = cat.rows.map(r => ({ label: C.SECTIONS[r.section], value: r.minutes, text: hm(r.minutes), short: shortH(r.minutes), cls: 'c-' + r.section }));
+    if (cat.unclassified) slices.push({ label: 'Unclassified', value: cat.unclassified, text: hm(cat.unclassified), short: shortH(cat.unclassified), cls: 'g-none' });
+    if (slices.length) main.push(Charts.donut({ slices, center: cat.classified ? [Math.round(climb / cat.classified * 100) + '%', 'climbing'] : null, aria: 'Training time by category in the period' }));
+
+    // Andamento: barre giornaliere (settimana, mese) o settimanali (3 mesi, anno), colorate per categoria
+    if (anMetric === 'time') {
+      const per = weekly ? sum.minutes / Math.max(1, days / 7) : sum.minutes / sum.sessions, [pv, pu] = hours(per);
+      main.push(h('div', { class: 'an-big', style: 'font-size:26px;margin-top:18px' }, pv, h('small', {}, pu + (weekly ? ' / week' : ' / training day'))));
+      const rows = weekly ? C.weeklyGroups(S.logs, from, t) : C.dailyGroups(S.logs, from, t);
+      const labels = rows.map(r => fmtDate(weekly ? r.week : r.date)), long = rows.map(r => (weekly ? `${fmtDate(r.week)} – ${fmtDate(C.addDays(r.week, 6))}` : `${wdOf(r.date)} ${fmtDate(r.date)}`));
+      main.push(Charts.stacked({ labels, longLabels: long, unit: 'min', aria: weekly ? 'Training minutes per week, by category' : 'Training minutes per day, by category',
+        series: [...Object.entries(C.SECTIONS), ['unclassified', 'Unclassified']].map(([k, name]) => ({ name, cls: k === 'unclassified' ? 'g-none' : 'c-' + k, values: rows.map(r => r[k]) })).filter(x => x.values.some(v => v > 0)) }));
+    } else {
+      const wk = C.weeklyStats(S.logs, sched, from, t, t);
+      main.push(h('div', { class: 'an-big', style: 'font-size:26px;margin-top:18px' }, dec(Math.round(sum.sessions / Math.max(1, days / 7) * 10) / 10), h('small', {}, 'days / week')),
+        Charts.columns({ labels: wk.map(w => fmtDate(w.week)), longLabels: wk.map(w => `${fmtDate(w.week)} – ${fmtDate(C.addDays(w.week, 6))}`), values: wk.map(w => w.sessions), targets: wk.map(w => w.plannedSessions), targetName: 'Planned', name: 'Training days', aria: 'Training days per week' }));
     }
-    if (wk.some(w => w.minutes || w.plannedMinutes)) out.push(chartCard('Weekly volume', 'Minutes logged by category, compared with the planned ones.',
-      Charts.stacked({ labels, longLabels: long, unit: 'min', targets: wk.map(w => w.plannedMinutes), targetName: 'Planned', aria: 'Training minutes per week, split by category',
-        series: [...Object.entries(C.SECTIONS), ['unclassified', 'Unclassified']].map(([k, name]) => ({ name, cls: k === 'unclassified' ? 'g-none' : 'c-' + k, values: grp.map(w => w[k]) })).filter(x => x.values.some(v => v > 0)) })));
-    if (wk.some(w => w.load)) out.push(chartCard('Weekly load', 'Sum of minutes × RPE for days with an RPE (arbitrary units).',
-      Charts.columns({ labels, longLabels: long, values: wk.map(w => Math.round(w.load)), name: 'Load', aria: 'Training load (sRPE) per week' })));
-    if (wk.some(w => w.rpe != null)) out.push(chartCard('Perceived effort', 'Average RPE of the days in the week (scale 1–10).',
-      Charts.line({ labels, longLabels: long, values: wk.map(w => w.rpe), name: 'Average RPE', domain: { min: 0, max: 10, step: 5 }, height: 120, aria: 'Average RPE per week' })));
-    if (wk.some(w => w.feel != null)) out.push(chartCard('Feeling', 'Average of "how you felt" (1 wrecked – 5 great).',
-      Charts.line({ labels, longLabels: long, values: wk.map(w => w.feel), name: 'Average feeling', domain: { min: 1, max: 5, step: 2 }, height: 120, aria: 'Average feeling per week' })));
+    out.push(h('div', { class: 'card' }, main));
 
-    // Superfici: tempo, blocchi chiusi e grado massimo; poi un pannello per superficie, tutti sulla stessa scala di gradi
-    const surf = C.surfaceStats(S.logs, from, to);
-    if (surf.length) {
-      const table = h('table', { class: 'tbl' }, h('tr', {}, ['Surface', 'Days', 'Problems sent', 'Top grade'].map(x => h('th', {}, x))),
-        surf.map(x => h('tr', {}, h('td', {}, surfName(x.surface)), h('td', {}, x.sessions), h('td', {}, x.sends), h('td', {}, x.top ? fmtG(x.top) : '—'))));
-      out.push(chartCard('Climbing surfaces', 'Minutes spent on each surface in the period.',
-        Charts.hbars(surf.map(x => ({ label: surfName(x.surface), value: x.minutes, text: x.minutes + ' min' }))), table));
-      const tg = C.weeklyTopGrades(S.logs, from, to);
-      const keys = S.surfaces.map(x => x.key).filter(k => tg.series[k]).concat(Object.keys(tg.series).filter(k => !S.surfaces.some(x => x.key === k)));
-      if (keys.length) {
-        const all = keys.flatMap(k => tg.series[k].filter(v => v != null));
-        const lo = Math.max(0, Math.min(...all) - 1), hi = Math.min(C.GRADES.length - 1, Math.max(...all) + 1), step = Math.max(1, Math.ceil((hi - lo) / 4));
-        const domain = { min: lo, max: lo + step * Math.ceil((hi - lo) / step), step }, fmt = v => (C.GRADES[Math.round(v)] ? fmtG(C.GRADES[Math.round(v)]) : '');
-        out.push(chartCard('Top grade sent by surface', 'The hardest problem sent each week. Panels share the same scale, so they compare at a glance.',
-          keys.map(k => [h('div', { class: 'sm-t' }, surfName(k)),
-            Charts.line({ labels, longLabels: long, values: tg.series[k], name: 'Top grade', domain, fmt, height: 112, aria: `Top grade sent per week on ${surfName(k)}` })])));
-      }
+    // Progressi: massimali dei test e grado massimo per superficie, con la variazione nel periodo; tocco → andamento
+    const prog = [];
+    for (const x of C.testProgress(S.tests, from, t)) {
+      const def = S.testDefs.find(d => d.key === x.key);
+      if (!def || def.key === 'bw') continue;
+      const fmt = v => (def.mode === 'hang' ? C.fmtKg(v) : dec(v) + ' ' + def.unit), fmtD = v => dec(v) + ' ' + def.unit;
+      prog.push(h('div', { class: 'prog-r', onclick: () => openSheet(def.name, [C.testLabel(def) ? h('p', { class: 'sub' }, C.testLabel(def)) : null,
+        Charts.line({ labels: x.points.map(p => fmtDate(p.date)), values: x.points.map(p => p.value), name: def.name, unit: def.unit, colLabel: 'Date', aria: `${def.name} over time` })]) },
+        h('div', { class: 'grow' }, h('div', { class: 'n' }, catBar('fingers'), def.name), h('div', { class: 'sub' }, [C.testLabel(def), 'last ' + fmtDate(x.date)].filter(Boolean).join(' · '))),
+        h('div', {}, h('div', { class: 'v' }, fmt(x.latest)), deltaTag(x.delta, fmtD))));
     }
+    const grades = C.gradeProgress(S.logs, from, t, prevFrom);
+    for (const g of grades) {
+      const chFrom = C.addDays(t, -7 * 11), tg = C.weeklyTopGrades(S.logs, P > 77 ? from : chFrom, t), vals = tg.series[g.surface] || [];
+      const all = vals.filter(v => v != null), lo = Math.max(0, Math.min(...all, g.top ?? 99) - 1), hi = Math.min(C.GRADES.length - 1, Math.max(...all, g.top ?? 0) + 1), step = Math.max(1, Math.ceil((hi - lo) / 4));
+      const domain = { min: lo, max: lo + step * Math.ceil((hi - lo) / step), step }, fmtGr = v => (C.GRADES[Math.round(v)] ? fmtG(C.GRADES[Math.round(v)]) : '');
+      prog.push(h('div', { class: 'prog-r', onclick: () => all.length ? openSheet(surfName(g.surface), [h('p', { class: 'sub' }, 'Top grade sent each week.'),
+        Charts.line({ labels: tg.weeks.map(fmtDate), values: vals, name: 'Top grade', domain, fmt: fmtGr, aria: `Top grade sent per week on ${surfName(g.surface)}` })]) : null },
+        h('div', { class: 'grow' }, h('div', { class: 'n' }, catBar('strength'), surfName(g.surface)), h('div', { class: 'sub' }, 'Top grade sent')),
+        h('div', {}, h('div', { class: 'v' }, g.top == null ? '—' : fmtG(C.GRADES[g.top])), g.top != null && g.prev != null ? deltaTag(g.top - g.prev, n => n + (n === 1 ? ' grade' : ' grades')) : null)));
+    }
+    out.push(h('div', { class: 'card' }, h('div', { class: 'ct' }, 'Progress'), h('div', { class: 'sub' }, `Latest value and change since ${fmtDate(from)}. Tap for the trend.`),
+      prog.length ? prog : h('p', { class: 'sub' }, 'Add test results (Tests and maxes) or log grades on climbing exercises to see them here.')));
 
-    const loads = C.loadSeries(S.logs, from, to);
-    if (loads.length) out.push(chartCard('Loads by exercise', 'One chart per standard exercise and test: two-handed hangs in one series, lifts split by side L/R. Tap a row for detail.',
-      loads.map(s => {
-        const v = s.points.map(p => p.kg), last = v[v.length - 1];
-        return h('div', { class: 'blk', style: 'cursor:pointer;align-items:center', onclick: () => openSheet(s.name, Charts.line({ labels: s.points.map(p => fmtDate(p.date)), values: v, name: 'Load', unit: 'kg', colLabel: 'Date', aria: `Load used for ${s.name}` })) },
-          h('div', { class: 'grow' }, h('div', { class: 'n' }, s.name), h('div', { class: 'p' }, `${v.length} ${v.length === 1 ? 'entry' : 'entries'}`)),
-          Charts.spark(v), h('div', { class: 'm', style: 'color:var(--tx);font-weight:600;min-width:58px;text-align:right' }, dec(last) + ' kg'));
-      })));
+    // Costanza: giornate fatte su previste, serie completate, sforzo e sensazione medi
+    const sets = C.setsCompletion(S.logs, from, t), row = (l, v) => h('div', { class: 'prog-r', style: 'cursor:default' }, h('div', { class: 'grow' }, l), h('div', { class: 'v' }, v));
+    out.push(h('div', { class: 'card' }, h('div', { class: 'ct' }, 'Consistency'),
+      row('Planned days trained', sum.due ? `${sum.dueDone} / ${sum.due}` : '—'),
+      row('Sets completed', sets.of ? `${Math.round(sets.share * 100)}%` : '—'),
+      row('Average RPE · feeling', `${sum.rpe == null ? '—' : dec(sum.rpe.toFixed(1))} · ${sum.feel == null ? '—' : dec(sum.feel.toFixed(1)) + '/5'}`)));
     return out;
   }
 

@@ -503,3 +503,21 @@ test('presa: grip, edge e hands negli esercizi Fingers, testo e YAML', () => {
   assert.match(bad('      - name: Max hang\n        sets: 3\n        work: 7s\n        grip: boh\n')[0], /grip: "boh" is not known/);
   assert.match(bad('      - name: Max hang\n        sets: 3\n        work: 7s\n        edge: 300\n')[0], /edge depth in mm/);
 });
+
+test('analisi: serie completate, massimali e gradi per periodo', () => {
+  const logs = [
+    { date: '2026-11-02', blocks: [{ sets: { done: 3, of: 4 } }], climbs: [{ surface: 'moon', top: '7A' }] },
+    { date: '2026-11-20', blocks: [{ sets: { done: 4, of: 4 } }, { load: 10 }], climbs: [{ surface: 'moon', top: '7B' }, { surface: 'moon', top: '7A+' }, { surface: 'gym', top: '?' }] },
+  ];
+  assert.deepEqual(C.setsCompletion(logs, '2026-11-15', '2026-11-30'), { done: 4, of: 4, share: 1 });
+  assert.equal(C.setsCompletion([], '2026-11-01', '2026-11-30').share, null, 'nessuna serie → nessuna percentuale');
+  const g = C.gradeProgress(logs, '2026-11-15', '2026-11-30', '2026-11-01');
+  assert.equal(g.length, 1, 'gradi non riconosciuti ignorati');
+  assert.equal(C.GRADES[g[0].top], '7B'); assert.equal(C.GRADES[g[0].prev], '7A');
+  const tests = [{ key: 'oh', date: '2026-10-01', value: 20 }, { key: 'oh', date: '2026-11-20', value: 25 }, { key: 'pinch', date: '2026-11-18', value: 30 }, { key: 'oh', date: '2026-12-10', value: 99 }];
+  const p = Object.fromEntries(C.testProgress(tests, '2026-11-15', '2026-11-30').map(r => [r.key, r]));
+  assert.equal(p.oh.latest, 25, 'valori dopo la fine del periodo esclusi'); assert.equal(p.oh.delta, 5); assert.equal(p.oh.points.length, 2);
+  assert.equal(p.pinch.delta, null, 'un solo valore → nessuna variazione');
+  const d = C.dailyGroups([], '2026-11-01', '2026-11-03');
+  assert.deepEqual(d.map(x => x.date), ['2026-11-01', '2026-11-02', '2026-11-03']);
+});

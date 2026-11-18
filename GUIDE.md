@@ -43,9 +43,14 @@ Every exercise has a category, shown as a coloured bar next to its name; the sam
 | Other | Mental work, activation sessions, your exercises without a category |
 
 ## Analytics
-Filter by period, then: training days, time, RPE, adherence; time by category; weekly volume by category against the
-planned one; load (minutes × RPE); effort and feeling; surfaces and grades; loads by exercise.
-Tap a chart to see the values; the table is underneath.
+Choose the metric (training time or training days) and the period (week, month, 3 months, year). Counts start from
+your first logged day, and the change against the previous period appears only once a whole previous period exists.
+- **Donut**: time by category, with the share of climbing in the middle.
+- **Bars**: time per day (week, month) or per week (3 months, year) split by category; with *Training days*, days
+  per week against the planned ones.
+- **Progress**: latest value of each test and its change in the period, top grade per surface. Tap a row for the trend.
+- **Consistency**: planned days trained, sets completed, average RPE and feeling.
+Tap a chart to see the values; the table is underneath. Tests are managed in *Tests and maxes*.
 
 ## During the trial
 - **Note** (bottom bar): jot down what is wrong. Notes go to More → Notebook, where they can be exported.

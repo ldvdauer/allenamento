@@ -244,13 +244,17 @@ const errTxt = await txt('.sheet'); await shot('11-errori');
 ok(errTxt.includes('The programme was not imported') && errTxt.includes('week: "3" is not valid') && errTxt.includes('"sette secondi" is not a duration'), 'import con errori: tutti gli errori elencati, con sessione ed esercizio');
 ok(await pg.evaluate(n => __app.state.plans.length === n, nPlans), 'import con errori: nessun programma aggiunto');
 await pg.evaluate(() => document.querySelectorAll('.overlay').forEach(o => o.remove()));
-await go('analytics'); ok((await txt('#view')).includes('Weekly volume') && !(await txt('#view')).includes('session type'), 'Analisi: grafici presenti, niente "tipo di sessione"');
-const an = await txt('#view'); if (process.env.DBG) console.log(an.slice(0, 900));
-ok(an.includes('Time by category') && an.includes('Fingers\n7 min · 16%') && an.includes('Strength\n36 min · 84%') && !/on the wall/i.test(an) && an.includes('Minutes logged by category'), 'Analisi: tempo e volume settimanale per categoria, niente "on the wall"');
-ok(await pg.evaluate(() => { const b = [...document.querySelectorAll('#view .viz-hb-t i')].find(i => i.className === 'c-strength'); return !!b && getComputedStyle(b).backgroundColor === 'rgb(213, 81, 129)'; }), 'Analisi: barra della categoria con il suo colore (Strength = magenta)');
-ok(!an.includes('most time'), 'nessuna classifica dei dieci esercizi');
-await pg.evaluate(() => { const hit = [...document.querySelectorAll('#view .viz')][0].querySelectorAll('.hit'); hit[hit.length - 1].dispatchEvent(new MouseEvent('click', { bubbles: true })); });
-ok(/in total/.test(await pg.$eval('#view .viz-tip', e => e.innerText)), 'grafico impilato: tocco su una settimana → totale e gruppi');
+await go('analytics');
+const an = await txt('#view'); if (process.env.DBG) console.log(an.slice(0, 1400));
+ok(an.includes('Training time') && an.includes('43min') && an.includes('84%\nclimbing') && !an.includes('session type') && !/on the wall/i.test(an), 'Analisi: totale ore, ciambella con % arrampicata, niente "tipo di sessione"');
+ok(an.includes('Progress') && an.includes('Consistency') && an.includes('Planned days trained') && an.includes('Sets completed'), 'Analisi: sezioni Progress e Consistency');
+ok(!an.includes('most time') && !an.includes('Weekly volume'), 'Analisi: niente vecchi grafici');
+ok(await pg.evaluate(() => { const b = document.querySelector('#view .viz-donut-li .c-strength'); return !!b && getComputedStyle(b).backgroundColor === 'rgb(213, 81, 129)'; }), 'Analisi: legenda della ciambella con il colore della categoria (Strength = magenta)');
+await pg.evaluate(() => { const v = document.querySelectorAll('#view .viz')[1]; const hit = v.querySelectorAll('.hit'); hit[hit.length - 1].dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+ok(/in total/.test(await pg.evaluate(() => document.querySelectorAll('#view .viz')[1].querySelector('.viz-tip').innerText)), 'grafico impilato: tocco su una colonna → totale e gruppi');
+await pg.evaluate(() => { const s = document.querySelector('#view .an-sel select'); s.value = 'days'; s.dispatchEvent(new Event('change', { bubbles: true })); });
+await sleep(100);
+ok((await txt('#view')).includes('days / week'), 'Analisi: metrica giorni di allenamento');
 await shot('10-analisi', true);
 
 // Taccuino: nota al volo dalla barra, con contesto; elenco esportabile
