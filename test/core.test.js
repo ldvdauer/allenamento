@@ -486,3 +486,20 @@ test('nomi: un esercizio standard si mostra con il nome della libreria', () => {
   const r = C.importYaml('title: x\nweeks: 1\ndays:\n  - week: 1\n    day: mon\n    exercises:\n      - name: Flessione polso (manubri)\n        sets: 3\n        reps: 6\n');
   assert.match(C.exportYaml(r.plan, Object.fromEntries(r.exercises.map(e => [e.id, e]))), /name: Wrist curl\n/);
 });
+
+test('presa: grip, edge e hands negli esercizi Fingers, testo e YAML', () => {
+  const r = C.importYaml('title: x\nweeks: 1\ndays:\n  - week: 1\n    day: mon\n    exercises:\n      - name: Max hang\n        sets: 4\n        work: 7s\n        rest: 3min\n        grip: F3 open\n        edge: 20\n      - name: One-arm hang\n        sets: 6\n        work: 7s\n        rest: 2min\n        sides: L/R\n        grip: half crimp\n        edge: 22\n        hands: 1\n');
+  const [a, b] = r.exercises;
+  assert.deepEqual(a.grip, { type: 'f3-open', edge: 20 });
+  assert.equal(C.gripText(a), '20 mm · Open hand 3 fingers');
+  assert.equal(C.gripText(b), '22 mm · Half crimp · one hand');
+  for (const [v, k] of [['Half crimp', 'half-crimp'], ['half-crimp', 'half-crimp'], ['F3 half crimp', 'f3-half'], ['open', 'open'], ['2 fingers front', 'f2-front'], ['boh', null]]) assert.equal(C.gripKey(v), k, v);
+  const text = C.exportYaml(r.plan, Object.fromEntries(r.exercises.map(e => [e.id, e])));
+  assert.match(text, /grip: Open hand 3 fingers\n {8}edge: 20\n/);
+  assert.match(text, /grip: Half crimp\n {8}edge: 22\n {8}hands: 1\n/);
+  assert.deepEqual(C.importYaml(text).exercises.map(e => e.grip), [a.grip, b.grip]);
+  const bad = t => { try { C.importYaml('title: x\nweeks: 1\ndays:\n  - week: 1\n    day: mon\n    exercises:\n' + t); return []; } catch (e) { return e.errors; } };
+  assert.match(bad('      - name: Pull-ups\n        sets: 3\n        reps: 6\n        grip: half crimp\n')[0], /only for Fingers exercises/);
+  assert.match(bad('      - name: Max hang\n        sets: 3\n        work: 7s\n        grip: boh\n')[0], /grip: "boh" is not known/);
+  assert.match(bad('      - name: Max hang\n        sets: 3\n        work: 7s\n        edge: 300\n')[0], /edge depth in mm/);
+});

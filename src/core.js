@@ -122,6 +122,16 @@ review|other|Attempt review|10|`.split('\n').map(line => {
   const EXACT = Object.fromEntries(LIBRARY.map(x => [x.name.toLowerCase(), x.key]));
   for (const [old, now] of Object.entries(LEGACY_NAMES)) if (EXACT[now.toLowerCase()]) EXACT[old.toLowerCase()] = EXACT[now.toLowerCase()];
   /** Prima il nome esatto di un esercizio standard (anche nella vecchia versione italiana), poi le regole. */
+  /* Presa per gli esercizi Fingers: tipo di presa, tacca in mm, una o due mani. Fa parte dei parametri del giorno. */
+  const GRIPS = { 'half-crimp': 'Half crimp', 'full-crimp': 'Full crimp', open: 'Open hand', 'f3-open': 'Open hand 3 fingers', 'f3-half': 'Half crimp 3 fingers',
+    'f2-front': '2 fingers front', 'f2-middle': '2 fingers middle', 'f2-back': '2 fingers back', sloper: 'Sloper', pinch: 'Pinch' };
+  // Altri modi di scrivere la presa nei file (minuscolo, senza spazi né trattini)
+  const GRIP_ALIASES = { halfcrimp: 'half-crimp', hc: 'half-crimp', fullcrimp: 'full-crimp', crimp: 'full-crimp', openhand: 'open', open4: 'open', oh: 'open',
+    f3open: 'f3-open', openhand3fingers: 'f3-open', open3: 'f3-open', '3fingeropen': 'f3-open', f3halfcrimp: 'f3-half', halfcrimp3fingers: 'f3-half', f3hc: 'f3-half', f3crimp: 'f3-half',
+    '2fingersfront': 'f2-front', f2front: 'f2-front', '2fingersmiddle': 'f2-middle', f2middle: 'f2-middle', '2fingersback': 'f2-back', f2back: 'f2-back', sloper: 'sloper', pinch: 'pinch' };
+  const gripKey = v => { const t = String(v == null ? '' : v).toLowerCase().replace(/[\s_-]/g, ''); return GRIPS[v] ? v : GRIP_ALIASES[t] || Object.keys(GRIPS).find(k => GRIPS[k].toLowerCase().replace(/[\s_-]/g, '') === t) || null; };
+  /** "20 mm · Half crimp · one hand": vuoto se l'esercizio non ha presa. */
+  const gripText = e => { const g = e && e.grip; if (!g) return ''; return [g.edge ? g.edge + ' mm' : '', GRIPS[g.type] || '', g.hands === 1 ? 'one hand' : ''].filter(Boolean).join(' · '); };
   /** Nome mostrato: per un esercizio standard quello della libreria, altrimenti quello scritto (esercizi personali e test). */
   const exName = e => (e && e.std && e.std !== 'test' && STD[e.std] ? STD[e.std].name : (e && e.name) || '');
   const matchStd = name => { const n = String(name || '').trim(); if (EXACT[n.toLowerCase()]) return EXACT[n.toLowerCase()]; const r = STD_RULES.find(([re]) => re.test(n)); return r ? r[1] : null; };
@@ -314,7 +324,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
   const yamlRefName = ref => Object.keys(YAML_REFS).find(k => YAML_REFS[k] === ref) || ref;
   const PROGRAMME_FIELDS = ['title', 'weeks', 'first_session', 'days', 'sessions']; // "sessions": nome dei file scritti prima di "days"
   const DAY_FIELDS = ['week', 'day', 'title', 'exercises'];
-  const EXERCISE_FIELDS = ['name', 'test', 'category', 'minutes', 'sets', 'rounds', 'work', 'reps', 'rest', 'set_rest', 'sides', 'load', 'surface', 'note'];
+  const EXERCISE_FIELDS = ['name', 'test', 'category', 'grip', 'edge', 'hands', 'minutes', 'sets', 'rounds', 'work', 'reps', 'rest', 'set_rest', 'sides', 'load', 'surface', 'note'];
 
   /** "7s", "45 s", "3min", "3 min", "1min30s", "2'", "1'30\"", oppure un numero (secondi). Restituisce i secondi o null. */
   function parseDuration(v) {
@@ -462,6 +472,18 @@ review|other|Attempt review|10|`.split('\n').map(line => {
           err(where, `load: "${x.load}" should look like "82.5% sloper" (tests: ${Object.keys(YAML_REFS).join(', ')})`);
         else e.load = { ref, mode: refMode(ref, opts.testDefs), pct: m[1] ? +m[1] : null, test: false };
       }
+      // Presa (solo esercizi Fingers): grip, edge in mm, hands 1 o 2
+      if (['grip', 'edge', 'hands'].some(has)) {
+        const sec = e.std === 'test' ? 'fingers' : e.std && STD[e.std] ? STD[e.std].section : e.section;
+        if (sec !== 'fingers') err(where, 'grip, edge and hands are only for Fingers exercises');
+        else {
+          const g = {};
+          if (has('grip')) { g.type = gripKey(x.grip); if (!g.type) err(where, `grip: "${x.grip}" is not known (${Object.values(GRIPS).join(', ')})`); }
+          if (has('edge')) { g.edge = typeof x.edge === 'number' ? x.edge : parseFloat(String(x.edge)); if (!(g.edge > 0 && g.edge <= 100)) err(where, `edge: "${x.edge}" should be the edge depth in mm, e.g. 20`); }
+          if (has('hands')) { if (x.hands === 1 || x.hands === 2) g.hands = x.hands; else err(where, 'hands: 1 or 2'); }
+          e.grip = g;
+        }
+      }
       if (has('surface')) {
         const sf = surfaces.find(s => s.key === x.surface || s.name.toLowerCase() === String(x.surface).toLowerCase());
         if (!sf) err(where, `surface: "${x.surface}" is not one of your surfaces (${surfaces.map(s => s.key).join(', ')})`); else e.surface = sf.key;
@@ -497,6 +519,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
         if (o.rounds && iv.setRestSeconds) o.set_rest = fmtDuration(iv.setRestSeconds);
         if (sided) o.sides = 'L/R';
       }
+      if (e.grip) { if (e.grip.type) o.grip = GRIPS[e.grip.type]; if (e.grip.edge) o.edge = e.grip.edge; if (e.grip.hands) o.hands = e.grip.hands; }
       if (e.load && !e.load.test) o.load = (e.load.pct != null ? e.load.pct + '% ' : '') + yamlRefName(e.load.ref);
       if (e.surface) o.surface = e.surface;
       if (b.note) o.note = b.note;
@@ -694,7 +717,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
   }
 
   return {
-    CLIMBING, LEGACY_SECTION, slotOf, blockSection, timeBySection, weeklyGroups, describe, leftoverNote, splitCues, fmtRest, PAIRS, refKeys, LEGACY_NAMES, normSide, firstOffset, firstSessionDate, startForFirst, recordsOf, lastRecord, nextLoad, TEST_TEMPLATES, testLabel, SECTIONS, LIBRARY, STD, stdVariant, matchStd, exName,
+    CLIMBING, LEGACY_SECTION, slotOf, blockSection, timeBySection, weeklyGroups, describe, leftoverNote, splitCues, fmtRest, PAIRS, refKeys, LEGACY_NAMES, normSide, firstOffset, firstSessionDate, startForFirst, recordsOf, lastRecord, nextLoad, TEST_TEMPLATES, testLabel, SECTIONS, LIBRARY, STD, stdVariant, matchStd, exName, GRIPS, gripKey, gripText,
     DAY_TYPES, PERIODS, SLOTS, GRADES, GRADE_SCALES, gradeIdx, fmtGrade, DEFAULT_SURFACES, inferSurface, validISO, uid, toISO, fromISO, todayISO, addDays, diffDays, mondayOf,
     inferLoad, loadKey, loadKg, latestMaxes, fmtKg, cycle, cueAt, intervalMinutes, buildSteps, normInterval,
     importYaml, exportYaml, parseDuration, parseWeeks, fmtWeeks, testExercise, YAML_REFS, locate, dateOf, sessionMinutes, cloneSession, validState,

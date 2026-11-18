@@ -82,27 +82,24 @@ ok(after[n - 3] === before[n - 1] && after[n - 1] === before[n - 2] && after[0] 
 ok((await pg.$('.sheet')) === null, 'trascinare non apre la scheda dell\'esercizio');
 await shot('3-giorno');
 
-// Sessione: elenco di esercizi, ognuno con il suo timer
+// Giornata di oggi: ogni esercizio si avvia dal suo ▶, senza una "sessione" da iniziare
 await go('home');
-await clickText('Start', '#view', true);
-ok(!(await pg.$eval('#runner', e => e.hidden)) && (await pg.$eval('#player', e => e.hidden)), 'avvio: elenco della sessione, nessun timer partito da solo');
-ok((await pg.$$('#runner .run-r')).length === before.length, 'elenco: un esercizio per riga');
+ok((await pg.$$('#view .play')).length === before.length && (await pg.$eval('#player', e => e.hidden)) && !(await pg.$('#runner:not([hidden])')), 'Home: un ▶ per esercizio, nessuna sessione da avviare, nessun timer partito da solo');
 await shot('4-sessione');
-// Esercizio a sola durata (Limit bouldering, 30 minuti): si avvia dalla sua riga
-const startRow = name => pg.evaluate(n => [...document.querySelectorAll('#runner .run-r')].find(r => r.innerText.includes(n)).querySelector('button').click(), name);
-await startRow('Limit bouldering'); await sleep(60);
+const play = name => pg.evaluate(n => [...document.querySelectorAll('#view .blk')].find(r => r.innerText.includes(n)).querySelector('.play').click(), name);
+// Esercizio a sola durata (Limit bouldering, 30 minuti)
+await play('Limit bouldering'); await sleep(60);
 ok((await txt('#p-clock')) === '30:00' && (await txt('#p-name')) === 'Limit bouldering', 'esercizio a durata: timer suo, 30:00');
 await adv(30 * 60000 + 500);
 ok((await pg.$eval('#player', e => e.hidden)) && (await txt('.sheet')).includes('Exercise complete'), 'allo scadere il timer si ferma e chiede la registrazione (non parte l\'esercizio dopo)');
 ok((await pg.$eval('.sheet input', e => e.value)) === '30', 'minuti misurati precompilati');
 await clickText('Save', '.sheet');
-ok((await pg.$$('#runner .run-r.done')).length === 1 && (await pg.$eval('#player', e => e.hidden)), 'tornato all\'elenco con l\'esercizio segnato come fatto');
+ok((await pg.$$('#view .play.done')).length === 1 && await pg.evaluate(() => __app.state.logs.filter(l => l.date === '2026-11-25').length === 1), 'tornato alla giornata: esercizio segnato come fatto, registrazione del giorno creata');
 
-// Esercizio a tempo (sloper 4 × 7"): preparazione → lavoro → recupero, kg nel timer
-await clickText('Start', '#runner', true);
-// dopo il trascinamento il secondo esercizio è quello spostato: cerco lo sloper per nome
-if ((await txt('#p-name')) !== 'Sloper hang') { await pg.click('#p-quit'); await clickText('Not done', '.sheet'); await pg.evaluate(() => [...document.querySelectorAll('#runner .run-r')].find(r => r.innerText.includes('Sloper hang')).querySelector('button').click()); await sleep(60); }
+// Esercizio a tempo (sloper 4 × 7"): preparazione → lavoro → recupero, kg e parametri nel timer
+await play('Sloper hang'); await sleep(60);
 ok((await txt('#p-ph')) === 'GET READY' && (await txt('#p-name')) === 'Sloper hang', 'sloper: preparazione');
+ok((await txt('#p-cue')).includes('82.5% max') && (await txt('#p-note')) === 'margine 2-3"', 'timer: parametri in evidenza, la nota del giorno sotto');
 await adv(10500);
 ok((await txt('#p-ph')) === 'WORK' && (await txt('#p-round')) === 'Round 1 of 4' && (await txt('#p-kg')).startsWith('+4.5'), 'lavoro: round 1/4 con i kg');
 await shot('5-timer');
@@ -110,18 +107,27 @@ await adv(7500);
 ok((await txt('#p-ph')) === 'REST', 'hang finito → recupero');
 const c0 = await txt('#p-clock'); await pg.click('#p-plus'); ok((await txt('#p-clock')) !== c0, '+30 s sul recupero');
 await pg.click('#p-pause'); const c1 = await txt('#p-clock'); await adv(60000); ok((await txt('#p-clock')) === c1, 'pausa: il tempo non scorre'); await pg.click('#p-pause');
-for (let i = 0; i < 20 && !(await pg.$eval('#player', e => e.hidden)); i++) await pg.click('#p-done');
-ok((await txt('.sheet')).includes('Load used') && (await pg.$eval('.sheet .cols label:nth-child(1) input', e => e.value)) === '+4.5 kg', 'fine esercizio: carico precompilato');
-await pg.type('.sheet .cols label:nth-child(2) input', '7');
+for (let i = 0; i < 20 && !(await pg.$eval('#player', e => e.hidden)); i++) await pg.click('#p-done'); // salta le altre serie
+ok((await txt('.sheet')).includes('Sets done (of 4)') && (await pg.$eval('.sheet .cols label:nth-child(1) input', e => e.value)) === '1', 'serie saltate: "Sets done" precompilato con quelle finite (1 di 4)');
+ok((await pg.evaluate(() => [...document.querySelectorAll('.sheet label')].find(l => l.innerText.startsWith('Load used')).querySelector('input').value)) === '+4.5 kg', 'fine esercizio: carico precompilato');
+await pg.evaluate(() => { const i = [...document.querySelectorAll('.sheet label')].find(l => l.innerText.startsWith('Exercise RPE')).querySelector('input'); i.value = '7'; });
 await clickText('Save', '.sheet');
 
-// Aggiungere un esercizio durante la sessione
-const nBlocks = (await pg.$$('#runner .run-r')).length;
-await clickText('+ Exercise', '#runner');
-ok((await txt('.sheet')).includes('FINGERS') && (await txt('.sheet')).includes('Limit bouldering') && !/versioni|Karma|MoonBoard/.test(await txt('.sheet')), 'scelta esercizio: solo esercizi di base per sezione, niente ereditato dal programma');
+// Esercizio a ripetizioni: il timer mostra quante farne, non il tempo
+await play('Wrist curl'); await sleep(60);
+ok((await txt('#p-clock')) === '6 reps' && (await txt('#p-ph')) === 'GO', 'a ripetizioni: "6 reps" al posto del tempo');
+await pg.click('#p-quit');
+ok((await txt('.sheet')).includes('Reps missed'), 'a ripetizioni: si possono segnare le ripetizioni mancanti');
+await clickText('Not done', '.sheet');
+ok((await pg.$$('#view .play.done')).length === 2, '"Not done": nessuna registrazione');
+
+// Durante l'allenamento si aggiungono, tolgono e riordinano esercizi dalla giornata stessa
+const nBlocks = (await pg.$$('#view .blk')).length;
+await clickText('+ Exercise', '#view');
+ok((await txt('.sheet')).includes('FINGERS') && (await txt('.sheet')).includes('Limit bouldering') && !/versioni|Karma|MoonBoard/.test(await txt('.sheet')), 'scelta esercizio: solo esercizi di base per categoria');
 await pg.type('.sheet input', 'limit'); await sleep(80); await clickText('Limit bouldering', '.sheet', true);
-ok((await pg.$$('#runner .run-r')).length === nBlocks + 1, 'esercizio aggiunto durante la sessione');
-await pg.evaluate(() => { const r = [...document.querySelectorAll('#runner .run-r')]; r[r.length - 1].querySelector('button').click(); }); await sleep(60);
+ok((await pg.$$('#view .blk')).length === nBlocks + 1, 'esercizio aggiunto a metà allenamento');
+await pg.evaluate(() => { const r = [...document.querySelectorAll('#view .blk')]; r[r.length - 1].querySelector('.play').click(); }); await sleep(60);
 ok((await txt('#p-name')) === 'Limit bouldering' && (await txt('#p-clock')) === '40:00', 'il nuovo esercizio parte con il suo timer (durata di base)');
 await adv(6 * 60000); await pg.click('#p-quit');
 await pg.select('.sheet .cols label:nth-child(1) select', 'moonboard');
@@ -130,21 +136,19 @@ await pg.type('.sheet .cols + label input', '3');
 await pg.type('.sheet label:last-of-type input', 'buone sensazioni');
 await shot('6-registrazione');
 await clickText('Save', '.sheet');
+await pg.evaluate(() => [...document.querySelectorAll('#view .blk')].find(r => r.innerText.includes('Ab wheel')).click()); await sleep(60);
+await clickText('Remove', '.sheet');
+ok((await pg.$$('#view .blk')).length === nBlocks && !(await txt('#view')).includes('Ab wheel'), 'esercizio tolto a metà allenamento');
 
-// Ricarica a metà: la sessione si riprende con gli esercizi già fatti
-await pg.reload();
-ok((await txt('#view')).includes('Session in progress'), 'ricarica a metà → "Sessione in corso" in Home');
-await clickText('Resume', '#view');
-ok((await pg.$$('#runner .run-r.done')).length === 3, 'ripresa: i tre esercizi fatti restano segnati');
-await clickText('Finish session', '#runner');
-ok((await txt('.sheet')).includes('3 of ' + (nBlocks + 1) + ' exercises done'), 'termina sessione: riepilogo');
+// Valutazione della giornata, facoltativa
+await clickText('Rate the day', '#view');
 await pg.type('.sheet textarea', 'Prova automatica');
 await clickText('Save', '.sheet');
-ok(await pg.evaluate(() => location.hash === '#calendar-2026-11-25'), 'a fine sessione si torna al giorno nel calendario (non c\'è più il Diario)');
+await go('calendar-2026-11-25');
 let diary = await txt('#view');
-ok(diary.includes('Prova automatica') && diary.includes('MoonBoard 7A+ · 3 sends') && diary.includes('Sloper hang: +4.5 kg') && diary.includes('buone sensazioni'), 'registrazione nel calendario: carico, superficie, grado e nota dei singoli esercizi');
+ok(diary.includes('Prova automatica') && diary.includes('MoonBoard 7A+ · 3 sends') && diary.includes('Sloper hang: +4.5 kg') && diary.includes('buone sensazioni') && diary.includes('Sloper hang: 1/4 sets'), 'registrazione nel calendario: carico, superficie, grado, nota e serie saltate');
 await shot('7-diario');
-await go('home'); ok((await txt('#view')).includes('Done'), 'Home: sessione segnata come fatta');
+await go('home'); ok(/\d+ of \d+ done/.test(await txt('#view')), 'Home: giornata con gli esercizi fatti contati');
 ok((await txt('#view')).includes('has no backup yet') && (await txt('#view')).includes('Save backup'), 'Home: promemoria backup quando ci sono dati non salvati');
 // Progressione: RPE 7 ≤ soglia 8 → la volta dopo +2,5% sul carico totale: (70 + 4,5) × 1,025 − 70 = 6,4 → 6,5 kg
 await go('calendar-2026-12-02');
@@ -186,19 +190,19 @@ ok((await txt('#toast')).includes('Type the minutes'), 'Duration only: senza min
 await pg.evaluate(() => { const m = [...document.querySelectorAll('.sheet label')].find(x => x.innerText.startsWith('Minutes')).querySelector('input'); m.value = '25'; m.dispatchEvent(new Event('input')); });
 await clickText('Save', '.sheet');
 ok(await pg.evaluate(() => { const x = __app.state.extras[0], b = x.blocks[x.blocks.length - 1]; return b.minutes === 25 && __app.state.exercises[b.exId].interval === null; }), 'Duration only: i minuti scritti a mano restano');
-await clickText('+ Test', '#view');
+await go('home'); await clickText('+ Test', '#view');
 ok((await txt('.sheet')).includes('Half-crimp') && (await txt('.sheet')).includes('L and R'), '+ Test: elenco dei test definiti');
 await clickText('Half-crimp', '.sheet', true);
 ok((await txt('#view')).includes('Test: Half-crimp'), 'test aggiunto alla sessione come esercizio');
-await clickText('Start', '#view'); await pg.evaluate(() => [...document.querySelectorAll('#runner .run-r')].find(r => r.innerText.includes('Test: Half-crimp')).querySelector('button').click()); await sleep(60);
-ok((await txt('#p-ph')) === 'GET READY' && (await txt('#p-cue')) === 'Increasing load', 'il test ha il suo timer (7" dai parametri del test)');
+await play('Test: Half-crimp'); await sleep(60);
+ok((await txt('#p-ph')) === 'GET READY' && (await txt('#p-note')) === 'Increasing load', 'il test ha il suo timer (7" dai parametri del test)');
+const result = v => pg.evaluate(v => { const i = [...document.querySelectorAll('.sheet label')].find(l => l.innerText.startsWith('Result:')).querySelector('input'); i.value = v; }, v);
 await pg.click('#p-quit');
-await pg.type('.sheet label:nth-of-type(2) input', '32,5'); await clickText('Save', '.sheet');
+await result('32,5'); await clickText('Save', '.sheet');
 ok(await pg.evaluate(() => { const t = __app.state.tests.filter(x => x.key === 'hc'); return t.length === 1 && t[0].value === 32.5; }), 'risultato del test salvato subito nella sezione Test');
-await pg.evaluate(() => [...document.querySelectorAll('#runner .run-r')].find(r => r.innerText.includes('Test: Half-crimp')).querySelector('button').click()); await sleep(60);
-await pg.click('#p-quit'); await pg.type('.sheet label:nth-of-type(2) input', '35'); await clickText('Save', '.sheet');
+await play('Test: Half-crimp'); await sleep(60);
+await pg.click('#p-quit'); await result('35'); await clickText('Save', '.sheet');
 ok(await pg.evaluate(() => { const t = __app.state.tests.filter(x => x.key === 'hc'); return t.length === 1 && t[0].value === 35; }), '"Rifai": il nuovo risultato sostituisce il precedente');
-await clickText('Leave', '#runner'); await clickText('Abandon');
 await go('tests'); ok((await txt('#view')).includes('35 kg'), 'sezione Test aggiornata');
 // Test personalizzato con parametri propri
 await clickText('Custom test', '#view'); await pg.type('.sheet input', 'Hang a una mano');
@@ -294,7 +298,7 @@ await pg.evaluate(() => { __app.state.settings.gh = null; });
 
 // Persistenza e migrazione di un backup v2 con due sessioni nello stesso giorno
 await pg.reload();
-ok(await pg.evaluate(() => __app.state.logs.length === 3 && __app.state.extras.length === 1 && __app.state.v === 11), 'i dati sopravvivono al ricaricamento');
+ok(await pg.evaluate(() => __app.state.logs.length === 3 && __app.state.extras.length === 1 && __app.state.v === 12), 'i dati sopravvivono al ricaricamento');
 const mig = await pg.evaluate(async () => {
   const mk = (id, ex) => ({ id, type: 'wall', period: 'base', blocks: [{ id: id + 'b', exId: ex, minutes: 5 }] });
   const old = { v: 2, plans: [{ id: 'p', title: 'Vecchio', startDate: '2026-11-23', weeks: [[{ sessions: [mk('s1', 'e1'), mk('s2', 'e2')] }, ...Array.from({ length: 6 }, () => ({ sessions: [] }))]] }],
@@ -304,7 +308,7 @@ const mig = await pg.evaluate(async () => {
 });
 await sleep(500);
 const m2 = await pg.evaluate(() => { const s = __app.state, d = s.plans[0].weeks[0][0]; return { n: d.sessions.length, blocks: d.sessions[0].blocks.length, log: s.logs[0].sid, live: s.live }; });
-ok(m2.n === 1 && m2.blocks === 2 && m2.log === 's1' && m2.live.sid === 's1' && m2.live.done, 'backup v2 migrato: sessioni del giorno unite, diario e sessione in corso ricollegati');
+ok(m2.n === 1 && m2.blocks === 2 && m2.log === 's1' && !m2.live, 'backup v2 migrato: sessioni del giorno unite, diario ricollegato, niente più sessione in corso');
 // Dati illeggibili: si tiene una copia, la Home lo segnala e permette di esportarla
 await pg.evaluate(() => { localStorage.setItem('allenamento.v1', '{"v":7,"plans":'); location.reload(); });
 await sleep(500);
@@ -350,7 +354,7 @@ await pg.evaluate(() => {
 });
 await sleep(500);
 const m7 = await pg.evaluate(() => { const s = __app.state; return { v: s.v, e1: s.exercises.e1.name, cues: s.exercises.e2.interval.cues.join(), e3: s.exercises.e3.name, defs: s.testDefs.map(d => d.name).join('|'), surf: s.surfaces.map(x => x.name).join('|'), sides: s.logs[0].blocks[0].kgs.map(k => k.side).join(), title: s.extras[0].title, note: s.extras[0].blocks[0].note, mins: s.extras[0].blocks.map(b => b.minutes).join(), nx: s.extras.length, lb: s.logs[0].blocks[1].name + '|' + s.logs[0].loads[0].name, nb: s.extras[0].blocks.length, e4: !!s.exercises.e4, secs: s.logs[0].blocks.map(b => b.sec).join(), e3s: s.exercises.e3.section }; });
-ok(m7.v === 11 && m7.e1 === 'Wrist curl' && m7.cues === 'L,R' && m7.defs === 'Body weight|Pinch block L|Pinch block R' && m7.surf === 'Indoor (gym)|Pannello di casa' && m7.sides === 'L,R', 'dati v6 in italiano: nomi predefiniti, superfici e lati SX/DX passano all\'inglese');
+ok(m7.v === 12 && m7.e1 === 'Wrist curl' && m7.cues === 'L,R' && m7.defs === 'Body weight|Pinch block L|Pinch block R' && m7.surf === 'Indoor (gym)|Pannello di casa' && m7.sides === 'L,R', 'dati v6 in italiano: nomi predefiniti, superfici e lati SX/DX passano all\'inglese');
 ok(m7.lb === 'Wrist curl|Wrist curl', 'migrazione v10: le registrazioni passate prendono il nome della libreria');
 ok(m7.nb === 3 && !m7.e4, 'migrazione v11: il riscaldamento esce dalle giornate e dai dati');
 ok(m7.secs === 'fingers,conditioning,strength' && m7.e3s === 'conditioning', 'migrazione v11: registrazioni ed esercizi personali nelle nuove categorie');

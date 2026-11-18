@@ -128,3 +128,8 @@ label.f input[type=checkbox]{display:inline-block;width:auto;margin:0 8px 0 0;ve
 .cb{background:var(--c)}
 .viz .seg[class*=" c-"],.viz-legend .sw[class*=" c-"],.viz-key[class*=" c-"],.viz-hb-t i[class^="c-"]{fill:var(--c);background:var(--c)}
 .sec .cb{height:.85em}
+#player .clock.reps{font-size:min(20vw,120px);letter-spacing:-.02em}
+#player .pnote{text-align:center;color:var(--mu);font-size:14px;margin-top:4px;min-height:1em}
+.blk .m{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.play{width:40px;height:40px;border-radius:50%;border:none;background:var(--ac);color:#04170b;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0 0 0 2px}
+.play.done{background:#0f2e1b;color:var(--ac);padding:0}

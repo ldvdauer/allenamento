@@ -139,6 +139,11 @@ label.f input[type=checkbox]{display:inline-block;width:auto;margin:0 8px 0 0;ve
 .cb{background:var(--c)}
 .viz .seg[class*=" c-"],.viz-legend .sw[class*=" c-"],.viz-key[class*=" c-"],.viz-hb-t i[class^="c-"]{fill:var(--c);background:var(--c)}
 .sec .cb{height:.85em}
+#player .clock.reps{font-size:min(20vw,120px);letter-spacing:-.02em}
+#player .pnote{text-align:center;color:var(--mu);font-size:14px;margin-top:4px;min-height:1em}
+.blk .m{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.play{width:40px;height:40px;border-radius:50%;border:none;background:var(--ac);color:#04170b;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0 0 0 2px}
+.play.done{background:#0f2e1b;color:var(--ac);padding:0}
 </style>
 </head>
 <body>
@@ -158,6 +163,7 @@ label.f input[type=checkbox]{display:inline-block;width:auto;margin:0 8px 0 0;ve
   <div class="rd" id="p-round"></div>
   <div class="clock" id="p-clock">0</div>
   <div class="cue" id="p-cue"></div>
+  <div class="pnote" id="p-note"></div>
   <div class="kg" id="p-kg"></div>
   <div class="nx" id="p-next"></div>
   <div class="ctl">
@@ -298,6 +304,16 @@ review|other|Attempt review|10|`.split('\n').map(line => {
   const EXACT = Object.fromEntries(LIBRARY.map(x => [x.name.toLowerCase(), x.key]));
   for (const [old, now] of Object.entries(LEGACY_NAMES)) if (EXACT[now.toLowerCase()]) EXACT[old.toLowerCase()] = EXACT[now.toLowerCase()];
   /** Prima il nome esatto di un esercizio standard (anche nella vecchia versione italiana), poi le regole. */
+  /* Presa per gli esercizi Fingers: tipo di presa, tacca in mm, una o due mani. Fa parte dei parametri del giorno. */
+  const GRIPS = { 'half-crimp': 'Half crimp', 'full-crimp': 'Full crimp', open: 'Open hand', 'f3-open': 'Open hand 3 fingers', 'f3-half': 'Half crimp 3 fingers',
+    'f2-front': '2 fingers front', 'f2-middle': '2 fingers middle', 'f2-back': '2 fingers back', sloper: 'Sloper', pinch: 'Pinch' };
+  // Altri modi di scrivere la presa nei file (minuscolo, senza spazi né trattini)
+  const GRIP_ALIASES = { halfcrimp: 'half-crimp', hc: 'half-crimp', fullcrimp: 'full-crimp', crimp: 'full-crimp', openhand: 'open', open4: 'open', oh: 'open',
+    f3open: 'f3-open', openhand3fingers: 'f3-open', open3: 'f3-open', '3fingeropen': 'f3-open', f3halfcrimp: 'f3-half', halfcrimp3fingers: 'f3-half', f3hc: 'f3-half', f3crimp: 'f3-half',
+    '2fingersfront': 'f2-front', f2front: 'f2-front', '2fingersmiddle': 'f2-middle', f2middle: 'f2-middle', '2fingersback': 'f2-back', f2back: 'f2-back', sloper: 'sloper', pinch: 'pinch' };
+  const gripKey = v => { const t = String(v == null ? '' : v).toLowerCase().replace(/[\s_-]/g, ''); return GRIPS[v] ? v : GRIP_ALIASES[t] || Object.keys(GRIPS).find(k => GRIPS[k].toLowerCase().replace(/[\s_-]/g, '') === t) || null; };
+  /** "20 mm · Half crimp · one hand": vuoto se l'esercizio non ha presa. */
+  const gripText = e => { const g = e && e.grip; if (!g) return ''; return [g.edge ? g.edge + ' mm' : '', GRIPS[g.type] || '', g.hands === 1 ? 'one hand' : ''].filter(Boolean).join(' · '); };
   /** Nome mostrato: per un esercizio standard quello della libreria, altrimenti quello scritto (esercizi personali e test). */
   const exName = e => (e && e.std && e.std !== 'test' && STD[e.std] ? STD[e.std].name : (e && e.name) || '');
   const matchStd = name => { const n = String(name || '').trim(); if (EXACT[n.toLowerCase()]) return EXACT[n.toLowerCase()]; const r = STD_RULES.find(([re]) => re.test(n)); return r ? r[1] : null; };
@@ -490,7 +506,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
   const yamlRefName = ref => Object.keys(YAML_REFS).find(k => YAML_REFS[k] === ref) || ref;
   const PROGRAMME_FIELDS = ['title', 'weeks', 'first_session', 'days', 'sessions']; // "sessions": nome dei file scritti prima di "days"
   const DAY_FIELDS = ['week', 'day', 'title', 'exercises'];
-  const EXERCISE_FIELDS = ['name', 'test', 'category', 'minutes', 'sets', 'rounds', 'work', 'reps', 'rest', 'set_rest', 'sides', 'load', 'surface', 'note'];
+  const EXERCISE_FIELDS = ['name', 'test', 'category', 'grip', 'edge', 'hands', 'minutes', 'sets', 'rounds', 'work', 'reps', 'rest', 'set_rest', 'sides', 'load', 'surface', 'note'];
 
   /** "7s", "45 s", "3min", "3 min", "1min30s", "2'", "1'30\"", oppure un numero (secondi). Restituisce i secondi o null. */
   function parseDuration(v) {
@@ -638,6 +654,18 @@ review|other|Attempt review|10|`.split('\n').map(line => {
           err(where, `load: "${x.load}" should look like "82.5% sloper" (tests: ${Object.keys(YAML_REFS).join(', ')})`);
         else e.load = { ref, mode: refMode(ref, opts.testDefs), pct: m[1] ? +m[1] : null, test: false };
       }
+      // Presa (solo esercizi Fingers): grip, edge in mm, hands 1 o 2
+      if (['grip', 'edge', 'hands'].some(has)) {
+        const sec = e.std === 'test' ? 'fingers' : e.std && STD[e.std] ? STD[e.std].section : e.section;
+        if (sec !== 'fingers') err(where, 'grip, edge and hands are only for Fingers exercises');
+        else {
+          const g = {};
+          if (has('grip')) { g.type = gripKey(x.grip); if (!g.type) err(where, `grip: "${x.grip}" is not known (${Object.values(GRIPS).join(', ')})`); }
+          if (has('edge')) { g.edge = typeof x.edge === 'number' ? x.edge : parseFloat(String(x.edge)); if (!(g.edge > 0 && g.edge <= 100)) err(where, `edge: "${x.edge}" should be the edge depth in mm, e.g. 20`); }
+          if (has('hands')) { if (x.hands === 1 || x.hands === 2) g.hands = x.hands; else err(where, 'hands: 1 or 2'); }
+          e.grip = g;
+        }
+      }
       if (has('surface')) {
         const sf = surfaces.find(s => s.key === x.surface || s.name.toLowerCase() === String(x.surface).toLowerCase());
         if (!sf) err(where, `surface: "${x.surface}" is not one of your surfaces (${surfaces.map(s => s.key).join(', ')})`); else e.surface = sf.key;
@@ -673,6 +701,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
         if (o.rounds && iv.setRestSeconds) o.set_rest = fmtDuration(iv.setRestSeconds);
         if (sided) o.sides = 'L/R';
       }
+      if (e.grip) { if (e.grip.type) o.grip = GRIPS[e.grip.type]; if (e.grip.edge) o.edge = e.grip.edge; if (e.grip.hands) o.hands = e.grip.hands; }
       if (e.load && !e.load.test) o.load = (e.load.pct != null ? e.load.pct + '% ' : '') + yamlRefName(e.load.ref);
       if (e.surface) o.surface = e.surface;
       if (b.note) o.note = b.note;
@@ -870,7 +899,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
   }
 
   return {
-    CLIMBING, LEGACY_SECTION, slotOf, blockSection, timeBySection, weeklyGroups, describe, leftoverNote, splitCues, fmtRest, PAIRS, refKeys, LEGACY_NAMES, normSide, firstOffset, firstSessionDate, startForFirst, recordsOf, lastRecord, nextLoad, TEST_TEMPLATES, testLabel, SECTIONS, LIBRARY, STD, stdVariant, matchStd, exName,
+    CLIMBING, LEGACY_SECTION, slotOf, blockSection, timeBySection, weeklyGroups, describe, leftoverNote, splitCues, fmtRest, PAIRS, refKeys, LEGACY_NAMES, normSide, firstOffset, firstSessionDate, startForFirst, recordsOf, lastRecord, nextLoad, TEST_TEMPLATES, testLabel, SECTIONS, LIBRARY, STD, stdVariant, matchStd, exName, GRIPS, gripKey, gripText,
     DAY_TYPES, PERIODS, SLOTS, GRADES, GRADE_SCALES, gradeIdx, fmtGrade, DEFAULT_SURFACES, inferSurface, validISO, uid, toISO, fromISO, todayISO, addDays, diffDays, mondayOf,
     inferLoad, loadKey, loadKg, latestMaxes, fmtKg, cycle, cueAt, intervalMinutes, buildSteps, normInterval,
     importYaml, exportYaml, parseDuration, parseWeeks, fmtWeeks, testExercise, YAML_REFS, locate, dateOf, sessionMinutes, cloneSession, validState,
@@ -1133,7 +1162,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
 
   /* ---------- Stato e persistenza ---------- */
   // Primo avvio: nessun piano precaricato, ogni utente importa o crea i propri.
-  const fresh = () => migrate({ v: 11, plans: [], activePlan: null, exercises: {}, logs: [], tests: [] });
+  const fresh = () => migrate({ v: 12, plans: [], activePlan: null, exercises: {}, logs: [], tests: [] });
   /** I test da cui dipendono i kg degli esercizi (e il peso corporeo) devono esistere nella sezione Test. */
   function ensureTests(s) {
     const need = new Set(['bw'].concat(Object.values(s.exercises).filter(e => e.load).flatMap(e => C.refKeys(e.load.ref))));
@@ -1260,7 +1289,8 @@ review|other|Attempt review|10|`.split('\n').map(line => {
       }
       pruneEmpty(s); prune(s); // e gli esercizi rimasti senza giornata
     }
-    s.v = 11;
+    if (fromV < 12) delete s.live; // v12: niente più sessione in corso: ogni esercizio si avvia dalla giornata
+    s.v = 12;
     return s;
   }
   let rescued = false;
@@ -1343,7 +1373,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
     cloudTimer = setTimeout(() => cloudBackup(false), Math.max(20000, 300000 - (Date.now() - cloudAt)));
   }
   // Quello che registri senza rete resta sul dispositivo; appena la rete torna (o riapri l'app) il backup riparte da solo.
-  const cloudRetry = () => { if (cloudOn() && navigator.onLine !== false) { clearTimeout(cloudTimer); cloudTimer = setTimeout(() => cloudBackup(false).then(() => { if (!R && !P) render(); }), 3000); } };
+  const cloudRetry = () => { if (cloudOn() && navigator.onLine !== false) { clearTimeout(cloudTimer); cloudTimer = setTimeout(() => cloudBackup(false).then(() => { if (!P) render(); }), 3000); } };
   window.addEventListener('online', cloudRetry);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') cloudRetry(); });
   async function cloudRestore() {
@@ -1476,10 +1506,11 @@ review|other|Attempt review|10|`.split('\n').map(line => {
   const pairsPresent = () => Object.keys(C.PAIRS).filter(k => C.refKeys(k).every(x => S.testDefs.some(t => t.key === x)));
   const inPair = (key, pairs) => pairs.some(k => C.refKeys(k).includes(key));
   /* Progressione: la proposta nasce dallo storico dell'esercizio (standard + test di riferimento), non dal programma. */
-  const exKey = e => (e.std || e.name) + '|' + (e.load ? e.load.ref : '');
+  // Chiave della serie dei carichi: esercizio, riferimento e presa (Max hang 20 mm half crimp ≠ Max hang 20 mm open hand)
+  const exKey = e => (e.std || e.name) + '|' + (e.load ? e.load.ref : '') + (e.grip ? '|' + [e.grip.type || '', e.grip.edge || '', e.grip.hands || ''].join('/') : '');
   function exLabel(e) {
     const base = e.std && C.STD[e.std] ? C.STD[e.std].name : e.name, d = e.load && !C.PAIRS[e.load.ref] ? S.testDefs.find(t => t.key === e.load.ref) : null;
-    return d ? `${base} · ${d.name}` : base;
+    return [d ? `${base} · ${d.name}` : base, C.gripText(e)].filter(Boolean).join(' · ');
   }
   const kgText = (kg, mode) => (mode === 'hang' ? C.fmtKg(kg) : dec(kg) + ' kg');
   /** { text, why } con il carico proposto per la prossima volta, oppure null se non c'è storico o la progressione è spenta. */
@@ -1507,15 +1538,15 @@ review|other|Attempt review|10|`.split('\n').map(line => {
     return out.join(' · ');
   }
   // Il titolo è sempre il nome della libreria (C.exName): la riga sotto ha solo parametri e superficie.
-  const exLine = e => [C.describe(e), e.surface ? surfName(e.surface) : ''].filter(Boolean).join(' · ');
-  function blockRow(b, onclick, drag) {
+  const exLine = e => [C.gripText(e), C.describe(e), e.surface ? surfName(e.surface) : ''].filter(Boolean).join(' · ');
+  function blockRow(b, onclick, drag, run) {
     const ex = S.exercises[b.exId];
     const grip = drag ? h('span', { class: 'grip', 'data-grip': '', role: 'img', 'aria-label': 'Drag to reorder', onclick: e => e.stopPropagation() }, '≡') : null;
     if (!ex) return h('div', { class: 'blk', 'data-id': b.id }, grip, h('span', { class: 'p' }, 'Exercise removed'));
     const hint = loadHint(ex);
     return h('div', { class: 'blk', 'data-id': b.id, onclick, style: onclick ? 'cursor:pointer' : null }, grip,
       h('div', { class: 'grow' }, h('div', { class: 'n' }, catBar(exSection(ex)), C.exName(ex)), exLine(ex) ? h('div', { class: 'p' }, exLine(ex)) : null, hint ? h('div', { class: 'kg' }, hint) : null, propLine(ex), b.note ? h('div', { class: 'p note' }, b.note) : null),
-      h('div', { class: 'm' }, b.minutes + ' min'));
+      h('div', { class: 'm' }, b.minutes + ' min', run ? run(b) : null));
   }
   /** Riordino per trascinamento dalla maniglia: la riga segue il dito, l'ordine si salva al rilascio. */
   function enableDrag(list, s) {
@@ -1557,18 +1588,29 @@ review|other|Attempt review|10|`.split('\n').map(line => {
     const ov = openSheet('Add a test', [h('p', { class: 'sub' }, 'When the exercise ends you log the result, which updates the max in the Tests section.'),
       items.map(([k, name, sub]) => h('div', { class: 'blk', style: 'cursor:pointer', onclick: () => { ov.remove(); cb(testExercise(k)); } }, h('div', { class: 'grow' }, h('div', { class: 'n' }, name), h('div', { class: 'p' }, sub))))]);
   }
+  /** Registrazione di oggi per questa giornata (una sola). Con `create` la crea vuota se manca. */
+  function dayLog(r, create) {
+    const s = sessOf(r), date = C.todayISO();
+    let l = S.logs.find(x => x.sid === s.id && x.date === date);
+    if (!l && create) { l = { id: C.uid(), date, sid: s.id, type: s.type || 'wall', title: autoTitle(s), minutes: 0, rpe: null, feel: null, notes: '', loads: [], climbs: [], blocks: [] }; S.logs.push(l); }
+    return l;
+  }
+  /** La giornata: ogni esercizio si fa partire dal suo ▶ (solo oggi). Ordine ed esercizi si cambiano sempre, anche a metà. */
   function sessionCard(r, edit) {
-    const s = sessOf(r), done = isDone(r);
-    const list = h('div', {}, s.blocks.map((b, bi) => blockRow(b, edit ? () => blockSheet(r, bi) : null, edit)));
+    const s = sessOf(r), today = dayOf(r) === C.todayISO(), l = today ? dayLog(r, false) : null, done = isDone(r);
+    const doneIds = new Set(l ? l.blocks.map(x => x.bid).filter(Boolean) : []);
+    const run = today ? b => (S.exercises[b.exId] ? h('button', { class: 'play' + (doneIds.has(b.id) ? ' done' : ''), 'aria-label': (doneIds.has(b.id) ? 'Redo ' : 'Start ') + C.exName(S.exercises[b.exId]),
+      onclick: e => { e.stopPropagation(); startBlock(r, b); } }, doneIds.has(b.id) ? '✓' : '▶') : null) : null;
+    const list = h('div', {}, s.blocks.map((b, bi) => blockRow(b, edit ? () => blockSheet(r, bi) : null, edit, run)));
     if (edit) enableDrag(list, s);
     return h('div', { class: 'card' },
       h('div', { class: 'row' }, h('div', { class: 'grow big', style: 'font-size:17px' }, s.title || 'Session'),
-        done ? h('span', { class: 'tag ok' }, 'Done') : null, h('span', { class: 'tag' }, C.sessionMinutes(s) + ' min')),
+        done ? h('span', { class: 'tag ok' }, today && doneIds.size < s.blocks.length ? `${doneIds.size} of ${s.blocks.length} done` : 'Done') : null, h('span', { class: 'tag' }, C.sessionMinutes(s) + ' min')),
       list,
       h('div', { class: 'btns' },
-        btn(done ? 'Repeat' : 'Start', () => startSession(r), 'pri'),
         edit ? [btn('+ Exercise', () => pickExercise(tpl => { addBlock(s, tpl); save(); render(); }), 'sm'), btn('+ Test', () => pickTest(tpl => { addBlock(s, tpl); save(); render(); }), 'sm'),
-          btn('Day…', () => daySheet(r), 'sm')] : btn('Edit', () => go('calendar-' + dayOf(r)), 'sm')));
+          btn('Day…', () => daySheet(r), 'sm')] : null,
+        l ? btn('Rate the day', () => logSheet(l), 'sm') : null));
   }
   const climbText = c => surfName(c.surface) + (c.top ? ' ' + fmtG(c.top) : '') + (c.sends != null ? ` · ${c.sends} ${c.sends === 1 ? 'send' : 'sends'}` : '');
   const logCard = l => h('div', { class: 'card tap', onclick: () => logSheet(l) },
@@ -1576,18 +1618,14 @@ review|other|Attempt review|10|`.split('\n').map(line => {
     h('div', { class: 'sub' }, `${wdOf(l.date)} ${fmtDate(l.date)}${l.rpe ? ' · RPE ' + dec(l.rpe) : ''}${l.feel ? ' · feeling ' + l.feel + '/5' : ''}`),
     (l.climbs || []).length ? h('div', { class: 'sub', style: 'color:var(--tx)' }, l.climbs.map(climbText).join('  |  ')) : null,
     (l.loads || []).length ? h('div', { class: 'p', style: 'color:var(--ac);font-size:13px' }, l.loads.map(x => `${x.name}: ${x.kg}`).join(' · ')) : null,
+    (l.blocks || []).some(b => (b.sets && b.sets.done < b.sets.of) || b.repsMissed) ? h('div', { class: 'sub', style: 'color:var(--warn)' }, l.blocks.filter(b => (b.sets && b.sets.done < b.sets.of) || b.repsMissed)
+      .map(b => [b.name + ':', b.sets && b.sets.done < b.sets.of ? `${b.sets.done}/${b.sets.of} sets` : '', b.repsMissed ? `${b.repsMissed} reps missed` : ''].filter(Boolean).join(' ')).join(' · ')) : null,
     (l.blocks || []).some(b => b.note) ? h('div', { class: 'sub' }, l.blocks.filter(b => b.note).map(b => `${b.name}: ${b.note}`).join(' · ')) : null,
     l.notes ? h('div', { class: 'sub', style: 'margin-top:4px;color:var(--tx)' }, l.notes) : null);
 
   /* ---------- Home ---------- */
   function viewHome() {
     const t = C.todayISO(), refs = refsOn(t), out = [h('div', { class: 'sub', style: 'text-transform:capitalize' }, `${WD_FULL[wdIdx(t)]} ${fmtDate(t)}`), h('h1', {}, 'Home')];
-    if (S.live) {
-      const lr = findRef(S.live.sid);
-      if (lr) out.push(h('div', { class: 'card', style: 'border-color:var(--warn)' }, h('div', { class: 'n' }, 'Session in progress'), h('div', { class: 'sub' }, autoTitle(sessOf(lr))),
-        h('div', { class: 'btns' }, btn('Resume', () => startSession(lr), 'pri'), btn('Discard', () => { S.live = null; save(); render(); }))));
-      else S.live = null;
-    }
     if (rescued) out.push(h('div', { class: 'card' }, h('div', { class: 'sub' }, 'The saved data could not be read, so the app started empty. A copy of the old data was kept: export it and send it to whoever develops the app.'),
       h('div', { class: 'btns' }, btn('Export old data', () => { const k = Object.keys(localStorage).filter(x => x.startsWith(KEY + '.rescue-')).sort().pop(); if (k) exportSheet('Old data', 'allenamento-rescue.json', localStorage.getItem(k)); }, 'sm'),
         btn('Hide', () => { rescued = false; render(); }, 'sm'))));
@@ -1597,7 +1635,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
       h('div', { class: 'btns' }, btn('Retry', () => cloudBackup(true), 'sm'), btn('Settings', () => go('more'), 'sm'))));
     else if (S.logs.length && (since == null || since >= 7))
       out.push(h('div', { class: 'card row' }, h('div', { class: 'grow sub' }, since == null ? 'Your data has no backup yet.' : `Last backup ${since} days ago.`), btn('Save backup', doBackup, 'sm')));
-    refs.forEach(r => out.push(sessionCard(r, false)));
+    refs.forEach(r => out.push(sessionCard(r, true)));
     if (!refs.length) out.push(restCard(t, false));
     out.push(h('div', { class: 'btns' }, btn('Log session', () => logSheet(null), 'sm')));
     return out;
@@ -1734,6 +1772,8 @@ review|other|Attempt review|10|`.split('\n').map(line => {
     const pairs = pairsPresent();
     const refs = [['', 'None']].concat(S.testDefs.filter(t => t.key !== 'bw' && !inPair(t.key, pairs)).map(t => [t.key, t.name]), pairs.map(k => [k, C.PAIRS[k] + ' (L/R alternating)']));
     const ref = opts(refs, ld.ref || ''), pct = numInp(ld.pct);
+    const isFingers = exSection(e) === 'fingers', gp = e.grip || {};
+    const grip = opts([['', '—']].concat(Object.entries(C.GRIPS)), gp.type || ''), edge = numInp(gp.edge, { placeholder: 'mm' }), hands = opts([['', '—'], ['2', 'Two'], ['1', 'One']], gp.hands ? String(gp.hands) : '');
     const workF = field('Work (s)', work), repsF = field('Reps', reps);
     const timer = h('div', {}, h('div', { class: 'cols3' }, field('Round', rounds), workF, repsF, field('Rest (s)', rest)),
       h('div', { class: 'cols' }, field('Rounds per set (optional)', perSet), field('Rest between sets (s)', setRest)),
@@ -1748,7 +1788,9 @@ review|other|Attempt review|10|`.split('\n').map(line => {
     const sync = () => { minF.hidden = mode.value !== 'none'; durLine.hidden = mode.value === 'none'; showDur(); timer.hidden = mode.value === 'none'; workF.hidden = mode.value !== 'timed'; repsF.hidden = mode.value !== 'reps'; sfNewField.hidden = sfSel.value !== '+new'; };
     const isTest = !!ld.test;
     const ov = openSheet(C.exName(e), [h('p', { class: 'sub' }, isStd ? 'Parameters of this exercise on this day. To change exercise use Replace.' : 'Parameters of this exercise on this day.'),
-      isStd ? null : field('Name', name), field('Timer', mode), minF, durLine, timer,
+      isStd ? null : field('Name', name),
+      isFingers ? h('div', { class: 'cols3' }, field('Grip', grip), field('Edge (mm)', edge), field('Hands', hands)) : null,
+      field('Timer', mode), minF, durLine, timer,
       isTest ? null : h('div', { class: 'cols' }, field('Load: reference test', ref), field('% of max', pct)),
       e.slot === 'wall' || e.slot === 'warmup' || e.surface ? [field('Climbing surface', sfSel), sfNewField] : null,
       field('Note', note),
@@ -1760,6 +1802,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
         e.surface = sf;
         if (mode.value === 'none' && !(val(min) > 0)) return toast('Type the minutes.');
         e.interval = mode.value === 'none' ? null : draft();
+        if (isFingers) { const g = { type: grip.value || undefined, edge: val(edge) > 0 ? val(edge) : undefined, hands: hands.value ? +hands.value : undefined }; e.grip = Object.values(g).some(v => v != null) ? JSON.parse(JSON.stringify(g)) : undefined; }
         if (!isTest) { const d = S.testDefs.find(t => t.key === C.refKeys(ref.value)[0]); e.load = ref.value ? { ref: ref.value, mode: d && d.mode === 'hang' ? 'hang' : 'lift', pct: val(pct), test: false } : null; }
         b.minutes = e.interval ? C.intervalMinutes(e.interval) : Math.round(val(min));
         b.note = note.value.trim().slice(0, 200);
@@ -2020,16 +2063,16 @@ review|other|Attempt review|10|`.split('\n').map(line => {
         cloudOn() ? [btn('Restore from GitHub', cloudRestore, 'sm'), btn('Disconnect', async () => { if (await confirmDlg('Disconnect GitHub? The token is deleted from this device; backups already uploaded stay in the repository.', 'Disconnect')) { S.settings.gh = null; clearTimeout(cloudTimer); save(); render(); } }, 'sm danger')] : null));
   }
   /* ---------- Taccuino: note al volo durante la prova dell'app, con il contesto per poterle riprodurre ---------- */
-  const VERSION = '20261118.1320';
+  const VERSION = '20261118.1534';
   function noteSheet() {
     const text = h('textarea', { class: 'inp', placeholder: 'What is wrong, or what would you like to be different?' });
-    const where = P ? 'timer: ' + P.steps[P.idx].name : R ? 'session in progress' : (location.hash.slice(1) || 'home');
+    const where = P ? 'timer: ' + P.steps[P.idx].name : (location.hash.slice(1) || 'home');
     const ov = openSheet('Note a problem', [h('p', { class: 'sub' }, `Saved with screen (${where}), date and version. You find it in More → Notebook.`), text,
       btn('Save note', () => {
         const t = text.value.trim().slice(0, 1000);
         if (!t) return toast('Write something.');
         S.notes.push({ id: C.uid(), at: new Date().toISOString(), text: t, where, version: VERSION });
-        save(); ov.remove(); toast('Note saved.'); if (!R && !P) render();
+        save(); ov.remove(); toast('Note saved.'); if (!P) render();
       }, 'pri block')]);
     ov.style.zIndex = 50; // anche sopra il timer
     setTimeout(() => text.focus(), 50);
@@ -2062,7 +2105,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
       const reg = 'serviceWorker' in navigator ? await navigator.serviceWorker.getRegistration() : null, hit = reg && window.caches ? await caches.match('./') : null;
       add('Offline use', reg && hit ? true : reg ? null : false, reg && hit ? 'a copy of the app is stored on the device' : reg ? 'getting ready: reopen the app once while online' : 'not available in this mode');
     } catch (e) { add('Offline use', false, 'check failed'); }
-    try { audioInit(); beep(880, 0.25); add('Sound signals', ac && ac.state === 'running' ? true : null, ac && ac.state === 'running' ? 'a signal was just played: if you did not hear it, check the volume and the silent switch' : 'audio not started: try again by tapping "Run the checks"'); }
+    try { audioInit(); SOUND.setEnd(); add('Sound signals', ac && ac.state === 'running' ? true : null, ac && ac.state === 'running' ? 'a signal was just played: if you did not hear it, check the volume and the silent switch' : 'audio not started: try again by tapping "Run the checks"'); }
     catch (e) { add('Sound signals', false, 'audio not available'); }
     try {
       if (navigator.wakeLock) { const l = await navigator.wakeLock.request('screen'); await l.release(); add('Screen stays on during a session', true, 'granted'); }
@@ -2090,7 +2133,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
       const r = await fetch('version.json', { cache: 'no-store' });
       if (!r.ok) return;
       const v = (await r.json()).version;
-      if (v && v !== VERSION && v !== newVersion) { newVersion = v; if (!R && !P) render(); }
+      if (v && v !== VERSION && v !== newVersion) { newVersion = v; if (!P) render(); }
     } catch (e) { /* offline o anteprima: nessun controllo */ }
   }
 
@@ -2123,58 +2166,41 @@ review|other|Attempt review|10|`.split('\n').map(line => {
 
   /* ---------- Player ---------- */
   let P = null, ac = null, wl = null;
-  function audioInit() { try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); ac.resume(); } catch (e) { ac = null; } }
-  function beep(freq, dur) {
+  /* Suoni. Su iPhone l'audio delle web app segue l'interruttore silenzioso: con l'Audio Session API (Safari 17+)
+     si dichiara "playback", come un'app di musica, e i segnali suonano anche in modalità silenziosa (il volume conta ancora).
+     Il contesto audio si crea e si sblocca solo dentro un tocco dell'utente, con un suono muto. */
+  function audioInit() {
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* API non disponibile */ }
+    try {
+      if (!ac) {
+        ac = new (window.AudioContext || window.webkitAudioContext)();
+        const b = ac.createBuffer(1, 1, 22050), src = ac.createBufferSource(); src.buffer = b; src.connect(ac.destination); src.start(0);
+      }
+      if (ac.state !== 'running') ac.resume();
+    } catch (e) { ac = null; }
+  }
+  function beep(freq, dur, at = 0) {
     if (!S.settings.sound || !ac) return;
     try {
-      const o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime;
-      o.frequency.value = freq; o.connect(g); g.connect(ac.destination);
-      g.gain.setValueAtTime(0.3, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-      o.start(t); o.stop(t + dur);
+      const o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime + at;
+      o.type = 'square'; o.frequency.value = freq; o.connect(g); g.connect(ac.destination); // onda quadra: si sente meglio dell'onda sinusoidale in palestra
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.35, t + 0.01);
+      g.gain.setValueAtTime(0.35, t + Math.max(0.02, dur - 0.05)); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.start(t); o.stop(t + dur + 0.02);
     } catch (e) { /* audio non disponibile: il player continua senza suoni */ }
   }
+  // Segnali: bip corti negli ultimi 3 secondi; suono lungo a fine serie (fine del lavoro); fine esercizio = due suoni lunghi.
+  const SOUND = { count: () => beep(880, 0.12), go: () => beep(1320, 0.35), setEnd: () => beep(660, 0.9), exEnd: () => { beep(660, 0.7); beep(990, 1.0, 0.8); } };
   async function wake() { try { if (navigator.wakeLock) wl = await navigator.wakeLock.request('screen'); } catch (e) { wl = null; } }
-  document.addEventListener('visibilitychange', () => { if (R && document.visibilityState === 'visible') { wake(); tick(); } });
+  document.addEventListener('visibilitychange', () => { if (P && document.visibilityState === 'visible') { wake(); tick(); } });
   const mmss = s => { s = Math.max(0, Math.round(s)); return s >= 60 ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` : String(s); };
   const isAuto = st => st.kind === 'rest' || (st.kind === 'work' && !st.selfPaced);
 
-  // R: sessione in corso (elenco). P: timer dell'esercizio in corso. Lo stato `done` sta anche in S.live, così si può riprendere.
-  let R = null;
-  function startSession(r) {
-    const s = sessOf(r), resumed = S.live && S.live.sid === s.id;
-    audioInit(); wake();
-    R = { r, s, startedAt: resumed ? S.live.startedAt : Date.now(), done: resumed ? S.live.done || {} : {} };
-    S.live = { sid: s.id, startedAt: R.startedAt, done: R.done }; save();
-    drawRunner();
-    log('session', resumed ? 'resumed' : 'started', { title: autoTitle(s), exercises: s.blocks.length });
-  }
-  function closeRunner() { $('runner').hidden = true; R = null; try { if (wl) wl.release(); } catch (e) { /* già rilasciato */ } wl = null; }
-  function drawRunner() {
-    const { s, done } = R, nextB = s.blocks.find(b => !done[b.id] && S.exercises[b.exId]);
-    const row = (b, i) => {
-      const ex = S.exercises[b.exId], d = done[b.id], hint = ex ? loadHint(ex) : '';
-      return h('div', { class: 'run-r' + (d ? ' done' : '') }, h('div', { class: 'st' }, d ? '✓' : i + 1),
-        h('div', { class: 'grow' }, h('div', { class: 'n', style: 'font-weight:600' }, ex ? catBar(exSection(ex)) : null, ex ? C.exName(ex) : 'Exercise removed'), ex ? h('div', { class: 'sub' }, exLine(ex)) : null,
-          hint && !d ? h('div', { style: 'color:var(--ac);font-size:13px;font-weight:600' }, hint) : null, ex && !d ? propLine(ex) : null, d && d.minutes ? h('div', { class: 'sub' }, `done · ${d.minutes} min`) : null),
-        ex ? btn(d ? 'Redo' : 'Start', () => startBlock(b), 'sm' + (b === nextB ? ' pri' : '')) : null);
-    };
-    const quit = () => {
-      const ov = openSheet('Leave the session?', h('div', { class: 'btns' }, btn('Continue', () => ov.remove()),
-        btn('Leave and resume later', () => { ov.remove(); closeRunner(); render(); }), btn('Abandon', () => { ov.remove(); S.live = null; save(); closeRunner(); render(); }, 'danger')), true);
-    };
-    $('runner').hidden = false;
-    $('runner').replaceChildren(h('div', { class: 'in' },
-      h('div', { class: 'row' }, h('div', { class: 'grow' }, h('div', { class: 'sub' }, 'Session in progress'), h('h1', {}, s.title || 'Session')), btn('Note', noteSheet, 'sm'), btn('Leave', quit, 'sm')),
-      h('div', { class: 'card' }, s.blocks.map(row), s.blocks.length ? null : h('p', { class: 'sub', style: 'margin:0' }, 'No exercises: add one to start.')),
-      h('div', { class: 'btns' }, btn('+ Exercise', () => pickExercise(tpl => { addBlock(s, tpl); save(); drawRunner(); }), ''), btn('+ Test', () => pickTest(tpl => { addBlock(s, tpl); save(); drawRunner(); }), ''),
-        btn('Finish session', finishSession, nextB ? '' : 'pri'))));
-  }
-
-  function startBlock(b) {
+  function startBlock(r, b) {
     const steps = C.buildSteps([b], S.exercises, S.settings.prep);
     if (!steps.length) return toast('Exercise not available.');
-    audioInit();
-    P = { b, steps, idx: null, ms: 0, paused: false };
+    audioInit(); wake();
+    P = { r, b, steps, idx: null, ms: 0, paused: false, completed: 0, works: steps.filter(x => x.kind === 'work').length };
     $('player').hidden = false;
     P.timer = setInterval(tick, 200);
     enter(0);
@@ -2197,18 +2223,26 @@ review|other|Attempt review|10|`.split('\n').map(line => {
     if (!P || P.paused) return;
     const st = P.steps[P.idx], rem = Math.ceil(remaining());
     if (isAuto(st)) {
-      if (rem <= 0) { beep(st.kind === 'rest' ? 1320 : 660, 0.5); return next(); }
-      if (rem <= 3 && rem !== P.lastBeep) { P.lastBeep = rem; beep(880, 0.12); }
+      if (rem <= 0) {
+        const last = P.idx + 1 >= P.steps.length;
+        if (last) SOUND.exEnd(); else if (st.kind === 'work') SOUND.setEnd(); else SOUND.go();
+        if (st.kind === 'work') P.completed = (P.completed || 0) + 1; // serie arrivata in fondo, non saltata
+        return next();
+      }
+      if (rem <= 3 && rem !== P.lastBeep) { P.lastBeep = rem; SOUND.count(); }
     } else if (st.kind === 'free' && st.seconds > 0) {
       // esercizio a durata: allo scadere il timer si ferma e si passa alla registrazione, non all'esercizio successivo
-      if (rem <= 0) { beep(1320, 0.6); return endBlock(); }
-      if (rem <= 3 && rem !== P.lastBeep) { P.lastBeep = rem; beep(880, 0.12); }
+      if (rem <= 0) { SOUND.exEnd(); return endBlock(); }
+      if (rem <= 3 && rem !== P.lastBeep) { P.lastBeep = rem; SOUND.count(); }
     }
     drawClock();
   }
   function drawClock() {
     const st = P.steps[P.idx], rem = remaining();
-    $('p-clock').textContent = st.kind === 'work' && st.selfPaced ? mmss(st.seconds - rem) : mmss(Math.ceil(rem)); // a ripetizioni: tempo trascorso
+    // A ripetizioni il numero da fare conta più del tempo: si mostra quello (e il tempo trascorso solo se non c'è un numero)
+    const reps = st.kind === 'work' && st.selfPaced && st.reps;
+    $('p-clock').classList.toggle('reps', !!reps);
+    $('p-clock').textContent = reps ? `${st.reps} reps` : st.kind === 'work' && st.selfPaced ? mmss(st.seconds - rem) : mmss(Math.ceil(rem));
   }
   function draw() {
     const st = P.steps[P.idx], nx = P.steps[P.idx + 1], ex = S.exercises[st.exId];
@@ -2218,7 +2252,9 @@ review|other|Attempt review|10|`.split('\n').map(line => {
     $('p-ph').textContent = { prep: 'GET READY', work: st.selfPaced ? 'GO' : 'WORK', rest: 'REST', free: 'IN PROGRESS' }[ph];
     $('p-name').textContent = st.name;
     $('p-round').textContent = st.kind === 'free' ? (ex && ex.surface ? surfName(ex.surface) : '') : `Round ${st.round} of ${st.rounds}`;
-    $('p-cue').textContent = [st.cue, P.b.note].filter(Boolean).join(' · ');
+    // Parametri dell'esercizio (lato, presa, tacca, mani, % del massimale); la nota del giorno sotto, più piccola
+    $('p-cue').textContent = [st.cue, C.gripText(ex), ex && ex.load && ex.load.pct != null && !ex.load.test ? ex.load.pct + '% max' : ''].filter(Boolean).join(' · ');
+    $('p-note').textContent = P.b.note || '';
     const kg = ex && st.kind !== 'free' ? C.loadKg(ex.load, st.cue, maxes()) : null;
     $('p-kg').textContent = kg == null ? '' : (ex.load.mode === 'hang' ? C.fmtKg(kg) : dec(kg) + ' kg');
     $('p-next').textContent = nx ? 'Next: ' + (nx.kind === 'rest' ? `rest ${mmss(nx.seconds)}` : (nx.cue || `round ${nx.round}`)) : 'Last step of the exercise';
@@ -2231,11 +2267,12 @@ review|other|Attempt review|10|`.split('\n').map(line => {
   /** Fine dell'esercizio: il timer si ferma e si apre la sua registrazione. */
   function endBlock() {
     track();
-    const { b, ms } = P;
+    const { r, b, ms, completed, works } = P;
     clearInterval(P.timer); P = null; $('player').hidden = true;
-    recordSheet(b, ms);
+    try { if (wl) wl.release(); } catch (e) { /* già rilasciato */ } wl = null;
+    recordSheet(r, b, ms, works ? { done: completed, of: works } : null);
   }
-  function recordSheet(b, ms) {
+  function recordSheet(r, b, ms, sets) {
     const ex = S.exercises[b.exId], m = maxes(), isClimb = ex.slot === 'wall' || !!ex.surface;
     const min = numInp(Math.round(ms / 60000)), note = h('input', { placeholder: 'Optional' });
     const isTest = !!(ex.load && ex.load.test), prop = proposal(ex), planned = loadHint(ex).replace('kg: maxes missing', '');
@@ -2245,44 +2282,46 @@ review|other|Attempt review|10|`.split('\n').map(line => {
     const tests = ex.load && ex.load.test ? C.refKeys(ex.load.ref).map(k => S.testDefs.find(t => t.key === k)).filter(Boolean)
       .map(def => ({ def, inp: numInp(null, { placeholder: m[def.key] == null ? '' : 'previous: ' + dec(m[def.key]) }) })) : [];
     const sf = isClimb ? opts(surfOpts(), ex.surface || '') : null, gr = isClimb ? opts(gradeOpts(), '') : null, sends = isClimb ? numInp(null) : null;
+    // Serie fatte: precompilate da quelle arrivate in fondo nel timer (le saltate non contano); ripetizioni mancanti a mano.
+    const setsDone = sets ? numInp(sets.done) : null, repsMissed = ex.interval && ex.interval.selfPaced && ex.interval.reps ? numInp(null, { placeholder: '0' }) : null;
     const put = rec => {
-      const prev = R.done[b.id], date = C.todayISO();
-      if (prev && prev.testIds) S.tests = S.tests.filter(t => !prev.testIds.includes(t.id)); // "Rifai": il nuovo risultato sostituisce il precedente
-      rec.testIds = (rec.tests || []).map(t => { const id = C.uid(); S.tests.push({ id, key: t.key, date, value: t.value }); return id; });
-      R.done[b.id] = rec; S.live.done = R.done; save(); ov.remove(); drawRunner();
+      const l = dayLog(r, true), i = l.blocks.findIndex(x => x.bid === b.id), prev = i >= 0 ? l.blocks[i] : null;
+      if (prev && prev.testIds) S.tests = S.tests.filter(t => !prev.testIds.includes(t.id)); // rifatto: il nuovo risultato sostituisce il precedente
+      rec.testIds = (rec.tests || []).map(t => { const id = C.uid(); S.tests.push({ id, key: t.key, date: l.date, value: t.value }); return id; });
+      delete rec.tests;
+      rec.bid = b.id;
+      for (const k of Object.keys(rec)) if (rec[k] == null || rec[k] === '' || (Array.isArray(rec[k]) && !rec[k].length)) delete rec[k];
+      if (prev) l.blocks[i] = rec; else l.blocks.push(rec);
+      l.minutes = Math.max(0, (l.minutes || 0) + (rec.minutes || 0) - (prev && prev.minutes || 0));
+      l.loads = l.blocks.filter(x => x.load).map(x => ({ name: x.name, kg: x.load }));
+      l.climbs = l.blocks.map(x => x.climb).filter(Boolean);
+      save(); ov.remove(); render();
+      log('exercise', 'logged', { name: rec.name });
     };
+    const of = sets ? sets.of : 0;
     const ov = openSheet(C.exName(ex), [h('p', { class: 'sub' }, 'Exercise complete: log how it went.'),
-      field('Minutes', min),
+      sets ? h('div', { class: 'cols' }, field(`Sets done (of ${of})`, setsDone), repsMissed ? field('Reps missed (total)', repsMissed) : field('Minutes', min)) : field('Minutes', min),
+      sets && repsMissed ? field('Minutes', min) : null,
       tests.length ? [tests.map(x => field(`Result: ${x.def.name} (${x.def.unit})`, x.inp)), h('p', { class: 'sub' }, 'On save, the result immediately updates the max in the Tests section.')] : null,
       load ? h('div', { class: 'cols' }, field('Load used', load), field('Exercise RPE', rpe)) : null,
       load && prop && planned ? h('p', { class: 'sub' }, `Suggested: ${prop.text} (${prop.why}).`) : null,
       isClimb ? [h('div', { class: 'cols' }, field('Surface', sf), field('Top grade sent', gr)), field('Problems sent', sends)] : null,
       field('Note', note),
-      btn('Save', () => put({ name: C.exName(ex), minutes: Math.max(0, Math.round(val(min) || 0)), note: note.value.trim().slice(0, 200), load: load ? load.value.trim() : '', sec: exSection(ex),
-        key: exKey(ex), label: exLabel(ex), kgs: load ? C.parseLoads(load.value) : [], rpe: rpe ? val(rpe) : null, mode: ex.load ? ex.load.mode : 'lift',
-        tests: tests.map(x => ({ key: x.def.key, value: val(x.inp) })).filter(x => x.value != null),
-        climb: isClimb && sf.value ? { name: ex.name, surface: sf.value, top: gr.value || null, sends: val(sends) == null ? null : Math.max(0, Math.round(val(sends))), minutes: Math.max(0, Math.round(val(min) || 0)) } : null }), 'pri block'),
-      btn('Done, without logging', () => put({ name: C.exName(ex), minutes: Math.round(ms / 60000) }), 'block'),
-      btn('Not done: back to the list', () => { ov.remove(); drawRunner(); }, 'block')]);
-  }
-  function finishSession() {
-    const { r, s, done } = R, recs = s.blocks.map(b => done[b.id]).filter(Boolean);
-    const min = numInp(Math.max(1, Math.round((Date.now() - R.startedAt) / 60000))), rpe = numInp(null), feel = opts(FEEL, ''), notes = h('textarea', {});
-    let ov;
-    const end = () => { S.live = null; save(); ov.remove(); closeRunner(); go('calendar-' + C.todayISO()); };
-    ov = openSheet('Finish session', [h('p', { class: 'sub' }, `${recs.length} of ${s.blocks.length} exercises done.`),
-      h('div', { class: 'cols3' }, field('Total minutes', min), field('RPE (1-10)', rpe), field('Feeling', feel)), field('Notes', notes),
       btn('Save', () => {
-        const date = C.todayISO();
-        S.logs.push({ id: C.uid(), date, sid: s.id, type: s.type || 'wall', title: autoTitle(s), minutes: Math.max(0, Math.round(val(min) || 0)), rpe: val(rpe), feel: feel.value ? +feel.value : null, notes: notes.value.trim(),
-          loads: recs.filter(x => x.load).map(x => ({ name: x.name, kg: x.load })), climbs: recs.map(x => x.climb).filter(Boolean),
-          blocks: recs.map(x => ({ name: x.name, minutes: x.minutes || 0, note: x.note || '', key: x.key, label: x.label, sec: x.sec, kgs: x.kgs && x.kgs.length ? x.kgs : undefined, rpe: x.rpe == null ? undefined : x.rpe, mode: x.mode })) });
-        log('session', 'logged', { exercises: recs.length });
-        end();
-      }, 'pri block'), btn('Close without saving', end, 'block')]);
+        const sd = setsDone ? Math.round(val(setsDone)) : null;
+        if (setsDone && !(sd >= 0 && sd <= of)) return toast(`Sets done: from 0 to ${of}.`);
+        const rm = repsMissed ? Math.max(0, Math.round(val(repsMissed) || 0)) : null;
+        put({ name: C.exName(ex), minutes: Math.max(0, Math.round(val(min) || 0)), note: note.value.trim().slice(0, 200), load: load ? load.value.trim() : '', sec: exSection(ex),
+          key: exKey(ex), label: exLabel(ex), kgs: load ? C.parseLoads(load.value) : [], rpe: rpe ? val(rpe) : null, mode: ex.load ? ex.load.mode : 'lift',
+          sets: sets ? { done: sd, of } : null, repsMissed: rm || null,
+          tests: tests.map(x => ({ key: x.def.key, value: val(x.inp) })).filter(x => x.value != null),
+          climb: isClimb && sf.value ? { name: C.exName(ex), surface: sf.value, top: gr.value || null, sends: val(sends) == null ? null : Math.max(0, Math.round(val(sends))), minutes: Math.max(0, Math.round(val(min) || 0)) } : null });
+      }, 'pri block'),
+      btn('Done, without logging', () => put({ name: C.exName(ex), minutes: Math.round(ms / 60000), sec: exSection(ex), key: exKey(ex), label: exLabel(ex) }), 'block'),
+      btn('Not done', () => ov.remove(), 'block')]);
   }
   function wirePlayer() {
-    $('p-done').onclick = () => next();
+    $('p-done').onclick = () => { const st = P.steps[P.idx]; if (st.kind === 'work' && st.selfPaced) { P.completed++; if (P.idx + 1 < P.steps.length) SOUND.setEnd(); } next(); };
     $('p-back').onclick = () => enter(Math.max(0, P.idx - 1));
     $('p-plus').onclick = () => { if (P.paused) P.remain += 30000; else P.endAt += 30000; P.lastBeep = null; drawClock(); };
     $('p-pause').onclick = () => {

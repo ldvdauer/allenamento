@@ -11,26 +11,26 @@ days:
         sets: 4
         work: 7s
         rest: 3min
-        note: 7" · carico crescente
+        note: Increasing load
       - test: half-crimp
         sets: 4
         work: 7s
         rest: 3min
-        note: 7" · carico crescente
+        note: Increasing load
       - name: Limit bouldering
         minutes: 30
         surface: moonboard
-        note: ≥ 3 tentativi per problema · stop quando cala la qualità
+        note: ≥ 3 attempts per problem · stop when quality drops
       - name: Overhead press
         sets: 3
         reps: 6
         rest: 2min
-        note: 6-8 rip. per braccio
+        note: 6-8 per arm
       - name: External rotations
         sets: 2
         reps: 12
         rest: 1min
-        note: 12-15 rip. per lato
+        note: 12-15 per side
 
   - week: 1
     day: wed
@@ -39,7 +39,7 @@ days:
         sets: 3
         reps: 4
         rest: 2min
-        note: 4-6 rip.
+        note: 4-6 reps
       - name: Hollow body hold
         sets: 3
         work: 25s
@@ -52,43 +52,43 @@ days:
         sets: 4
         work: 7s
         rest: 3min
-        note: sloper più inclinato che tieni ≥ 10" a peso corporeo · Carico crescente
+        note: "BM2000: the steepest sloper you hold ≥ 10\" at body weight · increasing load"
       - test: pinch
         sets: 8
         work: 7s
         rest: 1min30s
         sides: L/R
-        note: 7" per mano · carico crescente
+        note: Increasing load
       - test: wrist
         sets: 4
         reps: 6
         rest: 3min
-        note: 6RM · carico crescente · 6 rip. · carico crescente
+        note: Increasing load
       - name: Limit bouldering
         minutes: 30
-        note: Blocchi di qualità al muro commerciale
+        note: Quality problems on the commercial wall
       - name: Weighted pull-ups
         sets: 3
         reps: 4
         rest: 3min
-        note: 4-5 rip.
+        note: 4-5 reps
       - name: Flys (compression)
         sets: 3
         reps: 6
         rest: 1min30s
-        note: 6-8 rip.
+        note: 6-8 reps
       - name: Hanging leg raise
         sets: 3
         reps: 6
         rest: 1min30s
-        note: 6-8 rip.
+        note: 6-8 reps
 
   - week: 1-4
     day: fri
     exercises:
       - name: Hip mobility
         minutes: 10
-        note: 90/90 · rotazioni
+        note: 90/90 · rotations
       - name: Pallof press
         sets: 6
         reps: 10
@@ -100,7 +100,7 @@ days:
     exercises:
       - name: Limit bouldering
         minutes: 60
-        note: Qualità/pattern 70/30 · P1 posizione 5"
+        note: Quality/pattern 70/30 · P1 position 5"
       - name: Isometric flys
         sets: 3
         work: 10s
@@ -109,7 +109,7 @@ days:
         sets: 3
         reps: 6
         rest: 2min
-        note: 6-8 rip.
+        note: 6-8 reps
 
   - week: 2
     day: mon
@@ -118,28 +118,34 @@ days:
         sets: 4
         work: 7s
         rest: 3min
+        grip: Open hand
+        edge: 20
+        hands: 2
         load: 85% open-hand
-        note: margine 2-3"
+        note: 2-3" in reserve
       - name: Max hang
         sets: 2
         work: 7s
         rest: 3min
+        grip: Half crimp
+        edge: 20
+        hands: 2
         load: 85% half-crimp
-        note: margine 2-3"
+        note: 2-3" in reserve
       - name: Limit bouldering
         minutes: 35
         surface: moonboard
-        note: ≥ 3 tentativi per problema · stop quando cala la qualità
+        note: ≥ 3 attempts per problem · stop when quality drops
       - name: Overhead press
         sets: 3
         reps: 6
         rest: 2min
-        note: 6-8 rip. per braccio
+        note: 6-8 per arm
       - name: External rotations
         sets: 2
         reps: 12
         rest: 1min
-        note: 12-15 rip. per lato
+        note: 12-15 per side
 
   - week: 2-3
     day: tue
@@ -148,7 +154,7 @@ days:
         sets: 3
         reps: 4
         rest: 2min
-        note: 4-6 rip.
+        note: 4-6 reps
       - name: Hollow body hold
         sets: 3
         work: 25s
@@ -161,38 +167,41 @@ days:
         sets: 4
         work: 7s
         rest: 3min
+        grip: Sloper
+        hands: 2
         load: 82.5% sloper
-        note: margine 2-3" · stesso sloper del test
+        note: 2-3" in reserve · BM2000 sloper, same as the test
       - name: Pinch block
         sets: 6
         work: 7s
         rest: 1min15s
         sides: L/R
+        grip: Pinch
         load: 75% pinch
       - name: Wrist curl
         sets: 3
         reps: 6
         rest: 2min
         load: 90% wrist
-        note: 6-8 rip.
+        note: 6-8 reps
       - name: Limit bouldering
         minutes: 30
-        note: Blocchi di qualità al muro commerciale
+        note: Quality problems on the commercial wall
       - name: Weighted pull-ups
         sets: 3
         reps: 4
         rest: 3min
-        note: 4-5 rip.
+        note: 4-5 reps
       - name: Flys (compression)
         sets: 3
         reps: 6
         rest: 1min30s
-        note: 6-8 rip.
+        note: 6-8 reps
       - name: Hanging leg raise
         sets: 3
         reps: 6
         rest: 1min30s
-        note: 6-8 rip.
+        note: 6-8 reps
 
   - week: 2-3
     day: thu
@@ -203,19 +212,19 @@ days:
         work: done
         rest: 2min
         set_rest: 5min
-        note: Lettura (flash) → Piedi e tecnica → Lentezza e controllo
+        note: Reading (flash) → feet and technique → slow and controlled
       - name: "Technique: isolated move"
         sets: 10
         reps: 1
         rest: 1min
         sides: L/R
-        note: singolo movimento · Lato Karma → Lato opposto
+        note: Single move · Karma side → opposite side
       - name: "Technique: isolated move"
         sets: 10
         reps: 1
         rest: 1min
         sides: L/R
-        note: singolo movimento · Lato Karma → Lato opposto
+        note: Single move · Karma side → opposite side
 
   - week: 3
     day: mon
@@ -224,28 +233,34 @@ days:
         sets: 4
         work: 7s
         rest: 3min
+        grip: Open hand
+        edge: 20
+        hands: 2
         load: 87.5% open-hand
-        note: margine 2-3"
+        note: 2-3" in reserve
       - name: Max hang
         sets: 2
         work: 7s
         rest: 3min
+        grip: Half crimp
+        edge: 20
+        hands: 2
         load: 87.5% half-crimp
-        note: margine 2-3"
+        note: 2-3" in reserve
       - name: Limit bouldering
         minutes: 35
         surface: moonboard
-        note: ≥ 3 tentativi per problema · stop quando cala la qualità
+        note: ≥ 3 attempts per problem · stop when quality drops
       - name: Overhead press
         sets: 3
         reps: 6
         rest: 2min
-        note: 6-8 rip. per braccio
+        note: 6-8 per arm
       - name: External rotations
         sets: 2
         reps: 12
         rest: 1min
-        note: 12-15 rip. per lato
+        note: 12-15 per side
 
   - week: 3
     day: wed
@@ -254,45 +269,48 @@ days:
         sets: 4
         work: 7s
         rest: 3min
+        grip: Sloper
+        hands: 2
         load: 85% sloper
-        note: margine 2-3" · stesso sloper del test
+        note: 2-3" in reserve · BM2000 sloper, same as the test
       - name: Pinch block
         sets: 6
         work: 7s
         rest: 1min15s
         sides: L/R
+        grip: Pinch
         load: 80% pinch
       - name: Wrist curl
         sets: 3
         reps: 6
         rest: 2min
         load: 92.5% wrist
-        note: 6-8 rip.
+        note: 6-8 reps
       - name: Limit bouldering
         minutes: 30
-        note: Blocchi di qualità al muro commerciale
+        note: Quality problems on the commercial wall
       - name: Weighted pull-ups
         sets: 3
         reps: 4
         rest: 3min
-        note: 4-5 rip.
+        note: 4-5 reps
       - name: Flys (compression)
         sets: 3
         reps: 6
         rest: 1min30s
-        note: 6-8 rip.
+        note: 6-8 reps
       - name: Hanging leg raise
         sets: 3
         reps: 6
         rest: 1min30s
-        note: 6-8 rip.
+        note: 6-8 reps
 
   - week: 3
     day: sat
     exercises:
       - name: Limit bouldering
         minutes: 60
-        note: Qualità/pattern 70/30 · P1 → tocca la tacca
+        note: Quality/pattern 70/30 · P1 → touch the edge
       - name: Isometric flys
         sets: 3
         work: 10s
@@ -301,7 +319,7 @@ days:
         sets: 3
         reps: 6
         rest: 2min
-        note: 6-8 rip.
+        note: 6-8 reps
 
   - week: 4
     day: mon
@@ -310,28 +328,34 @@ days:
         sets: 2
         work: 7s
         rest: 3min
+        grip: Open hand
+        edge: 20
+        hands: 2
         load: 80% open-hand
-        note: margine ampio
+        note: Plenty in reserve
       - name: Max hang
         sets: 1
         work: 7s
         rest: 3min
+        grip: Half crimp
+        edge: 20
+        hands: 2
         load: 80% half-crimp
-        note: margine ampio
+        note: Plenty in reserve
       - name: Limit bouldering
         minutes: 20
         surface: moonboard
-        note: Facile
+        note: Easy
       - name: Overhead press
         sets: 2
         reps: 6
         rest: 2min
-        note: 6-8 rip. per braccio
+        note: 6-8 per arm
       - name: External rotations
         sets: 2
         reps: 12
         rest: 1min
-        note: 12-15 rip. per lato
+        note: 12-15 per side
 
   - week: 4
     day: tue
@@ -340,7 +364,6 @@ days:
         sets: 2
         reps: 4
         rest: 2min
-        note: 4 rip.
       - name: Hollow body hold
         sets: 2
         work: 25s
@@ -353,38 +376,40 @@ days:
         sets: 2
         work: 7s
         rest: 3min
+        grip: Sloper
+        hands: 2
         load: 75% sloper
-        note: margine ampio · stesso sloper del test
+        note: Plenty in reserve · BM2000 sloper, same as the test
       - name: Pinch block
         sets: 4
         work: 7s
         rest: 1min15s
         sides: L/R
+        grip: Pinch
         load: 70% pinch
       - name: Wrist curl
         sets: 2
         reps: 8
         rest: 2min
         load: 80% wrist
-        note: 8 rip.
       - name: Limit bouldering
         minutes: 15
-        note: Facile
+        note: Easy
       - name: Weighted pull-ups
         sets: 2
         reps: 4
         rest: 3min
-        note: 4-5 rip.
+        note: 4-5 reps
       - name: Flys (compression)
         sets: 2
         reps: 6
         rest: 1min30s
-        note: 6-8 rip.
+        note: 6-8 reps
       - name: Hanging leg raise
         sets: 2
         reps: 6
         rest: 1min30s
-        note: 6-8 rip.
+        note: 6-8 reps
 
   - week: 4
     day: thu
@@ -395,26 +420,26 @@ days:
         work: done
         rest: 2min
         set_rest: 5min
-        note: Lettura (flash) → Piedi e tecnica → Lentezza e controllo
+        note: Reading (flash) → feet and technique → slow and controlled
       - name: "Technique: isolated move"
         sets: 6
         reps: 1
         rest: 1min
         sides: L/R
-        note: singolo movimento · Lato Karma → Lato opposto
+        note: Single move · Karma side → opposite side
       - name: "Technique: isolated move"
         sets: 6
         reps: 1
         rest: 1min
         sides: L/R
-        note: singolo movimento · Lato Karma → Lato opposto
+        note: Single move · Karma side → opposite side
 
   - week: 4
     day: sat
     exercises:
       - name: Limit bouldering
         minutes: 30
-        note: Solo posizioni · P1 posizione
+        note: Positions only · P1
       - name: Isometric flys
         sets: 2
         work: 10s
@@ -423,4 +448,4 @@ days:
         sets: 2
         reps: 6
         rest: 2min
-        note: 6-8 rip.
+        note: 6-8 reps

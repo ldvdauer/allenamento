@@ -8,14 +8,16 @@
 
 ## Every day
 - **Home** shows today's training, or "Rest day" with **+ Exercise** to train anyway. "Log session" records something done outside the app.
-- **Start** opens the list of exercises. Each exercise has its own timer: when it ends you log how it went (minutes, load, RPE, surface and grade, note) and go back to the list.
-- During the session you can add exercises or tests. At the end you give the overall RPE and feeling.
+- Every exercise of today has its **▶**: it starts that exercise's timer. When it ends you log how it went (sets done, missed reps, minutes, load, RPE, surface and grade, note) and you are back on the day; done exercises show ✓ (tap it to redo).
+- There is no session to start or finish: you can add, remove and reorder exercises at any time, also halfway through. **Rate the day** (optional) adds overall RPE, feeling and notes.
+- Timer sounds: short beeps in the last 3 seconds, a long tone at the end of each set, two long tones at the end of the exercise. On iPhone they play even with the silent switch on (iOS 17 or later); the volume still counts.
+- In exercises with reps the timer shows how many to do ("6 reps") instead of the time. Skipped sets are counted for you in "Sets done".
 - If you leave halfway, Home offers "Resume".
 
 ## Planning
 - **Calendar**: tap a day to see or change its exercises (+ Exercise, + Test). Drag "≡" to reorder them. A day with no exercises is a rest day: there is nothing to create or delete.
 - **Day…** on a day: title, move it to another date (days you created), copy its exercises to another date, or clear it.
-- Tap an exercise to set its parameters *in that session*: rounds, seconds or reps, rests, L/R, reference test and %, surface, note. With a timer the duration is calculated; minutes are typed only for "Duration only" exercises.
+- Tap an exercise to set its parameters *on that day*: rounds, seconds or reps, rests, L/R, reference test and %, surface, note; for Fingers exercises also grip, edge (mm) and one or two hands. With a timer the duration is calculated; minutes are typed only for "Duration only" exercises.
 - **Programmes** (More): import a `.yaml` file (see [Programme files](#programme-files)), choose the day of the first session and find it in the calendar. Any day of the week works: the other sessions keep their order and the days between them.
 - "Copy to a date" adds the exercises of a day to another day.
 - A programme can be exported as `.yaml` (More → the programme → Export .yaml), edited and imported again.
@@ -23,7 +25,7 @@
 ## Loads and tests
 - An exercise linked to a test with a % shows the kg computed from the latest result.
 - **Progression**: if you log load and RPE, next time the app suggests the load (rule in More → Load progression).
-- **+ Test** in a session adds a test as an exercise: the result updates the max straight away.
+- **+ Test** on a day adds a test as an exercise: the result updates the max straight away.
 - Hangboard hangs are two-handed; lifts (max lift, pinch) have one test per side, L and R.
 
 ## Categories
@@ -46,12 +48,12 @@ planned one; load (minutes × RPE); effort and feeling; surfaces and grades; loa
 Tap a chart to see the values; the table is underneath.
 
 ## During the trial
-- **Note** (bottom bar, or in the session in progress): jot down what is wrong. Notes go to More → Notebook, where they can be exported.
+- **Note** (bottom bar): jot down what is wrong. Notes go to More → Notebook, where they can be exported.
 - If "A newer version of the app is available." shows up, tap Update.
 
 ## Good to know
 - It works offline after the first launch; the automatic backup resumes when the network is back and the app is open.
-- The timer does not run with the screen off: during a session the app keeps the screen on.
+- The timer does not run with the screen off: while a timer runs the app keeps the screen on.
 - Numbers use a decimal point (4.5 kg); a comma is still accepted when typing.
 - Data is on the phone only. Without a backup, losing the phone means losing the data.
 
@@ -81,6 +83,15 @@ days:
         rest: 1min15s
         sides: L/R
         load: 75% pinch
+        grip: Pinch
+      - name: Max hang
+        sets: 4
+        work: 7s
+        rest: 3min
+        grip: Half crimp     # Fingers only: grip, edge (mm), hands (1 or 2)
+        edge: 20
+        hands: 2
+        load: 85% half-crimp
       - name: Flash sets
         sets: 6
         rounds: 3            # rounds in each set
@@ -109,6 +120,7 @@ days:
 - `minutes`: only for exercises without a timer (required unless it is a standard exercise). With a timer the minutes are calculated from its parameters; with `reps` or `work: done` each round counts about 45 s.
 - Durations: `7s`, `45s`, `3min`, `1min30s` (also `3'` and `1'30"`).
 - `load`: a percentage of one of your tests: `open-hand`, `half-crimp`, `sloper`, `pinch`, `lift`, `wrist`, `pull-up`, `one-arm`. The kg are calculated from the latest result. `test:` uses the same names.
+- `grip`, `edge`, `hands` (Fingers exercises only): Half crimp, Full crimp, Open hand, Open hand 3 fingers, Half crimp 3 fingers, 2 fingers front/middle/back, Sloper, Pinch; edge depth in mm; 1 or 2 hands.
 - `surface`: one of your surfaces (More → Climbing surfaces), by key or by name.
 - If something is wrong the programme is not imported, and the app lists every problem with the day and exercise it refers to.
 
