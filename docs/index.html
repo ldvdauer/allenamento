@@ -464,14 +464,14 @@ review|mental|Attempt review|10|`.split('\n').map(line => {
   const startForFirst = (plan, iso) => addDays(iso, -firstOffset(plan));
 
   /* ---- Programmi in YAML ----
-     Un file di testo che una persona può rileggere e correggere: una voce per sessione, settimane come intervalli ("1-3"),
+     Un file di testo che una persona può rileggere e correggere: una voce per giornata, settimane come intervalli ("1-3"),
      parametri espliciti per ogni esercizio. Nel modello interno ogni esercizio di una sessione resta un'istanza privata. */
   const YAML_DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
   // Nomi leggibili dei test nel file → chiavi interne (vale anche la chiave interna stessa).
   const YAML_REFS = { 'open-hand': 'oh', 'half-crimp': 'hc', sloper: 'sl', pinch: 'pinch', lift: 'lift', wrist: 'wrist', 'pull-up': 'pull', 'one-arm': 'onearm' };
   const yamlRefName = ref => Object.keys(YAML_REFS).find(k => YAML_REFS[k] === ref) || ref;
-  const PROGRAMME_FIELDS = ['title', 'weeks', 'first_session', 'sessions'];
-  const SESSION_FIELDS = ['week', 'day', 'title', 'exercises'];
+  const PROGRAMME_FIELDS = ['title', 'weeks', 'first_session', 'days', 'sessions']; // "sessions": nome dei file scritti prima di "days"
+  const DAY_FIELDS = ['week', 'day', 'title', 'exercises'];
   const EXERCISE_FIELDS = ['name', 'test', 'minutes', 'sets', 'rounds', 'work', 'reps', 'rest', 'set_rest', 'sides', 'load', 'surface', 'note'];
 
   /** "7s", "45 s", "3min", "3 min", "1min30s", "2'", "1'30\"", oppure un numero (secondi). Restituisce i secondi o null. */
@@ -533,21 +533,23 @@ review|mental|Attempt review|10|`.split('\n').map(line => {
     const fail = () => Object.assign(new Error(errors.length === 1 ? errors[0] : `The programme has ${errors.length} errors.`), { errors });
     const isObj = v => !!v && typeof v === 'object' && !Array.isArray(v);
     const unknown = (o, allowed, where) => { for (const k of Object.keys(o)) if (!allowed.includes(k)) err(where, `unknown field "${k}"`); };
-    if (!isObj(doc)) { err('', 'the file must start with "title:", "weeks:" and "sessions:"'); throw fail(); }
+    if (!isObj(doc)) { err('', 'the file must start with "title:", "weeks:" and "days:"'); throw fail(); }
     if (Array.isArray(doc.weeks) && doc.weeks.length && doc.isForSelf !== undefined) { err('', 'Blok Sessions plans are no longer supported: use the YAML format described in the guide'); throw fail(); }
     unknown(doc, PROGRAMME_FIELDS, '');
     const title = typeof doc.title === 'string' && doc.title.trim() ? doc.title.trim().slice(0, 80) : (err('title', 'required'), 'Programme');
     const nWeeks = Number.isInteger(doc.weeks) && doc.weeks >= 1 && doc.weeks <= 52 ? doc.weeks : (err('weeks', 'must be a whole number from 1 to 52'), 0);
     let firstSession = null;
     if (doc.first_session !== undefined) { firstSession = typeof doc.first_session === 'string' ? validISO(doc.first_session) : null; if (!firstSession) err('first_session', 'must be a date like 2026-11-18'); }
-    if (!Array.isArray(doc.sessions) || !doc.sessions.length) err('sessions', 'required: a list of sessions');
+    if (doc.days !== undefined && doc.sessions !== undefined) err('', 'use either days or sessions (the old name), not both');
+    const dayList = doc.days !== undefined ? doc.days : doc.sessions;
+    if (!Array.isArray(dayList) || !dayList.length) err('days', 'required: a list of training days');
     const surfaces = opts.surfaces || DEFAULT_SURFACES;
     const weeks = Array.from({ length: nWeeks }, () => Array.from({ length: 7 }, () => ({ sessions: [] })));
     const taken = new Map(), exercises = [];
-    (Array.isArray(doc.sessions) ? doc.sessions : []).forEach((s, si) => {
-      const label = isObj(s) && s.day ? `session ${si + 1} (week ${s.week}, ${s.day})` : `session ${si + 1}`;
+    (Array.isArray(dayList) ? dayList : []).forEach((s, si) => {
+      const label = isObj(s) && s.day ? `day ${si + 1} (week ${s.week}, ${s.day})` : `day ${si + 1}`;
       if (!isObj(s)) return err(label, 'must be a block with week, day and exercises');
-      unknown(s, SESSION_FIELDS, label);
+      unknown(s, DAY_FIELDS, label);
       const ws = nWeeks ? parseWeeks(s.week, nWeeks) : null;
       if (!ws && nWeeks) err(label, `week: "${s.week}" is not valid (examples: 2, "1-3", "1,3", all; weeks go from 1 to ${nWeeks})`);
       const day = YAML_DAYS.indexOf(String(s.day).toLowerCase().slice(0, 3));
@@ -558,7 +560,7 @@ review|mental|Attempt review|10|`.split('\n').map(line => {
       if (!ws || day < 0) return;
       for (const w of ws) {
         const k = (w - 1) * 7 + day;
-        if (taken.has(k)) { err(label, `week ${w}, ${YAML_DAYS[day]} already has a session (${taken.get(k)}): one session per day`); continue; }
+        if (taken.has(k)) { err(label, `week ${w}, ${YAML_DAYS[day]} is already described (${taken.get(k)}): put all the exercises of a day together`); continue; }
         taken.set(k, label);
         if (items.some(x => !x)) continue;
         const blocks = items.map(({ e, minutes, note }) => {
@@ -626,7 +628,7 @@ review|mental|Attempt review|10|`.split('\n').map(line => {
     }
   }
 
-  /** Programma → testo YAML. Le sessioni identiche in più settimane (stesso giorno) diventano una sola voce con "week: 1-3". */
+  /** Programma → testo YAML. Le giornate identiche in più settimane (stesso giorno) diventano una sola voce con "week: 1-3". */
   function exportYaml(plan, exMap) {
     const yaml = YAML_LIB();
     const item = b => {
@@ -657,7 +659,7 @@ review|mental|Attempt review|10|`.split('\n').map(line => {
     })));
     groups.sort((a, b) => a.weeks[0] - b.weeks[0] || a.day - b.day);
     const doc = { title: plan.title, weeks: plan.weeks.length, first_session: firstSessionDate(plan),
-      sessions: groups.map(g => Object.assign({ week: fmtWeeks(g.weeks), day: YAML_DAYS[g.day] }, g.body)) };
+      days: groups.map(g => Object.assign({ week: fmtWeeks(g.weeks), day: YAML_DAYS[g.day] }, g.body)) };
     return '# Allenamento programme. Format: https://github.com/ldvdauer/allenamento/blob/main/GUIDE.md#programme-files\n' +
       yaml.dump(doc, { lineWidth: -1, noRefs: true, quotingType: '"' }).replace(/\n  - week:/g, '\n\n  - week:');
   }
@@ -1103,7 +1105,7 @@ review|mental|Attempt review|10|`.split('\n').map(line => {
 
   /* ---------- Stato e persistenza ---------- */
   // Primo avvio: nessun piano precaricato, ogni utente importa o crea i propri.
-  const fresh = () => migrate({ v: 8, plans: [], activePlan: null, exercises: {}, logs: [], tests: [] });
+  const fresh = () => migrate({ v: 9, plans: [], activePlan: null, exercises: {}, logs: [], tests: [] });
   /** I test da cui dipendono i kg degli esercizi (e il peso corporeo) devono esistere nella sezione Test. */
   function ensureTests(s) {
     const need = new Set(['bw'].concat(Object.values(s.exercises).filter(e => e.load).flatMap(e => C.refKeys(e.load.ref))));
@@ -1200,7 +1202,8 @@ review|mental|Attempt review|10|`.split('\n').map(line => {
       for (const p of s.plans) for (const w of p.weeks) for (const d of w) fix(d.sessions);
       fix(s.extras);
     }
-    s.v = 8;
+    if (fromV < 9) pruneEmpty(s); // v9: niente più sessioni vuote
+    s.v = 9;
     return s;
   }
   let rescued = false;
@@ -1217,7 +1220,13 @@ review|mental|Attempt review|10|`.split('\n').map(line => {
     return fresh();
   }
   let storeOk = true;
+  /** Il giorno è l'unità di allenamento: senza esercizi è riposo, quindi non resta nessun contenitore vuoto. */
+  function pruneEmpty(st) {
+    st.extras = st.extras.filter(x => x.blocks.length);
+    for (const p of st.plans) for (const w of p.weeks) for (const d of w) d.sessions = d.sessions.filter(x => x.blocks.length);
+  }
   function save() {
+    pruneEmpty(S);
     try { localStorage.setItem(KEY, JSON.stringify(S)); storeOk = true; scheduleCloud(); }
     catch (e) {
       console.warn('[store] write failed', e);
@@ -1380,6 +1389,24 @@ review|mental|Attempt review|10|`.split('\n').map(line => {
     return null;
   }
   /** Sessioni di una data: quelle di tutti i programmi importati più quelle create a mano. */
+  /** Aggiunge un esercizio alla giornata `iso`: a quella in programma se c'è, altrimenti la crea. */
+  function addToDay(iso, tpl) {
+    const r = refsOn(iso)[0];
+    if (r) addBlock(sessOf(r), tpl);
+    else { const x = { id: C.uid(), date: iso, type: 'wall', period: 'base', title: '', blocks: [] }; addBlock(x, tpl); S.extras.push(x); }
+    save(); render();
+  }
+  /** Porta degli esercizi in una giornata: si aggiungono in fondo a quella che c'è già, altrimenti diventano una giornata nuova. */
+  function mergeIntoDay(iso, blocks, title) {
+    const r = refsOn(iso)[0];
+    if (r) { const t = sessOf(r); t.blocks.push(...blocks); if (!t.title && title) t.title = title; }
+    else S.extras.push({ id: C.uid(), date: iso, type: 'wall', period: 'base', title: title || '', blocks });
+  }
+  const dayOf = r => (r.x ? r.x.date : C.dateOf(r.p, r.w, r.d));
+  function restCard(iso, edit) {
+    return h('div', { class: 'card' }, h('div', { class: 'big' }, 'Rest day'), h('p', { class: 'sub' }, 'Nothing planned. Add an exercise to train on this day.'),
+      h('div', { class: 'btns' }, btn('+ Exercise', () => pickExercise(tpl => addToDay(iso, tpl)), 'sm' + (edit ? '' : ' pri')), btn('+ Test', () => pickTest(tpl => addToDay(iso, tpl)), 'sm')));
+  }
   function refsOn(iso) {
     const out = [];
     for (const p of S.plans) { const pos = C.locate(p, iso); if (pos) p.weeks[pos.w][pos.d].sessions.forEach((_, si) => out.push({ p, w: pos.w, d: pos.d, si })); }
@@ -1481,11 +1508,11 @@ review|mental|Attempt review|10|`.split('\n').map(line => {
     return h('div', { class: 'card' },
       h('div', { class: 'row' }, h('div', { class: 'grow big', style: 'font-size:17px' }, s.title || 'Session'),
         done ? h('span', { class: 'tag ok' }, 'Done') : null, h('span', { class: 'tag' }, C.sessionMinutes(s) + ' min')),
-      list, s.blocks.length ? null : h('p', { class: 'sub' }, 'No exercises yet: add them here or during the session.'),
+      list,
       h('div', { class: 'btns' },
         btn(done ? 'Repeat' : 'Start', () => startSession(r), 'pri'),
         edit ? [btn('+ Exercise', () => pickExercise(tpl => { addBlock(s, tpl); save(); render(); }), 'sm'), btn('+ Test', () => pickTest(tpl => { addBlock(s, tpl); save(); render(); }), 'sm'),
-          btn('Edit', () => sessionSheet(r), 'sm')] : btn('Edit', () => go('calendar-' + (r.x ? r.x.date : C.dateOf(r.p, r.w, r.d))), 'sm')));
+          btn('Day…', () => daySheet(r), 'sm')] : btn('Edit', () => go('calendar-' + dayOf(r)), 'sm')));
   }
   const climbText = c => surfName(c.surface) + (c.top ? ' ' + fmtG(c.top) : '') + (c.sends != null ? ` · ${c.sends} ${c.sends === 1 ? 'send' : 'sends'}` : '');
   const logCard = l => h('div', { class: 'card tap', onclick: () => logSheet(l) },
@@ -1515,32 +1542,19 @@ review|mental|Attempt review|10|`.split('\n').map(line => {
     else if (S.logs.length && (since == null || since >= 7))
       out.push(h('div', { class: 'card row' }, h('div', { class: 'grow sub' }, since == null ? 'Your data has no backup yet.' : `Last backup ${since} days ago.`), btn('Save backup', doBackup, 'sm')));
     refs.forEach(r => out.push(sessionCard(r, false)));
-    if (!refs.length) out.push(h('div', { class: 'card' }, h('div', { class: 'big' }, 'Rest day'), h('p', { class: 'sub', style: 'margin-bottom:0' }, 'No session planned today.')));
-    out.push(h('div', { class: 'btns' }, btn('Create session', () => newSessionSheet(t), 'pri'), btn('Log session', () => logSheet(null))));
+    if (!refs.length) out.push(restCard(t, false));
+    out.push(h('div', { class: 'btns' }, btn('Log session', () => logSheet(null), 'sm')));
     return out;
   }
 
   /* ---------- Sessioni extra e calendario ---------- */
-  function showDate(iso) { // dopo aver creato o spostato una sessione si apre quel giorno nel calendario, dove si aggiungono gli esercizi
-    go('calendar-' + iso);
-  }
-  function newSessionSheet(dateDefault) {
-    const date = h('input', { type: 'date', value: dateDefault }), title = h('input', { placeholder: 'E.g. Board session with friends' });
-    const ov = openSheet('Create session', [h('div', { class: 'cols' }, field('Date', date), field('Title (optional)', title)),
-      btn('Create session', () => {
-        const iso = C.validISO(date.value);
-        if (!iso) return toast('Pick a valid date.');
-        S.extras.push({ id: C.uid(), date: iso, type: 'wall', period: 'base', title: title.value.trim().slice(0, 80), blocks: [] });
-        save(); ov.remove(); showDate(iso);
-      }, 'pri block')]);
-  }
   function copyToDateSheet(r) {
     const s = sessOf(r), date = h('input', { type: 'date', value: C.todayISO() });
-    const ov = openSheet('Copy to a date', [h('p', { class: 'sub' }, `"${autoTitle(s)}" is copied to another date with the same exercises.`), field('Date', date),
+    const ov = openSheet('Copy to a date', [h('p', { class: 'sub' }, `The exercises of "${autoTitle(s)}" are copied to another day. If that day already has exercises, they are added after them.`), field('Date', date),
       btn('Copy', () => {
         const iso = C.validISO(date.value);
         if (!iso) return toast('Pick a valid date.');
-        const copy = { ...C.cloneSession(s), date: iso, title: s.title || '' }; privatize(S, copy); S.extras.push(copy);
+        const copy = C.cloneSession(s); privatize(S, copy); mergeIntoDay(iso, copy.blocks, s.title || '');
         save(); ov.remove(); toast(`Copied to ${wdOf(iso)} ${fmtDate(iso)}.`); render();
       }, 'pri block')]);
   }
@@ -1561,7 +1575,7 @@ review|mental|Attempt review|10|`.split('\n').map(line => {
       if (dots.length < 3 && S.logs.some(l => l.date === iso && !ids.has(l.sid))) dots.push(h('i', { class: 'ok' }));
       const d = C.fromISO(iso);
       return h('button', { type: 'button', class: 'cal-d' + (iso.slice(0, 7) === calMonth.slice(0, 7) ? '' : ' out') + (iso === t ? ' today' : '') + (iso === calSel ? ' sel' : ''),
-        'aria-label': `${WD_FULL[wdIdx(iso)]} ${d.getDate()} ${MONTHS_FULL[d.getMonth()]}, ${refs.length} sessions`, 'aria-pressed': iso === calSel ? 'true' : 'false',
+        'aria-label': `${WD_FULL[wdIdx(iso)]} ${d.getDate()} ${MONTHS_FULL[d.getMonth()]}${refs.length ? ', training' : ''}`, 'aria-pressed': iso === calSel ? 'true' : 'false',
         onclick: () => go('calendar-' + iso) }, d.getDate(), h('span', { class: 'dots' }, dots));
     };
     const refs = refsOn(calSel), logs = S.logs.filter(l => l.date === calSel);
@@ -1570,10 +1584,8 @@ review|mental|Attempt review|10|`.split('\n').map(line => {
         btn('Today', () => { calMonth = t.slice(0, 7) + '-01'; go('calendar-' + t); }, 'sm'), btn('›', () => shift(1), 'sm')),
       h('div', { class: 'cal' }, ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map(x => h('div', { class: 'wh' }, x)), cells.map(cell)),
       h('div', { class: 'cal-key sub' }, h('span', {}, h('i', {}), 'planned'), h('span', {}, h('i', { class: 'ok' }), 'done')),
-      h('div', { class: 'row', style: 'margin-top:18px' }, h('h2', { class: 'grow', style: 'margin:0;text-transform:capitalize' }, `${WD_FULL[wdIdx(calSel)]} ${fmtDate(calSel)}`),
-        btn('Create session', () => newSessionSheet(calSel), 'sm pri')),
-      refs.map(r => sessionCard(r, true)),
-      refs.length ? null : h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin:0' }, 'No session planned.')),
+      h('h2', { style: 'margin-top:18px;text-transform:capitalize' }, `${WD_FULL[wdIdx(calSel)]} ${fmtDate(calSel)}`),
+      refs.length ? refs.map(r => sessionCard(r, true)) : restCard(calSel, true),
       logs.length ? [h('h2', {}, 'Logged'), h('div', { class: 'sub' }, 'Tap to view or edit.'), logs.map(logCard)] : null];
   }
 
@@ -1632,21 +1644,22 @@ review|mental|Attempt review|10|`.split('\n').map(line => {
   }
 
 
-  function sessionSheet(r) {
-    const s = sessOf(r), title = h('input', { value: s.title || '', placeholder: 'Session' }), date = r.x ? h('input', { type: 'date', value: r.x.date }) : null;
-    const ov = openSheet('Session', [field('Title', title), r.x ? field('Date', date) : null,
+  /** Titolo, spostamento (solo giornate create a mano), copia e svuotamento di una giornata. */
+  function daySheet(r) {
+    const s = sessOf(r), title = h('input', { value: s.title || '', placeholder: 'Optional' }), date = r.x ? h('input', { type: 'date', value: r.x.date }) : null;
+    const ov = openSheet('Day', [field('Title', title), r.x ? field('Move to', date) : null,
+      r.x ? h('p', { class: 'sub' }, 'If the new day already has exercises, these are added after them.') : null,
       btn('Save', () => {
         const iso = r.x ? C.validISO(date.value) : null, moved = iso && iso !== r.x.date;
         s.title = title.value.trim().slice(0, 80);
-        if (iso) r.x.date = iso;
+        if (moved) { S.extras = S.extras.filter(e => e !== r.x); mergeIntoDay(iso, r.x.blocks, s.title); }
         save(); ov.remove();
-        if (moved) showDate(iso); else render();
+        if (moved) go('calendar-' + iso); else render();
       }, 'pri block'),
       h('div', { class: 'btns' }, btn('Copy to a date…', () => { ov.remove(); copyToDateSheet(r); }, 'sm'),
-        btn('Delete session', async () => {
-          if (!await confirmDlg('Delete this session? Its logged entries stay.', 'Delete')) return;
-          if (r.x) S.extras = S.extras.filter(e => e !== r.x); else r.p.weeks[r.w][r.d].sessions.splice(r.si, 1);
-          save(); ov.remove(); render();
+        btn('Clear the day', async () => {
+          if (!await confirmDlg('Remove all exercises from this day? Logged entries stay.', 'Remove')) return;
+          s.blocks = []; save(); ov.remove(); render();
         }, 'sm danger'))]);
   }
   /** Parametri di un esercizio in questa sessione. Valgono solo qui: gli esercizi di base non hanno descrizioni né valori fissi. */
@@ -1948,7 +1961,7 @@ review|mental|Attempt review|10|`.split('\n').map(line => {
         cloudOn() ? [btn('Restore from GitHub', cloudRestore, 'sm'), btn('Disconnect', async () => { if (await confirmDlg('Disconnect GitHub? The token is deleted from this device; backups already uploaded stay in the repository.', 'Disconnect')) { S.settings.gh = null; clearTimeout(cloudTimer); save(); render(); } }, 'sm danger')] : null));
   }
   /* ---------- Taccuino: note al volo durante la prova dell'app, con il contesto per poterle riprodurre ---------- */
-  const VERSION = '20261118.0929';
+  const VERSION = '20261118.0954';
   function noteSheet() {
     const text = h('textarea', { class: 'inp', placeholder: 'What is wrong, or what would you like to be different?' });
     const where = P ? 'timer: ' + P.steps[P.idx].name : R ? 'session in progress' : (location.hash.slice(1) || 'home');

@@ -7,16 +7,17 @@
 4. **More → Automatic backup**: connect a private GitHub repository, or use "Save backup" every now and then.
 
 ## Every day
-- **Home** shows today's session, or "Rest day". From here you can also create a session or log one already done.
+- **Home** shows today's training, or "Rest day" with **+ Exercise** to train anyway. "Log session" records something done outside the app.
 - **Start** opens the list of exercises. Each exercise has its own timer: when it ends you log how it went (minutes, load, RPE, surface and grade, note) and go back to the list.
 - During the session you can add exercises or tests. At the end you give the overall RPE and feeling.
 - If you leave halfway, Home offers "Resume".
 
 ## Planning
-- **Calendar**: tap a day to view, create or edit sessions. Drag "≡" to reorder exercises.
+- **Calendar**: tap a day to see or change its exercises (+ Exercise, + Test). Drag "≡" to reorder them. A day with no exercises is a rest day: there is nothing to create or delete.
+- **Day…** on a day: title, move it to another date (days you created), copy its exercises to another date, or clear it.
 - Tap an exercise to set its parameters *in that session*: rounds, seconds or reps, rests, L/R, reference test and %, surface, note. With a timer the duration is calculated; minutes are typed only for "Duration only" exercises.
 - **Programmes** (More): import a `.yaml` file (see [Programme files](#programme-files)), choose the day of the first session and find it in the calendar. Any day of the week works: the other sessions keep their order and the days between them.
-- "Copy to a date" duplicates a session on another day.
+- "Copy to a date" adds the exercises of a day to another day.
 - A programme can be exported as `.yaml` (More → the programme → Export .yaml), edited and imported again.
 
 ## Loads and tests
@@ -47,9 +48,9 @@ A programme is a YAML text file: easy to read, to review and to change. Lines st
 ```yaml
 title: Karma - Fase 1
 weeks: 4                     # how many weeks the programme lasts
-first_session: "2026-11-18"  # optional: suggested date of the first session
+first_session: "2026-11-18"  # optional: suggested date of the first training day
 
-sessions:
+days:
   - week: 1-3                # 2, "1-3", "1,3", "1-2,4" or all
     day: tue                 # mon tue wed thu fri sat sun
     title: Fingers           # optional
@@ -85,13 +86,14 @@ sessions:
 ```
 
 **Rules**
-- One session per day. The same session in several weeks is written once, with a range in `week`.
+- Each entry is a training day: all its exercises go together. The same day in several weeks is written once, with a range in `week`. Days that are not listed are rest days.
+- Files written with `sessions:` instead of `days:` still work.
 - `name` is free text. Names of the standard exercises (Exercise library) are recognised, so time is counted in the right category in Analytics.
 - Timer: `sets` plus either `work` (a time, or `done`) or `reps`. `rest`, `rounds` + `set_rest` and `sides: L/R` are optional.
 - `minutes`: only for exercises without a timer (required unless it is a standard exercise). With a timer the minutes are calculated from its parameters; with `reps` or `work: done` each round counts about 45 s.
 - Durations: `7s`, `45s`, `3min`, `1min30s` (also `3'` and `1'30"`).
 - `load`: a percentage of one of your tests: `open-hand`, `half-crimp`, `sloper`, `pinch`, `lift`, `wrist`, `pull-up`, `one-arm`. The kg are calculated from the latest result. `test:` uses the same names.
 - `surface`: one of your surfaces (More → Climbing surfaces), by key or by name.
-- If something is wrong the programme is not imported, and the app lists every problem with the session and exercise it refers to.
+- If something is wrong the programme is not imported, and the app lists every problem with the day and exercise it refers to.
 
 Blok Sessions files (`.blokplan`) are no longer supported.

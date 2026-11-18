@@ -2,7 +2,7 @@
 title: Piano di esempio
 weeks: 3
 first_session: "2026-11-16"
-sessions:
+days:
 
   - week: 1
     day: mon

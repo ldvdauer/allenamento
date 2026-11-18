@@ -301,14 +301,14 @@ review|mental|Attempt review|10|`.split('\n').map(line => {
   const startForFirst = (plan, iso) => addDays(iso, -firstOffset(plan));
 
   /* ---- Programmi in YAML ----
-     Un file di testo che una persona può rileggere e correggere: una voce per sessione, settimane come intervalli ("1-3"),
+     Un file di testo che una persona può rileggere e correggere: una voce per giornata, settimane come intervalli ("1-3"),
      parametri espliciti per ogni esercizio. Nel modello interno ogni esercizio di una sessione resta un'istanza privata. */
   const YAML_DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
   // Nomi leggibili dei test nel file → chiavi interne (vale anche la chiave interna stessa).
   const YAML_REFS = { 'open-hand': 'oh', 'half-crimp': 'hc', sloper: 'sl', pinch: 'pinch', lift: 'lift', wrist: 'wrist', 'pull-up': 'pull', 'one-arm': 'onearm' };
   const yamlRefName = ref => Object.keys(YAML_REFS).find(k => YAML_REFS[k] === ref) || ref;
-  const PROGRAMME_FIELDS = ['title', 'weeks', 'first_session', 'sessions'];
-  const SESSION_FIELDS = ['week', 'day', 'title', 'exercises'];
+  const PROGRAMME_FIELDS = ['title', 'weeks', 'first_session', 'days', 'sessions']; // "sessions": nome dei file scritti prima di "days"
+  const DAY_FIELDS = ['week', 'day', 'title', 'exercises'];
   const EXERCISE_FIELDS = ['name', 'test', 'minutes', 'sets', 'rounds', 'work', 'reps', 'rest', 'set_rest', 'sides', 'load', 'surface', 'note'];
 
   /** "7s", "45 s", "3min", "3 min", "1min30s", "2'", "1'30\"", oppure un numero (secondi). Restituisce i secondi o null. */
@@ -370,21 +370,23 @@ review|mental|Attempt review|10|`.split('\n').map(line => {
     const fail = () => Object.assign(new Error(errors.length === 1 ? errors[0] : `The programme has ${errors.length} errors.`), { errors });
     const isObj = v => !!v && typeof v === 'object' && !Array.isArray(v);
     const unknown = (o, allowed, where) => { for (const k of Object.keys(o)) if (!allowed.includes(k)) err(where, `unknown field "${k}"`); };
-    if (!isObj(doc)) { err('', 'the file must start with "title:", "weeks:" and "sessions:"'); throw fail(); }
+    if (!isObj(doc)) { err('', 'the file must start with "title:", "weeks:" and "days:"'); throw fail(); }
     if (Array.isArray(doc.weeks) && doc.weeks.length && doc.isForSelf !== undefined) { err('', 'Blok Sessions plans are no longer supported: use the YAML format described in the guide'); throw fail(); }
     unknown(doc, PROGRAMME_FIELDS, '');
     const title = typeof doc.title === 'string' && doc.title.trim() ? doc.title.trim().slice(0, 80) : (err('title', 'required'), 'Programme');
     const nWeeks = Number.isInteger(doc.weeks) && doc.weeks >= 1 && doc.weeks <= 52 ? doc.weeks : (err('weeks', 'must be a whole number from 1 to 52'), 0);
     let firstSession = null;
     if (doc.first_session !== undefined) { firstSession = typeof doc.first_session === 'string' ? validISO(doc.first_session) : null; if (!firstSession) err('first_session', 'must be a date like 2026-11-18'); }
-    if (!Array.isArray(doc.sessions) || !doc.sessions.length) err('sessions', 'required: a list of sessions');
+    if (doc.days !== undefined && doc.sessions !== undefined) err('', 'use either days or sessions (the old name), not both');
+    const dayList = doc.days !== undefined ? doc.days : doc.sessions;
+    if (!Array.isArray(dayList) || !dayList.length) err('days', 'required: a list of training days');
     const surfaces = opts.surfaces || DEFAULT_SURFACES;
     const weeks = Array.from({ length: nWeeks }, () => Array.from({ length: 7 }, () => ({ sessions: [] })));
     const taken = new Map(), exercises = [];
-    (Array.isArray(doc.sessions) ? doc.sessions : []).forEach((s, si) => {
-      const label = isObj(s) && s.day ? `session ${si + 1} (week ${s.week}, ${s.day})` : `session ${si + 1}`;
+    (Array.isArray(dayList) ? dayList : []).forEach((s, si) => {
+      const label = isObj(s) && s.day ? `day ${si + 1} (week ${s.week}, ${s.day})` : `day ${si + 1}`;
       if (!isObj(s)) return err(label, 'must be a block with week, day and exercises');
-      unknown(s, SESSION_FIELDS, label);
+      unknown(s, DAY_FIELDS, label);
       const ws = nWeeks ? parseWeeks(s.week, nWeeks) : null;
       if (!ws && nWeeks) err(label, `week: "${s.week}" is not valid (examples: 2, "1-3", "1,3", all; weeks go from 1 to ${nWeeks})`);
       const day = YAML_DAYS.indexOf(String(s.day).toLowerCase().slice(0, 3));
@@ -395,7 +397,7 @@ review|mental|Attempt review|10|`.split('\n').map(line => {
       if (!ws || day < 0) return;
       for (const w of ws) {
         const k = (w - 1) * 7 + day;
-        if (taken.has(k)) { err(label, `week ${w}, ${YAML_DAYS[day]} already has a session (${taken.get(k)}): one session per day`); continue; }
+        if (taken.has(k)) { err(label, `week ${w}, ${YAML_DAYS[day]} is already described (${taken.get(k)}): put all the exercises of a day together`); continue; }
         taken.set(k, label);
         if (items.some(x => !x)) continue;
         const blocks = items.map(({ e, minutes, note }) => {
@@ -463,7 +465,7 @@ review|mental|Attempt review|10|`.split('\n').map(line => {
     }
   }
 
-  /** Programma → testo YAML. Le sessioni identiche in più settimane (stesso giorno) diventano una sola voce con "week: 1-3". */
+  /** Programma → testo YAML. Le giornate identiche in più settimane (stesso giorno) diventano una sola voce con "week: 1-3". */
   function exportYaml(plan, exMap) {
     const yaml = YAML_LIB();
     const item = b => {
@@ -494,7 +496,7 @@ review|mental|Attempt review|10|`.split('\n').map(line => {
     })));
     groups.sort((a, b) => a.weeks[0] - b.weeks[0] || a.day - b.day);
     const doc = { title: plan.title, weeks: plan.weeks.length, first_session: firstSessionDate(plan),
-      sessions: groups.map(g => Object.assign({ week: fmtWeeks(g.weeks), day: YAML_DAYS[g.day] }, g.body)) };
+      days: groups.map(g => Object.assign({ week: fmtWeeks(g.weeks), day: YAML_DAYS[g.day] }, g.body)) };
     return '# Allenamento programme. Format: https://github.com/ldvdauer/allenamento/blob/main/GUIDE.md#programme-files\n' +
       yaml.dump(doc, { lineWidth: -1, noRefs: true, quotingType: '"' }).replace(/\n  - week:/g, '\n\n  - week:');
   }

@@ -15,7 +15,7 @@
 
   /* ---------- Stato e persistenza ---------- */
   // Primo avvio: nessun piano precaricato, ogni utente importa o crea i propri.
-  const fresh = () => migrate({ v: 8, plans: [], activePlan: null, exercises: {}, logs: [], tests: [] });
+  const fresh = () => migrate({ v: 9, plans: [], activePlan: null, exercises: {}, logs: [], tests: [] });
   /** I test da cui dipendono i kg degli esercizi (e il peso corporeo) devono esistere nella sezione Test. */
   function ensureTests(s) {
     const need = new Set(['bw'].concat(Object.values(s.exercises).filter(e => e.load).flatMap(e => C.refKeys(e.load.ref))));
@@ -112,7 +112,8 @@
       for (const p of s.plans) for (const w of p.weeks) for (const d of w) fix(d.sessions);
       fix(s.extras);
     }
-    s.v = 8;
+    if (fromV < 9) pruneEmpty(s); // v9: niente più sessioni vuote
+    s.v = 9;
     return s;
   }
   let rescued = false;
@@ -129,7 +130,13 @@
     return fresh();
   }
   let storeOk = true;
+  /** Il giorno è l'unità di allenamento: senza esercizi è riposo, quindi non resta nessun contenitore vuoto. */
+  function pruneEmpty(st) {
+    st.extras = st.extras.filter(x => x.blocks.length);
+    for (const p of st.plans) for (const w of p.weeks) for (const d of w) d.sessions = d.sessions.filter(x => x.blocks.length);
+  }
   function save() {
+    pruneEmpty(S);
     try { localStorage.setItem(KEY, JSON.stringify(S)); storeOk = true; scheduleCloud(); }
     catch (e) {
       console.warn('[store] write failed', e);
@@ -292,6 +299,24 @@
     return null;
   }
   /** Sessioni di una data: quelle di tutti i programmi importati più quelle create a mano. */
+  /** Aggiunge un esercizio alla giornata `iso`: a quella in programma se c'è, altrimenti la crea. */
+  function addToDay(iso, tpl) {
+    const r = refsOn(iso)[0];
+    if (r) addBlock(sessOf(r), tpl);
+    else { const x = { id: C.uid(), date: iso, type: 'wall', period: 'base', title: '', blocks: [] }; addBlock(x, tpl); S.extras.push(x); }
+    save(); render();
+  }
+  /** Porta degli esercizi in una giornata: si aggiungono in fondo a quella che c'è già, altrimenti diventano una giornata nuova. */
+  function mergeIntoDay(iso, blocks, title) {
+    const r = refsOn(iso)[0];
+    if (r) { const t = sessOf(r); t.blocks.push(...blocks); if (!t.title && title) t.title = title; }
+    else S.extras.push({ id: C.uid(), date: iso, type: 'wall', period: 'base', title: title || '', blocks });
+  }
+  const dayOf = r => (r.x ? r.x.date : C.dateOf(r.p, r.w, r.d));
+  function restCard(iso, edit) {
+    return h('div', { class: 'card' }, h('div', { class: 'big' }, 'Rest day'), h('p', { class: 'sub' }, 'Nothing planned. Add an exercise to train on this day.'),
+      h('div', { class: 'btns' }, btn('+ Exercise', () => pickExercise(tpl => addToDay(iso, tpl)), 'sm' + (edit ? '' : ' pri')), btn('+ Test', () => pickTest(tpl => addToDay(iso, tpl)), 'sm')));
+  }
   function refsOn(iso) {
     const out = [];
     for (const p of S.plans) { const pos = C.locate(p, iso); if (pos) p.weeks[pos.w][pos.d].sessions.forEach((_, si) => out.push({ p, w: pos.w, d: pos.d, si })); }
@@ -393,11 +418,11 @@
     return h('div', { class: 'card' },
       h('div', { class: 'row' }, h('div', { class: 'grow big', style: 'font-size:17px' }, s.title || 'Session'),
         done ? h('span', { class: 'tag ok' }, 'Done') : null, h('span', { class: 'tag' }, C.sessionMinutes(s) + ' min')),
-      list, s.blocks.length ? null : h('p', { class: 'sub' }, 'No exercises yet: add them here or during the session.'),
+      list,
       h('div', { class: 'btns' },
         btn(done ? 'Repeat' : 'Start', () => startSession(r), 'pri'),
         edit ? [btn('+ Exercise', () => pickExercise(tpl => { addBlock(s, tpl); save(); render(); }), 'sm'), btn('+ Test', () => pickTest(tpl => { addBlock(s, tpl); save(); render(); }), 'sm'),
-          btn('Edit', () => sessionSheet(r), 'sm')] : btn('Edit', () => go('calendar-' + (r.x ? r.x.date : C.dateOf(r.p, r.w, r.d))), 'sm')));
+          btn('Day…', () => daySheet(r), 'sm')] : btn('Edit', () => go('calendar-' + dayOf(r)), 'sm')));
   }
   const climbText = c => surfName(c.surface) + (c.top ? ' ' + fmtG(c.top) : '') + (c.sends != null ? ` · ${c.sends} ${c.sends === 1 ? 'send' : 'sends'}` : '');
   const logCard = l => h('div', { class: 'card tap', onclick: () => logSheet(l) },
@@ -427,32 +452,19 @@
     else if (S.logs.length && (since == null || since >= 7))
       out.push(h('div', { class: 'card row' }, h('div', { class: 'grow sub' }, since == null ? 'Your data has no backup yet.' : `Last backup ${since} days ago.`), btn('Save backup', doBackup, 'sm')));
     refs.forEach(r => out.push(sessionCard(r, false)));
-    if (!refs.length) out.push(h('div', { class: 'card' }, h('div', { class: 'big' }, 'Rest day'), h('p', { class: 'sub', style: 'margin-bottom:0' }, 'No session planned today.')));
-    out.push(h('div', { class: 'btns' }, btn('Create session', () => newSessionSheet(t), 'pri'), btn('Log session', () => logSheet(null))));
+    if (!refs.length) out.push(restCard(t, false));
+    out.push(h('div', { class: 'btns' }, btn('Log session', () => logSheet(null), 'sm')));
     return out;
   }
 
   /* ---------- Sessioni extra e calendario ---------- */
-  function showDate(iso) { // dopo aver creato o spostato una sessione si apre quel giorno nel calendario, dove si aggiungono gli esercizi
-    go('calendar-' + iso);
-  }
-  function newSessionSheet(dateDefault) {
-    const date = h('input', { type: 'date', value: dateDefault }), title = h('input', { placeholder: 'E.g. Board session with friends' });
-    const ov = openSheet('Create session', [h('div', { class: 'cols' }, field('Date', date), field('Title (optional)', title)),
-      btn('Create session', () => {
-        const iso = C.validISO(date.value);
-        if (!iso) return toast('Pick a valid date.');
-        S.extras.push({ id: C.uid(), date: iso, type: 'wall', period: 'base', title: title.value.trim().slice(0, 80), blocks: [] });
-        save(); ov.remove(); showDate(iso);
-      }, 'pri block')]);
-  }
   function copyToDateSheet(r) {
     const s = sessOf(r), date = h('input', { type: 'date', value: C.todayISO() });
-    const ov = openSheet('Copy to a date', [h('p', { class: 'sub' }, `"${autoTitle(s)}" is copied to another date with the same exercises.`), field('Date', date),
+    const ov = openSheet('Copy to a date', [h('p', { class: 'sub' }, `The exercises of "${autoTitle(s)}" are copied to another day. If that day already has exercises, they are added after them.`), field('Date', date),
       btn('Copy', () => {
         const iso = C.validISO(date.value);
         if (!iso) return toast('Pick a valid date.');
-        const copy = { ...C.cloneSession(s), date: iso, title: s.title || '' }; privatize(S, copy); S.extras.push(copy);
+        const copy = C.cloneSession(s); privatize(S, copy); mergeIntoDay(iso, copy.blocks, s.title || '');
         save(); ov.remove(); toast(`Copied to ${wdOf(iso)} ${fmtDate(iso)}.`); render();
       }, 'pri block')]);
   }
@@ -473,7 +485,7 @@
       if (dots.length < 3 && S.logs.some(l => l.date === iso && !ids.has(l.sid))) dots.push(h('i', { class: 'ok' }));
       const d = C.fromISO(iso);
       return h('button', { type: 'button', class: 'cal-d' + (iso.slice(0, 7) === calMonth.slice(0, 7) ? '' : ' out') + (iso === t ? ' today' : '') + (iso === calSel ? ' sel' : ''),
-        'aria-label': `${WD_FULL[wdIdx(iso)]} ${d.getDate()} ${MONTHS_FULL[d.getMonth()]}, ${refs.length} sessions`, 'aria-pressed': iso === calSel ? 'true' : 'false',
+        'aria-label': `${WD_FULL[wdIdx(iso)]} ${d.getDate()} ${MONTHS_FULL[d.getMonth()]}${refs.length ? ', training' : ''}`, 'aria-pressed': iso === calSel ? 'true' : 'false',
         onclick: () => go('calendar-' + iso) }, d.getDate(), h('span', { class: 'dots' }, dots));
     };
     const refs = refsOn(calSel), logs = S.logs.filter(l => l.date === calSel);
@@ -482,10 +494,8 @@
         btn('Today', () => { calMonth = t.slice(0, 7) + '-01'; go('calendar-' + t); }, 'sm'), btn('›', () => shift(1), 'sm')),
       h('div', { class: 'cal' }, ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map(x => h('div', { class: 'wh' }, x)), cells.map(cell)),
       h('div', { class: 'cal-key sub' }, h('span', {}, h('i', {}), 'planned'), h('span', {}, h('i', { class: 'ok' }), 'done')),
-      h('div', { class: 'row', style: 'margin-top:18px' }, h('h2', { class: 'grow', style: 'margin:0;text-transform:capitalize' }, `${WD_FULL[wdIdx(calSel)]} ${fmtDate(calSel)}`),
-        btn('Create session', () => newSessionSheet(calSel), 'sm pri')),
-      refs.map(r => sessionCard(r, true)),
-      refs.length ? null : h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin:0' }, 'No session planned.')),
+      h('h2', { style: 'margin-top:18px;text-transform:capitalize' }, `${WD_FULL[wdIdx(calSel)]} ${fmtDate(calSel)}`),
+      refs.length ? refs.map(r => sessionCard(r, true)) : restCard(calSel, true),
       logs.length ? [h('h2', {}, 'Logged'), h('div', { class: 'sub' }, 'Tap to view or edit.'), logs.map(logCard)] : null];
   }
 
@@ -544,21 +554,22 @@
   }
 
 
-  function sessionSheet(r) {
-    const s = sessOf(r), title = h('input', { value: s.title || '', placeholder: 'Session' }), date = r.x ? h('input', { type: 'date', value: r.x.date }) : null;
-    const ov = openSheet('Session', [field('Title', title), r.x ? field('Date', date) : null,
+  /** Titolo, spostamento (solo giornate create a mano), copia e svuotamento di una giornata. */
+  function daySheet(r) {
+    const s = sessOf(r), title = h('input', { value: s.title || '', placeholder: 'Optional' }), date = r.x ? h('input', { type: 'date', value: r.x.date }) : null;
+    const ov = openSheet('Day', [field('Title', title), r.x ? field('Move to', date) : null,
+      r.x ? h('p', { class: 'sub' }, 'If the new day already has exercises, these are added after them.') : null,
       btn('Save', () => {
         const iso = r.x ? C.validISO(date.value) : null, moved = iso && iso !== r.x.date;
         s.title = title.value.trim().slice(0, 80);
-        if (iso) r.x.date = iso;
+        if (moved) { S.extras = S.extras.filter(e => e !== r.x); mergeIntoDay(iso, r.x.blocks, s.title); }
         save(); ov.remove();
-        if (moved) showDate(iso); else render();
+        if (moved) go('calendar-' + iso); else render();
       }, 'pri block'),
       h('div', { class: 'btns' }, btn('Copy to a date…', () => { ov.remove(); copyToDateSheet(r); }, 'sm'),
-        btn('Delete session', async () => {
-          if (!await confirmDlg('Delete this session? Its logged entries stay.', 'Delete')) return;
-          if (r.x) S.extras = S.extras.filter(e => e !== r.x); else r.p.weeks[r.w][r.d].sessions.splice(r.si, 1);
-          save(); ov.remove(); render();
+        btn('Clear the day', async () => {
+          if (!await confirmDlg('Remove all exercises from this day? Logged entries stay.', 'Remove')) return;
+          s.blocks = []; save(); ov.remove(); render();
         }, 'sm danger'))]);
   }
   /** Parametri di un esercizio in questa sessione. Valgono solo qui: gli esercizi di base non hanno descrizioni né valori fissi. */

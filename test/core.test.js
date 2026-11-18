@@ -26,7 +26,7 @@ test('import YAML: struttura del piano di esempio', () => {
 test('import YAML: parametri del timer, carico, lati, superficie, nota', () => {
   const r = C.importYaml(`title: T
 weeks: 2
-sessions:
+days:
   - week: all
     day: Tuesday
     title: Dita
@@ -76,7 +76,7 @@ sessions:
 test('import YAML: tutti gli errori, con il punto esatto, e nessun risultato parziale', () => {
   const errs = errorsOf(`title: Prova
 weeks: 3
-sessions:
+days:
   - week: 1-4
     day: tue
     exercises:
@@ -100,21 +100,21 @@ sessions:
       - name: Custom
 `);
   const has = re => assert.ok(errs.some(e => re.test(e)), re + ' in\n' + errs.join('\n'));
-  has(/session 1 .*week: "1-4" is not valid/);
+  has(/day 1 .*week: "1-4" is not valid/);
   has(/exercise 1 "Sloper hang": work: "7 secondi" is not a duration/);
   has(/load: "80% slopr" should look like/);
   has(/day: "lun" is not valid/);
   has(/"Board": unknown field "minutez"/);
   has(/a test has no load/);
-  has(/week 2, wed already has a session/);
+  has(/week 2, wed is already described/);
   has(/"Custom": minutes: required/);
   assert.equal(errs.length, 8);
-  assert.match(errorsOf('title: x\nweeks: 1\nsessions:\n  - week: 1\n    day: mon\n    exercises:\n      - name: X\n        minutes: 60\n        sets: 2\n        work: 7s')[0], /minutes: remove it, with a timer the minutes are calculated/);
-  assert.match(errorsOf('title: x\nweeks: 2\nsessions:\n  - week: 1\n   day: mon')[0], /^line \d+: /);
+  assert.match(errorsOf('title: x\nweeks: 1\ndays:\n  - week: 1\n    day: mon\n    exercises:\n      - name: X\n        minutes: 60\n        sets: 2\n        work: 7s')[0], /minutes: remove it, with a timer the minutes are calculated/);
+  assert.match(errorsOf('title: x\nweeks: 2\ndays:\n  - week: 1\n   day: mon')[0], /^line \d+: /);
   for (const bad of ['', 'ciao', '[]', 'title: x', '{"title":"x","isForSelf":true,"weeks":[[]]}'])
     assert.ok(errorsOf(bad).length > 0, JSON.stringify(bad));
   assert.match(errorsOf('{"title":"x","isForSelf":true,"weeks":[[]]}')[0], /Blok Sessions plans are no longer supported/);
-  assert.match(errorsOf('title: x\nweeks: 1\nsessions:\n  - week: 1\n    day: mon\n    exercises:\n      - name: X\n        sets: 2\n        work: 7s\n        reps: 3')[0], /either work .* or reps/);
+  assert.match(errorsOf('title: x\nweeks: 1\ndays:\n  - week: 1\n    day: mon\n    exercises:\n      - name: X\n        sets: 2\n        work: 7s\n        reps: 3')[0], /either work .* or reps/);
 });
 
 test('YAML: durate e settimane', () => {
@@ -130,7 +130,8 @@ test('YAML: durate e settimane', () => {
 
 test('YAML: export → import senza perdite, sessioni uguali raggruppate', () => {
   const a = imported(), text = C.exportYaml(a.plan, exMapOf(a));
-  assert.match(text, /\n  - week: 1-3\n    day: wed\n/); // la stessa sessione in tre settimane si scrive una volta
+  assert.match(text, /\ndays:\n/);
+  assert.match(text, /\n  - week: 1-3\n    day: wed\n/); // la stessa giornata in tre settimane si scrive una volta
   assert.match(text, /first_session: "2026-11-16"/);
   const b = C.importYaml(text), shape = (r, m) => r.plan.weeks.map(w => w.map(d => d.sessions.map(s => [s.title || '', s.blocks.map(x => {
     const e = m[x.exId]; return [e.name, e.std, x.minutes, x.note || '', e.interval, e.load, e.surface || ''];
@@ -457,4 +458,10 @@ test('libreria: esercizi di stretching e riconoscimento dei nomi', () => {
     assert.equal(C.matchStd(n), k, n);
   for (const k of ['butterfly', 'side-split', 'frog', 'biceps-stretch']) assert.equal(C.STD[k].section, 'mobility');
   assert.equal(C.matchStd('Biceps curl'), null);
+});
+
+test('YAML: "sessions" (nome precedente) resta valido, ma non insieme a "days"', () => {
+  const body = '\n  - week: 1\n    day: mon\n    exercises:\n      - name: Board\n';
+  assert.equal(C.importYaml('title: x\nweeks: 1\nsessions:' + body).plan.weeks[0][0].sessions.length, 1);
+  assert.match(errorsOf('title: x\nweeks: 1\ndays:' + body + 'sessions:' + body)[0], /either days or sessions/);
 });

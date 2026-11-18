@@ -36,7 +36,7 @@ await pg.goto(url);
 
 // Home vuota: solo Rest day e i due pulsanti, nessun riferimento ai piani
 let home = await txt('#view');
-ok(home.includes('Home') && home.includes('Rest day') && home.includes('Create session') && home.includes('Log session'), 'Home al primo avvio: Rest day + crea/registra');
+await shot('0-home-riposo'); ok(home.includes('Home') && home.includes('Rest day') && home.includes('+ Exercise') && home.includes('Log session') && !home.includes('Create session'), 'Home al primo avvio: Rest day con + Exercise, nessun "crea sessione"');
 ok(!/programme|this week/i.test(home), 'Home: nessun riferimento al piano né riepiloghi');
 ok((await txt('#tabs')).replace(/\s+/g, ' ').trim() === 'Home Calendar Analytics More Note', 'navigazione: 4 schede + Nota, niente Piano né Diario');
 
@@ -151,14 +151,15 @@ await go('more'); await pg.evaluate(() => { const c = [...document.querySelector
 await go('calendar-2026-12-02'); ok(!(await txt('#view')).includes('Suggested:'), 'progressione disattivabile dalle impostazioni');
 await pg.evaluate(() => { __app.state.settings.prog.on = true; });
 
-// Crea sessione da Home su un giorno qualsiasi, aggiunge esercizi dal calendario
-await clickText('Create session', '#view');
-await setVal('.sheet input[type=date]', '2026-12-25'); await pg.type('.sheet .cols label:nth-child(2) input', 'Natale al muro');
-await clickText('Create session', '.sheet');
-ok(await pg.evaluate(() => location.hash === '#calendar-2026-12-25') && (await txt('#view')).includes('Natale al muro'), 'sessione creata su una data scelta e aperta nel calendario');
+// Il giorno è l'unità: su un giorno di riposo si aggiunge un esercizio e il giorno diventa di allenamento
+await go('calendar-2027-06-01');
+ok((await txt('#view')).includes('Rest day') && !(await txt('#view')).includes('Create session'), 'calendario: giorno vuoto = Rest day, nessun "crea sessione"');
+const nExtras = await pg.evaluate(() => __app.state.extras.length);
 await clickText('+ Exercise', '#view'); await clickText('+ New');
 await pg.type('.sheet input', 'Circuito spray'); await clickText('Create exercise');
-ok((await txt('#view')).includes('Circuito spray'), 'esercizio nuovo aggiunto alla sessione');
+ok((await txt('#view')).includes('Circuito spray') && !(await txt('#view')).includes('Rest day') && await pg.evaluate(n => __app.state.extras.length === n + 1, nExtras), 'primo esercizio aggiunto: il giorno diventa di allenamento');
+await clickText('Day…', '#view'); await pg.type('.sheet label input', 'Natale al muro'); await clickText('Save', '.sheet');
+await clickText('Day…', '#view'); await shot('15-day-sheet'); await pg.evaluate(() => document.querySelectorAll('.overlay').forEach(o => o.remove())); ok((await txt('#view')).includes('Natale al muro'), 'Day…: titolo facoltativo della giornata');
 // Libreria → ogni aggiunta è un'istanza con parametri propri: modificarne una non tocca l'altra
 await clickText('+ Exercise', '#view'); await pg.type('.sheet input', 'max hang'); await sleep(80); await clickText('Max hang', '.sheet', true);
 await clickText('+ Exercise', '#view'); await pg.type('.sheet input', 'max hang'); await sleep(80); await clickText('Max hang', '.sheet', true);
@@ -205,7 +206,7 @@ ok((await txt('#view')).includes('Hang a una mano') && (await txt('#view')).incl
 await shot('11-test', true);
 await go('library'); await shot('12-libreria');
 ok((await txt('#view')).includes('Limit bouldering') && (await txt('#view')).includes('MY EXERCISES') && (await txt('#view')).includes('Circuito spray') && !/versioni|Karma|\d ×/.test(await txt('#view')), 'libreria: solo nomi, più i miei esercizi; nessun parametro né descrizione');
-await go('calendar-2026-12-25');
+await go('calendar-2027-06-01');
 await shot('8-calendario-giorno');
 
 // Registra sessione (manuale) da Home
@@ -290,7 +291,7 @@ await pg.evaluate(() => { __app.state.settings.gh = null; });
 
 // Persistenza e migrazione di un backup v2 con due sessioni nello stesso giorno
 await pg.reload();
-ok(await pg.evaluate(() => __app.state.logs.length === 3 && __app.state.extras.length === 1 && __app.state.v === 8), 'i dati sopravvivono al ricaricamento');
+ok(await pg.evaluate(() => __app.state.logs.length === 3 && __app.state.extras.length === 1 && __app.state.v === 9), 'i dati sopravvivono al ricaricamento');
 const mig = await pg.evaluate(async () => {
   const mk = (id, ex) => ({ id, type: 'wall', period: 'base', blocks: [{ id: id + 'b', exId: ex, minutes: 5 }] });
   const old = { v: 2, plans: [{ id: 'p', title: 'Vecchio', startDate: '2026-11-23', weeks: [[{ sessions: [mk('s1', 'e1'), mk('s2', 'e2')] }, ...Array.from({ length: 6 }, () => ({ sessions: [] }))]] }],
@@ -320,12 +321,20 @@ if (fs.existsSync(REAL)) {
   ok(await pg.evaluate(() => __app.state.plans[0].startDate === '2026-11-17'), 'backup reale: prima sessione mercoledì 18');
   await go('calendar-2026-11-17'); const d17 = await txt('#view');
   await go('calendar-2026-11-18'); const d18 = await txt('#view');
-  ok(d17.includes('No session planned') && !d18.includes('No session planned'), 'calendario: nulla il 17, la prima sessione il 18');
+  ok(d17.includes('Rest day') && !d18.includes('Rest day'), 'calendario: nulla il 17, la prima giornata il 18');
+  // Copia su un giorno che ha già esercizi: si aggiungono in fondo, nessuna seconda giornata
+  const before = await pg.evaluate(() => { const p = __app.state.plans[0], d = iso => { const l = Core.locate(p, iso); return p.weeks[l.w][l.d].sessions; }; return { d20: d('2026-11-20')[0].blocks.length, d18: d('2026-11-18')[0].blocks.length }; });
+  await go('calendar-2026-11-18'); await clickText('Day…', '#view'); await clickText('Copy to a date…', '.sheet');
+  await setVal('.sheet input[type=date]', '2026-11-20'); await clickText('Copy', '.sheet');
+  ok(await pg.evaluate(b => { const p = __app.state.plans[0], l = Core.locate(p, '2026-11-20'), d = p.weeks[l.w][l.d].sessions; return d.length === 1 && d[0].blocks.length === b.d20 + b.d18 && !__app.state.extras.some(x => x.date === '2026-11-20'); }, before), 'copia su un giorno con esercizi: aggiunti in fondo, una sola giornata');
+  // Svuotare un giorno: diventa riposo, senza contenitore vuoto
+  await go('calendar-2026-11-18'); await clickText('Day…', '#view'); await clickText('Clear the day', '.sheet'); await clickText('Remove', '.sheet');
+  ok((await txt('#view')).includes('Rest day') && await pg.evaluate(() => { const p = __app.state.plans[0], l = Core.locate(p, '2026-11-18'); return p.weeks[l.w][l.d].sessions.length === 0; }), 'Clear the day: il giorno torna di riposo e la giornata sparisce dai dati');
 }
 
 // Dati salvati con l'interfaccia in italiano (v6): nomi predefiniti e lati passano all'inglese, quello che ha scritto l'utente resta
 await pg.evaluate(() => {
-  const old = { v: 6, plans: [], activePlan: null, extras: [{ id: 'x1', date: '2026-11-25', title: 'Dita a casa', blocks: [{ id: 'b1', exId: 'e1', minutes: 7, note: 'lento' }, { id: 'b2', exId: 'e2', minutes: 8 }, { id: 'b3', exId: 'e3', minutes: 5 }] }],
+  const old = { v: 6, plans: [], activePlan: null, extras: [{ id: 'x0', date: '2026-11-26', title: 'Vuota', blocks: [] }, { id: 'x1', date: '2026-11-25', title: 'Dita a casa', blocks: [{ id: 'b1', exId: 'e1', minutes: 7, note: 'lento' }, { id: 'b2', exId: 'e2', minutes: 8 }, { id: 'b3', exId: 'e3', minutes: 5 }] }],
     exercises: { e1: { id: 'e1', std: 'wrist-curl', name: 'Flessione polso', slot: 'strength', interval: null, load: null, surface: '' },
       e2: { id: 'e2', std: 'pinch-lift', name: 'Pinch block', slot: 'strength', interval: { rounds: 6, workSeconds: 7, restSeconds: 75, cues: ['SX', 'DX'] }, load: { ref: 'pinch', mode: 'lift', pct: 75 }, surface: '' },
       e3: { id: 'e3', std: null, name: 'Sospensioni di Leo', slot: 'strength', interval: null, load: null, surface: '' } },
@@ -336,8 +345,9 @@ await pg.evaluate(() => {
   localStorage.setItem('allenamento.v1', JSON.stringify(old)); location.reload();
 });
 await sleep(500);
-const m7 = await pg.evaluate(() => { const s = __app.state; return { v: s.v, e1: s.exercises.e1.name, cues: s.exercises.e2.interval.cues.join(), e3: s.exercises.e3.name, defs: s.testDefs.map(d => d.name).join('|'), surf: s.surfaces.map(x => x.name).join('|'), sides: s.logs[0].blocks[0].kgs.map(k => k.side).join(), title: s.extras[0].title, note: s.extras[0].blocks[0].note, mins: s.extras[0].blocks.map(b => b.minutes).join() }; });
-ok(m7.v === 8 && m7.e1 === 'Wrist curl' && m7.cues === 'L,R' && m7.defs === 'Body weight|Pinch block L|Pinch block R' && m7.surf === 'Indoor (gym)|Pannello di casa' && m7.sides === 'L,R', 'dati v6 in italiano: nomi predefiniti, superfici e lati SX/DX passano all\'inglese');
+const m7 = await pg.evaluate(() => { const s = __app.state; return { v: s.v, e1: s.exercises.e1.name, cues: s.exercises.e2.interval.cues.join(), e3: s.exercises.e3.name, defs: s.testDefs.map(d => d.name).join('|'), surf: s.surfaces.map(x => x.name).join('|'), sides: s.logs[0].blocks[0].kgs.map(k => k.side).join(), title: s.extras[0].title, note: s.extras[0].blocks[0].note, mins: s.extras[0].blocks.map(b => b.minutes).join(), nx: s.extras.length }; });
+ok(m7.v === 9 && m7.e1 === 'Wrist curl' && m7.cues === 'L,R' && m7.defs === 'Body weight|Pinch block L|Pinch block R' && m7.surf === 'Indoor (gym)|Pannello di casa' && m7.sides === 'L,R', 'dati v6 in italiano: nomi predefiniti, superfici e lati SX/DX passano all\'inglese');
+ok(m7.nx === 1, 'migrazione v9: le giornate senza esercizi spariscono');
 ok(m7.mins === '7,7,5', 'migrazione v8: con un timer i minuti diventano quelli calcolati (8 → 7), senza timer restano');
 ok(m7.e3 === 'Sospensioni di Leo' && m7.title === 'Dita a casa' && m7.note === 'lento', 'nomi, titoli e note scritti dall\'utente restano come sono');
 await go('home');

@@ -22,7 +22,7 @@ The interface is in English only. Code comments and test descriptions are still 
 
 ## Data model (in short)
 - **Library**: 54 standard exercises with only a name and a section (`LIBRARY` in `core.js`), plus the ones the user creates.
-- **Session**: tied to a date (created by hand) or to an imported programme. It contains blocks.
+- **Training day** (internally still a "session" object): the exercises of one date, from an imported programme or added by hand. The day is the unit: a day with no exercises is a rest day and is removed from the data (`pruneEmpty` on every save). Copying or moving onto a day that already has exercises appends to it.
 - **Block**: an exercise *in that session*, with its own parameters (rounds, seconds or reps, rests, L/R, reference test and %, surface, note). Nothing is shared between sessions.
 - **Test**: definitions with their own parameters; the latest result is the max used to compute kg.
 - **Log entry**: a session done, with minutes, RPE and, for each exercise, minutes, load, RPE, surface/grade.
