@@ -392,13 +392,13 @@
   }
   // Il titolo è sempre il nome della libreria (C.exName): la riga sotto ha solo parametri e superficie.
   const exLine = e => [C.gripText(e), C.describe(e), e.surface ? surfName(e.surface) : ''].filter(Boolean).join(' · ');
-  function blockRow(b, onclick, drag, run) {
+  function blockRow(b, onclick, drag, run, extra) {
     const ex = S.exercises[b.exId];
     const grip = drag ? h('span', { class: 'grip', 'data-grip': '', role: 'img', 'aria-label': 'Drag to reorder', onclick: e => e.stopPropagation() }, '≡') : null;
     if (!ex) return h('div', { class: 'blk', 'data-id': b.id }, grip, h('span', { class: 'p' }, 'Exercise removed'));
     const hint = loadHint(ex);
     return h('div', { class: 'blk', 'data-id': b.id, onclick, style: onclick ? 'cursor:pointer' : null }, grip,
-      h('div', { class: 'grow' }, h('div', { class: 'n' }, catBar(exSection(ex)), C.exName(ex)), exLine(ex) ? h('div', { class: 'p' }, exLine(ex)) : null, hint ? h('div', { class: 'kg' }, hint) : null, propLine(ex), b.note ? h('div', { class: 'p note' }, b.note) : null),
+      h('div', { class: 'grow' }, h('div', { class: 'n' }, catBar(exSection(ex)), C.exName(ex)), exLine(ex) ? h('div', { class: 'p' }, exLine(ex)) : null, hint ? h('div', { class: 'kg' }, hint) : null, propLine(ex), b.note ? h('div', { class: 'p note' }, b.note) : null, extra || null),
       h('div', { class: 'm' }, b.minutes + ' min', run ? run(b) : null));
   }
   /** Riordino per trascinamento dalla maniglia: la riga segue il dito, l'ordine si salva al rilascio. */
@@ -454,16 +454,36 @@
     const doneIds = new Set(l ? l.blocks.map(x => x.bid).filter(Boolean) : []);
     const run = today ? b => (S.exercises[b.exId] ? h('button', { class: 'play' + (doneIds.has(b.id) ? ' done' : ''), 'aria-label': (doneIds.has(b.id) ? 'Redo ' : 'Start ') + C.exName(S.exercises[b.exId]),
       onclick: e => { e.stopPropagation(); startBlock(r, b); } }, doneIds.has(b.id) ? '✓' : '▶') : null) : null;
-    const list = h('div', {}, s.blocks.map((b, bi) => blockRow(b, edit ? () => blockSheet(r, bi) : null, edit, run)));
+    // Quello che è stato registrato sta sotto il suo esercizio; gli esercizi registrati e poi tolti dalla giornata restano in fondo
+    const logged = new Map(l ? l.blocks.filter(x => x.bid).map(x => [x.bid, x]) : []), ids = new Set(s.blocks.map(b => b.id));
+    const list = h('div', {}, s.blocks.map((b, bi) => blockRow(b, edit ? () => blockSheet(r, bi) : null, edit, run, logged.has(b.id) ? loggedLine(logged.get(b.id)) : null)));
+    const gone = l ? l.blocks.filter(x => !x.bid || !ids.has(x.bid)) : [];
     if (edit) enableDrag(list, s);
     return h('div', { class: 'card' },
       h('div', { class: 'row' }, h('div', { class: 'grow big', style: 'font-size:17px' }, s.title || 'Training'),
         done ? h('span', { class: 'tag ok' }, today && doneIds.size < s.blocks.length ? `${doneIds.size} of ${s.blocks.length} done` : 'Done') : null, h('span', { class: 'tag' }, C.sessionMinutes(s) + ' min')),
       list,
+      gone.length ? h('div', { class: 'logged-x' }, gone.map(x => h('div', {}, h('b', {}, x.name), loggedLine(x)))) : null,
+      l ? dayLine(l) : null,
       h('div', { class: 'btns' },
         edit ? [btn('+ Exercise', () => pickExercise(tpl => { addBlock(s, tpl); save(); render(); }), 'sm'), btn('+ Test', () => pickTest(tpl => { addBlock(s, tpl); save(); render(); }), 'sm'),
           btn('Day…', () => daySheet(r), 'sm')] : null,
         l ? btn('Rate the day', () => logSheet(l), 'sm') : null));
+  }
+  /** Riga di ciò che è stato registrato per un esercizio: carico, RPE, serie, arrampicata, risultati dei test, nota. */
+  function loggedLine(x) {
+    const res = (x.testIds || []).map(id => S.tests.find(t => t.id === id)).filter(Boolean).map(t => { const d = S.testDefs.find(k => k.key === t.key); return `${d ? d.name : t.key} ${dec(t.value)}`; });
+    const parts = [x.load, x.rpe ? 'RPE ' + dec(x.rpe) : '', x.sets ? `${x.sets.done}/${x.sets.of} sets` : '', x.repsMissed ? `${x.repsMissed} reps missed` : '',
+      x.climb ? climbText(x.climb) : '', ...res].filter(Boolean);
+    const short = (x.sets && x.sets.done < x.sets.of) || x.repsMissed;
+    if (!parts.length && !x.note) return null;
+    return h('div', { class: 'logged' + (short ? ' short' : '') }, parts.length ? h('div', {}, '✓ ' + parts.join(' · ')) : null, x.note ? h('div', { class: 'p' }, x.note) : null);
+  }
+  /** RPE, sensazione e note della giornata, se dati. */
+  function dayLine(l) {
+    const p = [l.rpe ? 'RPE ' + dec(l.rpe) : '', l.feel ? `feeling ${l.feel}/5` : ''].filter(Boolean);
+    if (!p.length && !l.notes) return null;
+    return h('div', { class: 'logged-day' }, p.length ? h('div', {}, 'Day: ' + p.join(' · ')) : null, l.notes ? h('div', { class: 'p' }, l.notes) : null);
   }
   const climbText = c => surfName(c.surface) + (c.top ? ' ' + fmtG(c.top) : '') + (c.sends != null ? ` · ${c.sends} ${c.sends === 1 ? 'send' : 'sends'}` : '');
   const logCard = l => h('div', { class: 'card tap', onclick: () => logSheet(l) },
@@ -524,7 +544,8 @@
         'aria-label': `${WD_FULL[wdIdx(iso)]} ${d.getDate()} ${MONTHS_FULL[d.getMonth()]}${refs.length ? ', training' : ''}`, 'aria-pressed': iso === calSel ? 'true' : 'false',
         onclick: () => go('calendar-' + iso) }, d.getDate(), h('span', { class: 'dots' }, dots));
     };
-    const refs = refsOn(calSel), logs = S.logs.filter(l => l.date === calSel);
+    // Le registrazioni si vedono già nella giornata sopra (✓ e "Rate the day"): qui solo quelle senza giornata, es. di un programma eliminato
+    const refs = refsOn(calSel), shown = new Set(refs.map(r => sessOf(r).id)), logs = S.logs.filter(l => l.date === calSel && !shown.has(l.sid));
     return [h('h1', {}, 'Calendar'),
       h('div', { class: 'week' }, btn('‹', () => shift(-1), 'sm'), h('div', { class: 't big', style: 'font-size:17px;text-transform:capitalize' }, `${MONTHS_FULL[first.getMonth()]} ${first.getFullYear()}`),
         btn('Today', () => { calMonth = t.slice(0, 7) + '-01'; go('calendar-' + t); }, 'sm'), btn('›', () => shift(1), 'sm')),
@@ -532,7 +553,7 @@
       h('div', { class: 'cal-key sub' }, h('span', {}, h('i', {}), 'planned'), h('span', {}, h('i', { class: 'ok' }), 'done')),
       h('h2', { style: 'margin-top:18px;text-transform:capitalize' }, `${WD_FULL[wdIdx(calSel)]} ${fmtDate(calSel)}`),
       refs.length ? refs.map(r => sessionCard(r, true)) : restCard(calSel, true),
-      logs.length ? [h('h2', {}, 'Logged exercises'), h('div', { class: 'sub' }, 'Tap to rate the day or delete what was logged.'), logs.map(logCard)] : null];
+      logs.length ? [h('h2', {}, 'Without a planned day'), h('div', { class: 'sub' }, 'Logged on this day, but its day is no longer in the calendar. Tap to rate it or delete it.'), logs.map(logCard)] : null];
   }
 
   /* ---------- Programmi: insiemi di sessioni importati, visibili solo nel calendario ---------- */

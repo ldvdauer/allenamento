@@ -143,3 +143,10 @@ label.f input[type=checkbox]{display:inline-block;width:auto;margin:0 8px 0 0;ve
 .prog-r{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line);cursor:pointer}.prog-r:first-of-type{border-top:none}
 .prog-r .v{text-align:right;font-weight:600}.prog-r .d{font-size:12px;font-weight:600}.d.up{color:var(--ac)}.d.down{color:var(--bad)}.d.same{color:var(--mu)}
 .viz-donut-li .viz-key{width:10px;height:10px;border-radius:3px;flex:none}
+/* Registrato: sotto l'esercizio, in chiaro (il verde è del carico previsto); in giallo se mancano serie o ripetizioni */
+.logged { margin-top: 4px; font-size: 13px; color: var(--note); }
+.logged.short { color: var(--warn); }
+.logged .p, .logged-day .p { color: var(--mu); }
+.logged-x { padding: 8px 0; border-top: 1px solid var(--line); font-size: 14px; }
+.logged-x > div + div { margin-top: 6px; }
+.logged-day { padding-top: 8px; border-top: 1px solid var(--line); font-size: 14px; color: var(--tx); }

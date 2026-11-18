@@ -146,8 +146,11 @@ await pg.type('.sheet textarea', 'Prova automatica');
 await clickText('Save', '.sheet');
 await go('calendar-2026-11-25');
 let diary = await txt('#view');
-ok(diary.includes('Prova automatica') && diary.includes('MoonBoard 7A+ · 3 sends') && diary.includes('Sloper hang: +4.5 kg') && diary.includes('buone sensazioni') && diary.includes('Sloper hang: 1/4 sets'), 'registrazione nel calendario: carico, superficie, grado, nota e serie saltate');
-await shot('7-diario');
+ok(diary.includes('Prova automatica') && diary.includes('MoonBoard 7A+ · 3 sends') && diary.includes('buone sensazioni'), 'registrazione nel calendario: superficie, grado, note');
+const sloperLog = await pg.evaluate(() => { const row = [...document.querySelectorAll('#view .blk')].find(b => b.querySelector('.n').innerText.includes('Sloper hang')); const x = row && row.querySelector('.logged'); return x ? { t: x.innerText, short: x.classList.contains('short') } : null; });
+ok(sloperLog && sloperLog.t.includes('+4.5 kg') && sloperLog.t.includes('1/4 sets') && sloperLog.short, 'registrazione sotto il suo esercizio: carico e serie saltate evidenziate');
+ok(!diary.includes('Logged exercises') && !diary.includes('Without a planned day'), 'calendario: niente elenco separato delle registrazioni');
+await shot('7-diario', true);
 await go('home'); ok(/\d+ of \d+ done/.test(await txt('#view')), 'Home: giornata con gli esercizi fatti contati');
 ok((await txt('#view')).includes('has no backup yet') && (await txt('#view')).includes('Save backup'), 'Home: promemoria backup quando ci sono dati non salvati');
 // Progressione: RPE 7 ≤ soglia 8 → la volta dopo +2,5% sul carico totale: (70 + 4,5) × 1,025 − 70 = 6,4 → 6,5 kg
