@@ -44,7 +44,6 @@ sessions:
         sides: L/R
         load: 75% pinch
       - name: Set tecnici al flash
-        minutes: 60
         sets: 6
         rounds: 3
         work: done
@@ -110,6 +109,7 @@ sessions:
   has(/week 2, wed already has a session/);
   has(/"Custom": minutes: required/);
   assert.equal(errs.length, 8);
+  assert.match(errorsOf('title: x\nweeks: 1\nsessions:\n  - week: 1\n    day: mon\n    exercises:\n      - name: X\n        minutes: 60\n        sets: 2\n        work: 7s')[0], /minutes: remove it, with a timer the minutes are calculated/);
   assert.match(errorsOf('title: x\nweeks: 2\nsessions:\n  - week: 1\n   day: mon')[0], /^line \d+: /);
   for (const bad of ['', 'ciao', '[]', 'title: x', '{"title":"x","isForSelf":true,"weeks":[[]]}'])
     assert.ok(errorsOf(bad).length > 0, JSON.stringify(bad));

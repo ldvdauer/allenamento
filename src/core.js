@@ -448,8 +448,8 @@ review|mental|Attempt review|10|`.split('\n').map(line => {
         if (!sf) err(where, `surface: "${x.surface}" is not one of your surfaces (${surfaces.map(s => s.key).join(', ')})`); else e.surface = sf.key;
       }
       let minutes = null;
-      if (has('minutes')) minutes = posInt('minutes');
-      else if (e.interval) minutes = intervalMinutes(e.interval);
+      if (e.interval) { if (has('minutes')) err(where, 'minutes: remove it, with a timer the minutes are calculated'); else minutes = intervalMinutes(e.interval); }
+      else if (has('minutes')) minutes = posInt('minutes');
       else if (e.std && STD[e.std] && STD[e.std].minutes) minutes = STD[e.std].minutes;
       else err(where, 'minutes: required for an exercise without a timer');
       if (has('note') && typeof x.note !== 'string' && typeof x.note !== 'number') err(where, 'note must be text');
@@ -467,7 +467,7 @@ review|mental|Attempt review|10|`.split('\n').map(line => {
       if (!e) return null;
       const o = {}, iv = e.interval;
       if (e.load && e.load.test) o.test = yamlRefName(e.load.ref); else o.name = e.name;
-      o.minutes = b.minutes || 1;
+      if (!(iv && iv.rounds)) o.minutes = b.minutes || 1; // con un timer i minuti si calcolano
       if (iv && iv.rounds) {
         const sided = iv.cues && iv.cues.length === 2 && iv.cues[0] === 'L' && iv.cues[1] === 'R';
         if (iv.roundsPerSet && iv.rounds % iv.roundsPerSet === 0 && !sided) { o.sets = iv.rounds / iv.roundsPerSet; o.rounds = iv.roundsPerSet; } else o.sets = iv.rounds;

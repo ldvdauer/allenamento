@@ -165,12 +165,24 @@ await clickText('+ Exercise', '#view'); await pg.type('.sheet input', 'max hang'
 ok(await pg.evaluate(() => { const s = __app.state, x = s.extras[0], ids = x.blocks.slice(-2).map(b => b.exId); return ids[0] !== ids[1] && s.exercises[ids[0]].std === 'max-hang' && x.blocks[x.blocks.length - 1].minutes === 10; }), 'libreria: lo standard si aggiunge con i valori di base, come istanza separata');
 await pg.evaluate(() => { const r = [...document.querySelectorAll('#view .blk')].filter(x => x.innerText.includes('Max hang')); r[r.length - 1].click(); }); await sleep(60); // l'ultimo dei due
 ok(!/\bCue\b/.test(await txt('.sheet')) && (await txt('.sheet')).includes('Alternate L/R') && (await txt('.sheet')).includes('Note'), 'parametri: un solo campo Nota e l\'interruttore SX/DX, nessun campo Cue');
-await pg.evaluate(() => { const l = [...document.querySelectorAll('.sheet label')]; const set = (t, v) => { const i = l.find(x => x.innerText.startsWith(t)).querySelector('input,select'); i.value = v; i.dispatchEvent(new Event('change')); };
-  set('Round', '6'); set('Work', '10'); set('Rest (s)', '150'); set('Load: reference', 'hc'); set('% of', '90'); set('Planned minutes', ''); set('Note', 'margine 1"'); });
+await pg.evaluate(() => { const l = [...document.querySelectorAll('.sheet label')]; const set = (t, v) => { const i = l.find(x => x.innerText.startsWith(t)).querySelector('input,select'); i.value = v; i.dispatchEvent(new Event('input')); i.dispatchEvent(new Event('change')); };
+  set('Round', '6'); set('Work', '10'); set('Rest (s)', '150'); set('Load: reference', 'hc'); set('% of', '90'); set('Note', 'margine 1"'); });
+await shot('14-durata'); ok(await pg.evaluate(() => { const f = [...document.querySelectorAll('.sheet label')].find(x => x.innerText.startsWith('Minutes')); return f && f.hidden; })
+  && (await txt('.sheet')).includes('Duration: 14 min, calculated from the timer'), 'con un timer i minuti non si scrivono: si calcolano mentre cambi i parametri');
 await clickText('Save', '.sheet');
 const mh = await txt('#view');
 ok(mh.includes('6 × 10" · rest 2\'30" · 90%') && mh.includes('4 × 7" · rest 3\'') && mh.includes('margine 1"'), 'parametri (round, secondi, recupero, %) impostati nella sessione: valgono solo per quel blocco');
 ok(await pg.evaluate(() => { const x = __app.state.extras[0]; return x.blocks[x.blocks.length - 1].minutes === 14; }), 'minuti ricalcolati dai parametri');
+// Senza timer ("Duration only") i minuti si scrivono a mano e sono obbligatori
+await pg.evaluate(() => { const r = [...document.querySelectorAll('#view .blk')].filter(x => x.innerText.includes('Max hang')); r[r.length - 1].click(); }); await sleep(60);
+await pg.evaluate(() => { const l = [...document.querySelectorAll('.sheet label')]; const sel = l.find(x => x.innerText.startsWith('Timer')).querySelector('select'); sel.value = 'none'; sel.dispatchEvent(new Event('change'));
+  const m = l.find(x => x.innerText.startsWith('Minutes')).querySelector('input'); m.value = ''; m.dispatchEvent(new Event('input')); });
+ok(await pg.evaluate(() => !document.querySelector('.sheet .sub:not([hidden])').innerText.includes('Duration:') && ![...document.querySelectorAll('.sheet label')].find(x => x.innerText.startsWith('Minutes')).hidden), 'Duration only: campo Minutes visibile, niente durata calcolata');
+await clickText('Save', '.sheet');
+ok((await txt('#toast')).includes('Type the minutes'), 'Duration only: senza minuti non si salva');
+await pg.evaluate(() => { const m = [...document.querySelectorAll('.sheet label')].find(x => x.innerText.startsWith('Minutes')).querySelector('input'); m.value = '25'; m.dispatchEvent(new Event('input')); });
+await clickText('Save', '.sheet');
+ok(await pg.evaluate(() => { const x = __app.state.extras[0], b = x.blocks[x.blocks.length - 1]; return b.minutes === 25 && __app.state.exercises[b.exId].interval === null; }), 'Duration only: i minuti scritti a mano restano');
 await clickText('+ Test', '#view');
 ok((await txt('.sheet')).includes('Half-crimp') && (await txt('.sheet')).includes('L and R'), '+ Test: elenco dei test definiti');
 await clickText('Half-crimp', '.sheet', true);
@@ -278,7 +290,7 @@ await pg.evaluate(() => { __app.state.settings.gh = null; });
 
 // Persistenza e migrazione di un backup v2 con due sessioni nello stesso giorno
 await pg.reload();
-ok(await pg.evaluate(() => __app.state.logs.length === 3 && __app.state.extras.length === 1 && __app.state.v === 7), 'i dati sopravvivono al ricaricamento');
+ok(await pg.evaluate(() => __app.state.logs.length === 3 && __app.state.extras.length === 1 && __app.state.v === 8), 'i dati sopravvivono al ricaricamento');
 const mig = await pg.evaluate(async () => {
   const mk = (id, ex) => ({ id, type: 'wall', period: 'base', blocks: [{ id: id + 'b', exId: ex, minutes: 5 }] });
   const old = { v: 2, plans: [{ id: 'p', title: 'Vecchio', startDate: '2026-11-23', weeks: [[{ sessions: [mk('s1', 'e1'), mk('s2', 'e2')] }, ...Array.from({ length: 6 }, () => ({ sessions: [] }))]] }],
@@ -324,8 +336,9 @@ await pg.evaluate(() => {
   localStorage.setItem('allenamento.v1', JSON.stringify(old)); location.reload();
 });
 await sleep(500);
-const m7 = await pg.evaluate(() => { const s = __app.state; return { v: s.v, e1: s.exercises.e1.name, cues: s.exercises.e2.interval.cues.join(), e3: s.exercises.e3.name, defs: s.testDefs.map(d => d.name).join('|'), surf: s.surfaces.map(x => x.name).join('|'), sides: s.logs[0].blocks[0].kgs.map(k => k.side).join(), title: s.extras[0].title, note: s.extras[0].blocks[0].note }; });
-ok(m7.v === 7 && m7.e1 === 'Wrist curl' && m7.cues === 'L,R' && m7.defs === 'Body weight|Pinch block L|Pinch block R' && m7.surf === 'Indoor (gym)|Pannello di casa' && m7.sides === 'L,R', 'dati v6 in italiano: nomi predefiniti, superfici e lati SX/DX passano all\'inglese');
+const m7 = await pg.evaluate(() => { const s = __app.state; return { v: s.v, e1: s.exercises.e1.name, cues: s.exercises.e2.interval.cues.join(), e3: s.exercises.e3.name, defs: s.testDefs.map(d => d.name).join('|'), surf: s.surfaces.map(x => x.name).join('|'), sides: s.logs[0].blocks[0].kgs.map(k => k.side).join(), title: s.extras[0].title, note: s.extras[0].blocks[0].note, mins: s.extras[0].blocks.map(b => b.minutes).join() }; });
+ok(m7.v === 8 && m7.e1 === 'Wrist curl' && m7.cues === 'L,R' && m7.defs === 'Body weight|Pinch block L|Pinch block R' && m7.surf === 'Indoor (gym)|Pannello di casa' && m7.sides === 'L,R', 'dati v6 in italiano: nomi predefiniti, superfici e lati SX/DX passano all\'inglese');
+ok(m7.mins === '7,7,5', 'migrazione v8: con un timer i minuti diventano quelli calcolati (8 → 7), senza timer restano');
 ok(m7.e3 === 'Sospensioni di Leo' && m7.title === 'Dita a casa' && m7.note === 'lento', 'nomi, titoli e note scritti dall\'utente restano come sono');
 await go('home');
 ok((await txt('#view')).includes('L 15 kg · R 18 kg') && (await txt('#view')).includes('Wrist curl'), 'dopo la migrazione i kg per lato si calcolano ancora dai massimali');

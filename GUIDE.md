@@ -14,7 +14,7 @@
 
 ## Planning
 - **Calendar**: tap a day to view, create or edit sessions. Drag "≡" to reorder exercises.
-- Tap an exercise to set its parameters *in that session*: rounds, seconds or reps, rests, L/R, reference test and %, surface, note.
+- Tap an exercise to set its parameters *in that session*: rounds, seconds or reps, rests, L/R, reference test and %, surface, note. With a timer the duration is calculated; minutes are typed only for "Duration only" exercises.
 - **Programmes** (More): import a `.yaml` file (see [Programme files](#programme-files)), choose the day of the first session and find it in the calendar. Any day of the week works: the other sessions keep their order and the days between them.
 - "Copy to a date" duplicates a session on another day.
 - A programme can be exported as `.yaml` (More → the programme → Export .yaml), edited and imported again.
@@ -69,7 +69,6 @@ sessions:
         sides: L/R
         load: 75% pinch
       - name: Flash sets
-        minutes: 60
         sets: 6
         rounds: 3            # rounds in each set
         work: done           # no countdown: tap Done at the end of each round
@@ -89,7 +88,7 @@ sessions:
 - One session per day. The same session in several weeks is written once, with a range in `week`.
 - `name` is free text. Names of the standard exercises (Exercise library) are recognised, so time is counted in the right category in Analytics.
 - Timer: `sets` plus either `work` (a time, or `done`) or `reps`. `rest`, `rounds` + `set_rest` and `sides: L/R` are optional.
-- `minutes` is calculated from the timer when missing. It is required for exercises without a timer, unless they are standard exercises.
+- `minutes`: only for exercises without a timer (required unless it is a standard exercise). With a timer the minutes are calculated from its parameters; with `reps` or `work: done` each round counts about 45 s.
 - Durations: `7s`, `45s`, `3min`, `1min30s` (also `3'` and `1'30"`).
 - `load`: a percentage of one of your tests: `open-hand`, `half-crimp`, `sloper`, `pinch`, `lift`, `wrist`, `pull-up`, `one-arm`. The kg are calculated from the latest result. `test:` uses the same names.
 - `surface`: one of your surfaces (More → Climbing surfaces), by key or by name.

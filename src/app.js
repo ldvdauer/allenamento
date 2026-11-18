@@ -15,7 +15,7 @@
 
   /* ---------- Stato e persistenza ---------- */
   // Primo avvio: nessun piano precaricato, ogni utente importa o crea i propri.
-  const fresh = () => migrate({ v: 7, plans: [], activePlan: null, exercises: {}, logs: [], tests: [] });
+  const fresh = () => migrate({ v: 8, plans: [], activePlan: null, exercises: {}, logs: [], tests: [] });
   /** I test da cui dipendono i kg degli esercizi (e il peso corporeo) devono esistere nella sezione Test. */
   function ensureTests(s) {
     const need = new Set(['bw'].concat(Object.values(s.exercises).filter(e => e.load).flatMap(e => C.refKeys(e.load.ref))));
@@ -106,7 +106,13 @@
         for (const k of b.kgs || []) if (k.side) k.side = C.normSide(k.side);
       }
     }
-    s.v = 7;
+    // v8: con un timer i minuti previsti si calcolano dai parametri, non si scrivono a mano.
+    if (fromV < 8) {
+      const fix = list => { for (const x of list) for (const b of x.blocks || []) { const e = s.exercises[b.exId]; if (e && e.interval && e.interval.rounds) b.minutes = C.intervalMinutes(e.interval); } };
+      for (const p of s.plans) for (const w of p.weeks) for (const d of w) fix(d.sessions);
+      fix(s.extras);
+    }
+    s.v = 8;
     return s;
   }
   let rescued = false;
@@ -575,10 +581,17 @@
     const timer = h('div', {}, h('div', { class: 'cols3' }, field('Round', rounds), workF, repsF, field('Rest (s)', rest)),
       h('div', { class: 'cols' }, field('Rounds per set (optional)', perSet), field('Rest between sets (s)', setRest)),
       h('label', { class: 'f' }, 'Sides', h('div', { style: 'margin-top:8px;color:var(--tx)' }, sides, ' Alternate L/R (rounds count both sides: 6 rounds = 3 per side)')));
-    const sync = () => { timer.hidden = mode.value === 'none'; workF.hidden = mode.value !== 'timed'; repsF.hidden = mode.value !== 'reps'; sfNewField.hidden = sfSel.value !== '+new'; };
+    // Minuti: con un timer si calcolano dai parametri (sola lettura); a mano solo per "Duration only".
+    const minF = field('Minutes', min), durLine = h('p', { class: 'sub' });
+    const draft = () => C.normInterval({ rounds: Math.max(1, val(rounds) || 1), workSeconds: mode.value === 'timed' ? val(work) || 0 : 45, restSeconds: val(rest) || 0, selfPaced: mode.value === 'reps',
+      reps: mode.value === 'reps' ? val(reps) || 0 : 0, roundsPerSet: val(perSet) || 0, setRestSeconds: val(setRest) || 0, cues: sides.checked ? ['L', 'R'] : [] });
+    const showDur = () => { if (mode.value !== 'none') durLine.textContent = `Duration: ${C.intervalMinutes(draft())} min, calculated from the timer` + (mode.value === 'reps' ? ' (about 45 s per round)' : '') + '.'; };
+    for (const x of [rounds, work, rest, reps, perSet, setRest]) x.addEventListener('input', showDur);
+    sides.addEventListener('change', showDur);
+    const sync = () => { minF.hidden = mode.value !== 'none'; durLine.hidden = mode.value === 'none'; showDur(); timer.hidden = mode.value === 'none'; workF.hidden = mode.value !== 'timed'; repsF.hidden = mode.value !== 'reps'; sfNewField.hidden = sfSel.value !== '+new'; };
     const isTest = !!ld.test;
     const ov = openSheet(e.std && C.STD[e.std] ? C.STD[e.std].name : e.name, [h('p', { class: 'sub' }, 'Parameters of this exercise in this session.'),
-      h('div', { class: 'cols' }, field('Name', name), field('Planned minutes', min)), field('Timer', mode), timer,
+      field('Name', name), field('Timer', mode), minF, durLine, timer,
       isTest ? null : h('div', { class: 'cols' }, field('Load: reference test', ref), field('% of max', pct)),
       e.slot === 'wall' || e.slot === 'warmup' || e.surface ? [field('Climbing surface', sfSel), sfNewField] : null,
       field('Note', note),
@@ -587,10 +600,10 @@
         let sf = sfSel.value;
         if (sf === '+new') { const nm = sfNew.value.trim().slice(0, 40); if (!nm) return toast('Type the name of the new surface.'); sf = addSurface(nm); }
         e.name = name.value.trim().slice(0, 80); e.surface = sf;
-        e.interval = mode.value === 'none' ? null : C.normInterval({ rounds: Math.max(1, val(rounds) || 1), workSeconds: mode.value === 'timed' ? val(work) || 0 : 45, restSeconds: val(rest) || 0, selfPaced: mode.value === 'reps',
-          reps: mode.value === 'reps' ? val(reps) || 0 : 0, roundsPerSet: val(perSet) || 0, setRestSeconds: val(setRest) || 0, cues: sides.checked ? ['L', 'R'] : [] });
+        if (mode.value === 'none' && !(val(min) > 0)) return toast('Type the minutes.');
+        e.interval = mode.value === 'none' ? null : draft();
         if (!isTest) { const d = S.testDefs.find(t => t.key === C.refKeys(ref.value)[0]); e.load = ref.value ? { ref: ref.value, mode: d && d.mode === 'hang' ? 'hang' : 'lift', pct: val(pct), test: false } : null; }
-        const m = val(min); b.minutes = m == null ? C.intervalMinutes(e.interval) || b.minutes : Math.max(0, Math.round(m));
+        b.minutes = e.interval ? C.intervalMinutes(e.interval) : Math.round(val(min));
         b.note = note.value.trim().slice(0, 200);
         close();
       }, 'pri block'),

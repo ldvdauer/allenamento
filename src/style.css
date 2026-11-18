@@ -114,3 +114,4 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
 .errs{margin:6px 0 10px;padding-left:18px;font-size:14px;line-height:1.45}.errs li{margin:4px 0;overflow-wrap:anywhere}
 .blk .p.note{color:var(--note)}
 input:not([type=checkbox]):not([type=radio]):not([type=file]),select,textarea{background:#101316;color:var(--tx);border:1px solid var(--line);border-radius:10px}
+label.f input[type=checkbox]{display:inline-block;width:auto;margin:0 8px 0 0;vertical-align:-2px}
