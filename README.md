@@ -21,7 +21,7 @@ The interface is in English only. Code comments and test descriptions are still 
 | `test/` | `core.test.js` (unit tests), `e2e.mjs` (smoke test in headless Chrome), `fixture.yaml` (sample programme). |
 
 ## Data model (in short)
-- **Library**: 50 standard exercises with only a name and a section (`LIBRARY` in `core.js`), plus the ones the user creates.
+- **Library**: 54 standard exercises with only a name and a section (`LIBRARY` in `core.js`), plus the ones the user creates.
 - **Session**: tied to a date (created by hand) or to an imported programme. It contains blocks.
 - **Block**: an exercise *in that session*, with its own parameters (rounds, seconds or reps, rests, L/R, reference test and %, surface, note). Nothing is shared between sessions.
 - **Test**: definitions with their own parameters; the latest result is the max used to compute kg.

@@ -450,3 +450,11 @@ test('programma nel repository: Karma - Fase 1.yaml è valido', () => {
   const r = C.importYaml(fs.readFileSync(require.resolve('../Karma - Fase 1.yaml'), 'utf8'));
   assert.equal(r.plan.weeks.length, 4);
 });
+
+test('libreria: esercizi di stretching e riconoscimento dei nomi', () => {
+  for (const [n, k] of [['Butterfly passivo', 'butterfly'], ['Side split', 'side-split'], ['Spaccata laterale', 'side-split'], ['Frog', 'frog'], ['Biceps stretch', 'biceps-stretch'],
+    ['Allungamento bicipiti', 'biceps-stretch'], ['Attivazione dita open hand 20 mm', 'warmup-fingers'], ['Attivazione', 'activation'], ['Mobilità generale', 'stretch']])
+    assert.equal(C.matchStd(n), k, n);
+  for (const k of ['butterfly', 'side-split', 'frog', 'biceps-stretch']) assert.equal(C.STD[k].section, 'mobility');
+  assert.equal(C.matchStd('Biceps curl'), null);
+});
