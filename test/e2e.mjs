@@ -36,7 +36,7 @@ await pg.goto(url);
 
 // Home vuota: solo Rest day e i due pulsanti, nessun riferimento ai piani
 let home = await txt('#view');
-await shot('0-home-riposo'); ok(home.includes('Home') && home.includes('Rest day') && home.includes('+ Exercise') && home.includes('Log session') && !home.includes('Create session'), 'Home al primo avvio: Rest day con + Exercise, nessun "crea sessione"');
+await shot('0-home-riposo'); ok(home.includes('Home') && home.includes('Rest day') && home.includes('+ Exercise') && !/session/i.test(home), 'Home al primo avvio: Rest day con + Exercise, nessun "crea sessione"');
 ok(!/programme|this week/i.test(home), 'Home: nessun riferimento al piano né riepiloghi');
 ok((await txt('#tabs')).replace(/\s+/g, ' ').trim() === 'Home Calendar Analytics More Note', 'navigazione: 4 schede + Nota, niente Piano né Diario');
 
@@ -215,11 +215,14 @@ ok((await txt('#view')).includes('Limit bouldering') && (await txt('#view')).inc
 await go('calendar-2027-06-01');
 await shot('8-calendario-giorno');
 
-// Registra sessione (manuale) da Home
-await go('home'); await clickText('Log session', '#view');
-ok((await txt('.sheet')).includes('Log session') && !(await txt('.sheet')).includes('Type'), 'registrazione manuale senza campo "tipo"');
+// Si registrano esercizi, non sessioni: un esercizio fatto senza timer si registra dal suo foglio
+await go('home');
+ok(!/log session|logged session/i.test(await txt('#view')), 'Home: nessun "Log session"');
+await pg.evaluate(() => [...document.querySelectorAll('#view .blk')].find(r => r.innerText.includes('Pinch block')).click()); await sleep(60);
+await clickText('Log without timer', '.sheet');
+ok((await txt('.sheet')).includes('Sets done (of 6)') && (await pg.$eval('.sheet .cols label:nth-child(1) input', e => e.value)) === '6', 'registrazione senza timer: serie tutte fatte, modificabili');
 await clickText('Save', '.sheet');
-ok(await pg.evaluate(() => __app.state.logs.length === 2), 'registrazione manuale salvata');
+ok(await pg.evaluate(() => { const l = __app.state.logs.filter(x => x.date === '2026-11-25'); return l.length === 1 && l[0].blocks.some(b => b.name === 'Pinch block'); }), 'esercizio registrato nella stessa giornata (una sola registrazione per giorno)');
 
 // Programmi: gestione da Altro, spostare la data di inizio sposta le sessioni nel calendario
 await go('more'); await clickText('Karma 8A+', '#view', true);
@@ -243,8 +246,8 @@ ok(await pg.evaluate(n => __app.state.plans.length === n, nPlans), 'import con e
 await pg.evaluate(() => document.querySelectorAll('.overlay').forEach(o => o.remove()));
 await go('analytics'); ok((await txt('#view')).includes('Weekly volume') && !(await txt('#view')).includes('session type'), 'Analisi: grafici presenti, niente "tipo di sessione"');
 const an = await txt('#view'); if (process.env.DBG) console.log(an.slice(0, 900));
-ok(an.includes('Time by category') && an.includes('Strength\n36 min · 100%') && an.includes('Unclassified') && !/on the wall/i.test(an) && an.includes('Minutes logged by category'), 'Analisi: tempo e volume settimanale per categoria, niente "on the wall"');
-ok(await pg.evaluate(() => { const b = [...document.querySelectorAll('#view .viz-hb-t i')][0]; return b.className === 'c-strength' && getComputedStyle(b).backgroundColor === 'rgb(213, 81, 129)'; }), 'Analisi: barra della categoria con il suo colore (Strength = magenta)');
+ok(an.includes('Time by category') && an.includes('Fingers\n7 min · 16%') && an.includes('Strength\n36 min · 84%') && !/on the wall/i.test(an) && an.includes('Minutes logged by category'), 'Analisi: tempo e volume settimanale per categoria, niente "on the wall"');
+ok(await pg.evaluate(() => { const b = [...document.querySelectorAll('#view .viz-hb-t i')].find(i => i.className === 'c-strength'); return !!b && getComputedStyle(b).backgroundColor === 'rgb(213, 81, 129)'; }), 'Analisi: barra della categoria con il suo colore (Strength = magenta)');
 ok(!an.includes('most time'), 'nessuna classifica dei dieci esercizi');
 await pg.evaluate(() => { const hit = [...document.querySelectorAll('#view .viz')][0].querySelectorAll('.hit'); hit[hit.length - 1].dispatchEvent(new MouseEvent('click', { bubbles: true })); });
 ok(/in total/.test(await pg.$eval('#view .viz-tip', e => e.innerText)), 'grafico impilato: tocco su una settimana → totale e gruppi');
@@ -280,7 +283,7 @@ await clickText('Save and test', '#view'); await sleep(200);
 const gh = await pg.evaluate(() => { const put = __gh.find(x => x.m === 'PUT'), body = JSON.parse(put.body), txt = new TextDecoder().decode(Uint8Array.from(atob(body.content), c => c.charCodeAt(0))), data = JSON.parse(txt);
   return { url: put.url, auth: put.auth, sha: body.sha, hasToken: txt.includes('github_pat'), logs: data.logs.length, repo: data.settings.gh.repo, toast: document.getElementById('toast').textContent, last: __app.state.settings.lastBackup, kept: __app.state.settings.gh.token }; });
 ok(gh.url === 'https://api.github.com/repos/leo/allenamento-dati/contents/allenamento-backup.json' && gh.auth === 'Bearer github_pat_FINTO' && gh.sha === undefined, 'backup GitHub: file creato nel repository indicato');
-ok(!gh.hasToken && gh.logs === 2 && gh.repo === 'leo/allenamento-dati' && gh.kept === 'github_pat_FINTO', 'il backup contiene i dati ma non il token, che resta sul dispositivo');
+ok(!gh.hasToken && gh.logs === 1 && gh.repo === 'leo/allenamento-dati' && gh.kept === 'github_pat_FINTO', 'il backup contiene i dati ma non il token, che resta sul dispositivo');
 ok(/Backup saved to GitHub/.test(gh.toast) && gh.last === '2026-11-25' && (await txt('#view')).includes('Active. Last backup'), 'esito mostrato e data dell\'ultimo backup aggiornata');
 await pg.evaluate(async () => { __ghStatus.GET = 200; __gh.length = 0; await __app.cloudBackup(true); });
 ok(await pg.evaluate(() => JSON.parse(__gh.find(x => x.m === 'PUT').body).sha === 'abc'), 'backup successivi: aggiornano il file esistente');
@@ -298,7 +301,7 @@ await pg.evaluate(() => { __app.state.settings.gh = null; });
 
 // Persistenza e migrazione di un backup v2 con due sessioni nello stesso giorno
 await pg.reload();
-ok(await pg.evaluate(() => __app.state.logs.length === 3 && __app.state.extras.length === 1 && __app.state.v === 12), 'i dati sopravvivono al ricaricamento');
+ok(await pg.evaluate(() => __app.state.logs.length === 2 && __app.state.extras.length === 1 && __app.state.v === 12), 'i dati sopravvivono al ricaricamento');
 const mig = await pg.evaluate(async () => {
   const mk = (id, ex) => ({ id, type: 'wall', period: 'base', blocks: [{ id: id + 'b', exId: ex, minutes: 5 }] });
   const old = { v: 2, plans: [{ id: 'p', title: 'Vecchio', startDate: '2026-11-23', weeks: [[{ sessions: [mk('s1', 'e1'), mk('s2', 'e2')] }, ...Array.from({ length: 6 }, () => ({ sessions: [] }))]] }],

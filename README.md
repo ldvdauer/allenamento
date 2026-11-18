@@ -1,6 +1,6 @@
 # Allenamento
 
-Offline PWA to plan and log climbing training: calendar, sessions with one timer per exercise, tests and maxes,
+Offline PWA to plan and log climbing training: calendar, training days with one timer per exercise, tests and maxes,
 load progression, analytics. No backend and no account: data lives on the device, with backup to a file or
 automatically to a private GitHub repository.
 
@@ -14,7 +14,7 @@ The interface is in English only. Code comments and test descriptions are still 
 | `src/core.js` | Pure logic, no DOM: dates, standard library, loads and progression, timer steps, YAML programme import/export, aggregations for analytics. The only file covered by unit tests. |
 | `src/vendor/` | [js-yaml](https://github.com/nodeca/js-yaml) 4.1.0 (MIT), the only third-party code, inlined by the build. |
 | `src/charts.js` | Dependency-free SVG charts (columns, stacked columns, lines, horizontal bars) with tooltip and table. |
-| `src/app.js` | Interface: Home, calendar, session in progress, tests, analytics, settings, backup, notebook, diagnostics. |
+| `src/app.js` | Interface: Home, calendar, timer, tests, analytics, settings, backup, notebook, diagnostics. |
 | `src/style.css`, `src/index.html` | Style and page skeleton. |
 | `public/` | Manifest, service worker and icon. |
 | `build.mjs` | Produces `dist/index.html` (single file for previews) and `docs/` (installable version published by GitHub Pages). |
@@ -23,9 +23,9 @@ The interface is in English only. Code comments and test descriptions are still 
 ## Data model (in short)
 - **Library**: 53 standard exercises with only a name and a category (`LIBRARY` and `SECTIONS` in `core.js`), plus the ones the user creates. Categories are training qualities (Fingers, Strength, Power endurance, Endurance, Technique, Conditioning, Mobility, Other); there is no warm-up category. Their colours (`--c-*` in `style.css`) were chosen by hand: some pairs are close (see the comment there), so the category name is also in the library and in the accessible label.
 - **Training day** (internally still a "session" object): the exercises of one date, from an imported programme or added by hand. The day is the unit: a day with no exercises is a rest day and is removed from the data (`pruneEmpty` on every save). Copying or moving onto a day that already has exercises appends to it.
-- **Block**: an exercise *in that session*, with its own parameters (rounds, seconds or reps, rests, L/R, reference test and %, surface, note). Nothing is shared between sessions.
+- **Block**: an exercise *on that day*, with its own parameters (rounds, seconds or reps, rests, L/R, grip, reference test and %, surface, note). Nothing is shared between days.
 - **Test**: definitions with their own parameters; the latest result is the max used to compute kg.
-- **Log entry**: a session done, with minutes, RPE and, for each exercise, minutes, load, RPE, surface/grade.
+- **Day log** (`S.logs`): one per training day, filled exercise by exercise (`bid` = block id): minutes, sets done, missed reps, load, RPE, surface/grade, note. RPE, feeling and notes of the day are optional ("Rate the day").
 - The state has a version (`v`) and `migrate()` in `app.js` brings old data forward on every launch.
   Version 7 moved the interface from Italian to English: default names (standard exercises, test templates, default
   surfaces) and the SX/DX side labels are renamed (`LEGACY_NAMES`, `normSide`); anything the user typed is left alone.

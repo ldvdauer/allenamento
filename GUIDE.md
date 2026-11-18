@@ -7,9 +7,9 @@
 4. **More → Automatic backup**: connect a private GitHub repository, or use "Save backup" every now and then.
 
 ## Every day
-- **Home** shows today's training, or "Rest day" with **+ Exercise** to train anyway. "Log session" records something done outside the app.
+- **Home** shows today's training, or "Rest day" with **+ Exercise** to train anyway. You log exercises, not sessions: an exercise done without the app's timer is logged from its sheet with **Log without timer** (also on past days).
 - Every exercise of today has its **▶**: it starts that exercise's timer. When it ends you log how it went (sets done, missed reps, minutes, load, RPE, surface and grade, note) and you are back on the day; done exercises show ✓ (tap it to redo).
-- There is no session to start or finish: you can add, remove and reorder exercises at any time, also halfway through. **Rate the day** (optional) adds overall RPE, feeling and notes.
+- There is nothing to start or finish: you can add, remove and reorder exercises at any time, also halfway through. **Rate the day** (optional) adds overall RPE, feeling and notes.
 - Timer sounds: short beeps in the last 3 seconds, a long tone at the end of each set, two long tones at the end of the exercise. On iPhone they play even with the silent switch on (iOS 17 or later); the volume still counts.
 - In exercises with reps the timer shows how many to do ("6 reps") instead of the time. Skipped sets are counted for you in "Sets done".
 - If you leave halfway, Home offers "Resume".
@@ -18,7 +18,7 @@
 - **Calendar**: tap a day to see or change its exercises (+ Exercise, + Test). Drag "≡" to reorder them. A day with no exercises is a rest day: there is nothing to create or delete.
 - **Day…** on a day: title, move it to another date (days you created), copy its exercises to another date, or clear it.
 - Tap an exercise to set its parameters *on that day*: rounds, seconds or reps, rests, L/R, reference test and %, surface, note; for Fingers exercises also grip, edge (mm) and one or two hands. With a timer the duration is calculated; minutes are typed only for "Duration only" exercises.
-- **Programmes** (More): import a `.yaml` file (see [Programme files](#programme-files)), choose the day of the first session and find it in the calendar. Any day of the week works: the other sessions keep their order and the days between them.
+- **Programmes** (More): import a `.yaml` file (see [Programme files](#programme-files)), choose the first training day and find it in the calendar. Any day of the week works: the other sessions keep their order and the days between them.
 - "Copy to a date" adds the exercises of a day to another day.
 - A programme can be exported as `.yaml` (More → the programme → Export .yaml), edited and imported again.
 
@@ -43,7 +43,7 @@ Every exercise has a category, shown as a coloured bar next to its name; the sam
 | Other | Mental work, activation sessions, your exercises without a category |
 
 ## Analytics
-Filter by period, then: sessions, time, RPE, adherence; time by category; weekly volume by category against the
+Filter by period, then: training days, time, RPE, adherence; time by category; weekly volume by category against the
 planned one; load (minutes × RPE); effort and feeling; surfaces and grades; loads by exercise.
 Tap a chart to see the values; the table is underneath.
 

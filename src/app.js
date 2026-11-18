@@ -318,7 +318,7 @@
   const sessOf = r => (r.x ? r.x : r.p.weeks[r.w][r.d].sessions[r.si]);
   const isDone = r => { const id = sessOf(r).id; return S.logs.some(l => l.sid === id); };
   // Titolo per diario e sessione in corso: quello scelto, altrimenti i primi due esercizi che non sono riscaldamento.
-  const autoTitle = s => s.title || s.blocks.map(b => S.exercises[b.exId]).filter(e => e && e.slot !== 'warmup').slice(0, 2).map(C.exName).join(' · ') || 'Session';
+  const autoTitle = s => s.title || s.blocks.map(b => S.exercises[b.exId]).filter(e => e && e.slot !== 'warmup').slice(0, 2).map(C.exName).join(' · ') || 'Training';
   function findRef(sid) {
     const x = S.extras.find(e => e.id === sid);
     if (x) return { x };
@@ -443,21 +443,21 @@
   }
   /** Registrazione di oggi per questa giornata (una sola). Con `create` la crea vuota se manca. */
   function dayLog(r, create) {
-    const s = sessOf(r), date = C.todayISO();
+    const s = sessOf(r), date = dayOf(r);
     let l = S.logs.find(x => x.sid === s.id && x.date === date);
     if (!l && create) { l = { id: C.uid(), date, sid: s.id, type: s.type || 'wall', title: autoTitle(s), minutes: 0, rpe: null, feel: null, notes: '', loads: [], climbs: [], blocks: [] }; S.logs.push(l); }
     return l;
   }
   /** La giornata: ogni esercizio si fa partire dal suo ▶ (solo oggi). Ordine ed esercizi si cambiano sempre, anche a metà. */
   function sessionCard(r, edit) {
-    const s = sessOf(r), today = dayOf(r) === C.todayISO(), l = today ? dayLog(r, false) : null, done = isDone(r);
+    const s = sessOf(r), today = dayOf(r) === C.todayISO(), l = dayOf(r) <= C.todayISO() ? dayLog(r, false) : null, done = isDone(r);
     const doneIds = new Set(l ? l.blocks.map(x => x.bid).filter(Boolean) : []);
     const run = today ? b => (S.exercises[b.exId] ? h('button', { class: 'play' + (doneIds.has(b.id) ? ' done' : ''), 'aria-label': (doneIds.has(b.id) ? 'Redo ' : 'Start ') + C.exName(S.exercises[b.exId]),
       onclick: e => { e.stopPropagation(); startBlock(r, b); } }, doneIds.has(b.id) ? '✓' : '▶') : null) : null;
     const list = h('div', {}, s.blocks.map((b, bi) => blockRow(b, edit ? () => blockSheet(r, bi) : null, edit, run)));
     if (edit) enableDrag(list, s);
     return h('div', { class: 'card' },
-      h('div', { class: 'row' }, h('div', { class: 'grow big', style: 'font-size:17px' }, s.title || 'Session'),
+      h('div', { class: 'row' }, h('div', { class: 'grow big', style: 'font-size:17px' }, s.title || 'Training'),
         done ? h('span', { class: 'tag ok' }, today && doneIds.size < s.blocks.length ? `${doneIds.size} of ${s.blocks.length} done` : 'Done') : null, h('span', { class: 'tag' }, C.sessionMinutes(s) + ' min')),
       list,
       h('div', { class: 'btns' },
@@ -490,7 +490,6 @@
       out.push(h('div', { class: 'card row' }, h('div', { class: 'grow sub' }, since == null ? 'Your data has no backup yet.' : `Last backup ${since} days ago.`), btn('Save backup', doBackup, 'sm')));
     refs.forEach(r => out.push(sessionCard(r, true)));
     if (!refs.length) out.push(restCard(t, false));
-    out.push(h('div', { class: 'btns' }, btn('Log session', () => logSheet(null), 'sm')));
     return out;
   }
 
@@ -533,18 +532,18 @@
       h('div', { class: 'cal-key sub' }, h('span', {}, h('i', {}), 'planned'), h('span', {}, h('i', { class: 'ok' }), 'done')),
       h('h2', { style: 'margin-top:18px;text-transform:capitalize' }, `${WD_FULL[wdIdx(calSel)]} ${fmtDate(calSel)}`),
       refs.length ? refs.map(r => sessionCard(r, true)) : restCard(calSel, true),
-      logs.length ? [h('h2', {}, 'Logged'), h('div', { class: 'sub' }, 'Tap to view or edit.'), logs.map(logCard)] : null];
+      logs.length ? [h('h2', {}, 'Logged exercises'), h('div', { class: 'sub' }, 'Tap to rate the day or delete what was logged.'), logs.map(logCard)] : null];
   }
 
   /* ---------- Programmi: insiemi di sessioni importati, visibili solo nel calendario ---------- */
   function planSheet(p) {
     const title = h('input', { value: p.title }), start = h('input', { type: 'date', value: C.firstSessionDate(p) });
     const done = () => { save(); ov.remove(); render(); };
-    const ov = openSheet('Programme', [field('Name', title), field('First session on', start),
-      h('p', { class: 'sub' }, `${p.weeks.length} weeks · until ${fmtDate(C.dateOf(p, p.weeks.length - 1, 6))}. Sessions are edited from the calendar.`),
+    const ov = openSheet('Programme', [field('Name', title), field('First training day on', start),
+      h('p', { class: 'sub' }, `${p.weeks.length} weeks · until ${fmtDate(C.dateOf(p, p.weeks.length - 1, 6))}. Days are edited from the calendar.`),
       btn('Save', () => { p.title = title.value.trim().slice(0, 80) || p.title; if (C.validISO(start.value)) p.startDate = C.startForFirst(p, start.value); done(); }, 'pri block'),
       h('div', { class: 'btns' }, btn('Export .yaml', () => exportSheet('Export programme', p.title.replace(/[^\w+-]+/g, '_') + '.yaml', C.exportYaml(p, S.exercises)), 'sm'),
-        btn('Delete programme', async () => { if (await confirmDlg(`Delete "${p.title}"? Its sessions disappear from the calendar, logged sessions stay.`, 'Delete')) { S.plans = S.plans.filter(x => x !== p); done(); } }, 'sm danger'))]);
+        btn('Delete programme', async () => { if (await confirmDlg(`Delete "${p.title}"? Its days disappear from the calendar, logged exercises stay.`, 'Delete')) { S.plans = S.plans.filter(x => x !== p); done(); } }, 'sm danger'))]);
   }
 
   function fileBtn(label, after) {
@@ -574,9 +573,9 @@
     }
     const r = C.importYaml(text, { surfaces: S.surfaces, testDefs: S.testDefs }); // lancia con tutti gli errori: lo stato non viene toccato
     const title = h('input', { value: r.plan.title }), start = h('input', { type: 'date', value: r.firstSession || C.todayISO() });
-    const ov = openSheet('Import programme', [h('p', { class: 'sub' }, `${r.plan.weeks.length} weeks. Choose when it starts: sessions appear in the calendar.`),
-      field('Name', title), field('First session on', start),
-      h('p', { class: 'sub' }, 'The other sessions keep their order and the days between them.'),
+    const ov = openSheet('Import programme', [h('p', { class: 'sub' }, `${r.plan.weeks.length} weeks. Choose when it starts: its days appear in the calendar.`),
+      field('Name', title), field('First training day on', start),
+      h('p', { class: 'sub' }, 'The other days keep their order and the gaps between them.'),
       btn('Import', () => {
         const iso = C.validISO(start.value);
         if (!iso) return toast('Pick a valid date.');
@@ -605,7 +604,7 @@
       }, 'pri block'),
       h('div', { class: 'btns' }, btn('Copy to a date…', () => { ov.remove(); copyToDateSheet(r); }, 'sm'),
         btn('Clear the day', async () => {
-          if (!await confirmDlg('Remove all exercises from this day? Logged entries stay.', 'Remove')) return;
+          if (!await confirmDlg('Remove all exercises from this day? Logged exercises stay.', 'Remove')) return;
           s.blocks = []; save(); ov.remove(); render();
         }, 'sm danger'))]);
   }
@@ -613,7 +612,7 @@
   function blockSheet(r, bi) {
     const s = sessOf(r), b = s.blocks[bi], e = S.exercises[b.exId];
     const close = () => { save(); ov.remove(); render(); };
-    if (!e) { const ov0 = openSheet('Exercise removed', btn('Remove from session', () => { s.blocks.splice(bi, 1); save(); ov0.remove(); render(); }, 'danger block')); return; }
+    if (!e) { const ov0 = openSheet('Exercise removed', btn('Remove from the day', () => { s.blocks.splice(bi, 1); save(); ov0.remove(); render(); }, 'danger block')); return; }
     const iv = e.interval || {}, ld = e.load || {}, isStd = !!(e.std && e.std !== 'test' && C.STD[e.std]);
     const name = h('input', { value: e.name }), min = numInp(b.minutes), note = h('input', { value: b.note || '', placeholder: 'Optional: also shown in the timer' });
     const sfSel = opts(surfOpts().concat([['+new', '＋ Add new…']]), e.surface || '', { onchange: () => sync() }), sfNew = h('input', { placeholder: 'E.g. Spray wall' });
@@ -661,6 +660,7 @@
         b.note = note.value.trim().slice(0, 200);
         close();
       }, 'pri block'),
+      dayOf(r) <= C.todayISO() ? btn('Log without timer', () => { ov.remove(); recordSheet(r, b, (b.minutes || 0) * 60000, e.interval && e.interval.rounds ? { done: e.interval.rounds, of: e.interval.rounds } : null); }, 'block') : null,
       h('div', { class: 'btns' }, btn('Replace…', () => pickExercise(tpl => { s.blocks.splice(bi, 1); addBlock(s, tpl); s.blocks.splice(bi, 0, s.blocks.pop()); close(); }), 'sm'), btn('Remove', () => { s.blocks.splice(bi, 1); close(); }, 'sm danger'))]);
     sync();
   }
@@ -702,7 +702,7 @@
     const fill = () => {
       const t = q.value.trim().toLowerCase(), nodes = [], mine = S.custom.filter(c => !t || c.name.toLowerCase().includes(t));
       if (mine.length) nodes.push(secHead('My exercises'), ...mine.map(c => h('div', { class: 'blk' }, h('div', { class: 'grow' }, h('div', { class: 'n' }, catBar(c.section), c.name), h('div', { class: 'p' }, C.SECTIONS[c.section] || 'Other')),
-        btn('Delete', async () => { if (await confirmDlg(`Delete "${c.name}" from the library? Sessions that contain it do not change.`, 'Delete')) { S.custom = S.custom.filter(x => x !== c); save(); render(); } }, 'sm danger'))));
+        btn('Delete', async () => { if (await confirmDlg(`Delete "${c.name}" from the library? Days that contain it do not change.`, 'Delete')) { S.custom = S.custom.filter(x => x !== c); save(); render(); } }, 'sm danger'))));
       for (const [sec, label] of Object.entries(C.SECTIONS)) {
         const items = C.LIBRARY.filter(x => x.section === sec && (!t || x.name.toLowerCase().includes(t)));
         if (items.length) nodes.push(secHead(label, sec), ...items.map(x => h('div', { class: 'blk' }, h('div', { class: 'grow n' }, x.name))));
@@ -711,7 +711,7 @@
     };
     fill();
     return [h('div', { class: 'row' }, btn('‹ More', () => { location.hash = 'more'; }, 'sm'), btn('+ New', () => customSheet(null), 'sm pri right')),
-      h('h1', { style: 'margin-top:10px' }, 'Exercises'), h('div', { class: 'sub' }, 'Base exercises only have a name. Sets, times, reps and loads are parameters you set in each session.'),
+      h('h1', { style: 'margin-top:10px' }, 'Exercises'), h('div', { class: 'sub' }, 'Base exercises only have a name. Sets, times, reps and loads are parameters you set on each day.'),
       h('div', { style: 'margin-top:10px' }, q), h('div', { class: 'card' }, list)];
   }
 
@@ -730,24 +730,22 @@
       read: () => items.filter(i => i.sf.value).map(i => ({ name: i.c.name || '', surface: i.sf.value, top: i.gr.value || null,
         sends: val(i.sends) == null ? null : Math.max(0, Math.round(val(i.sends))), minutes: Math.max(0, Math.round(val(i.min) || 0)) })) };
   }
+  /** Valutazione di una giornata registrata: RPE, sensazione e note. Gli esercizi si registrano uno per uno. */
   function logSheet(l) {
-    const isNew = !l; l = l || { id: C.uid(), date: C.todayISO(), type: 'wall', title: 'Free session', minutes: 60, rpe: null, feel: null, notes: '', loads: [], climbs: [] };
-    const date = h('input', { type: 'date', value: l.date }), title = h('input', { value: l.title }), min = numInp(l.minutes);
-    const rpe = numInp(l.rpe), feel = opts(FEEL, l.feel ? String(l.feel) : '');
+    const legacy = !(l.blocks || []).length; // registrazioni delle versioni precedenti, fatte a mano: minuti e arrampicata modificabili
+    const min = numInp(l.minutes), rpe = numInp(l.rpe), feel = opts(FEEL, l.feel ? String(l.feel) : '');
     const notes = h('textarea', {}); notes.value = l.notes || '';
-    const climbs = climbEditor(l.climbs || [], () => val(min));
-    const ov = openSheet(isNew ? 'Log session' : 'Edit log entry', [h('div', { class: 'cols' }, field('Date', date), field('Minutes', min)),
-      field('Title', title),
-      h('div', { class: 'cols' }, field('RPE (1-10)', rpe), field('How you felt', feel)),
-      h('h2', {}, 'Climbing'), climbs.node, field('Notes', notes),
-      (l.loads || []).length ? h('div', { class: 'sub' }, l.loads.map(x => `${x.name}: ${x.kg}`).join(' · ')) : null,
+    const climbs = legacy ? climbEditor(l.climbs || [], () => val(min)) : null;
+    const ov = openSheet('Rate the day', [h('p', { class: 'sub' }, `${wdOf(l.date)} ${fmtDate(l.date)} · ${(l.blocks || []).length} exercises logged · ${l.minutes || 0} min`),
+      legacy ? field('Minutes', min) : null,
+      h('div', { class: 'cols' }, field('RPE of the day (1-10)', rpe), field('How you felt', feel)),
+      legacy ? [h('h2', {}, 'Climbing'), climbs.node] : null, field('Notes', notes),
       btn('Save', () => {
-        Object.assign(l, { date: C.validISO(date.value) || l.date, title: title.value.trim() || 'Session', minutes: Math.max(0, Math.round(val(min) || 0)), rpe: val(rpe),
-          feel: feel.value ? +feel.value : null, notes: notes.value.trim(), climbs: climbs.read() });
-        if (isNew) S.logs.push(l);
+        Object.assign(l, { rpe: val(rpe), feel: feel.value ? +feel.value : null, notes: notes.value.trim() });
+        if (legacy) Object.assign(l, { minutes: Math.max(0, Math.round(val(min) || 0)), climbs: climbs.read() });
         save(); ov.remove(); render();
       }, 'pri block'),
-      isNew ? null : btn('Delete', async () => { if (await confirmDlg('Delete this log entry?', 'Delete')) { S.logs = S.logs.filter(x => x !== l); save(); ov.remove(); render(); } }, 'danger block')]);
+      btn('Delete what was logged this day', async () => { if (await confirmDlg('Delete the exercises logged on this day, with RPE and notes? Test results stay.', 'Delete')) { S.logs = S.logs.filter(x => x !== l); save(); ov.remove(); render(); } }, 'danger block')]);
   }
   /* ---------- Analisi ---------- */
   const anHead = cur => [h('h1', {}, 'Analytics'), seg([['analytics', 'Charts'], ['tests', 'Tests and maxes']], cur, k => { location.hash = k; })];
@@ -772,12 +770,12 @@
     const out = [anHead('analytics'), seg([[4, '4 wk'], [8, '8 wk'], [12, '12 wk'], [0, 'All']], anWeeks, k => { anWeeks = k; render(); }),
       h('div', { class: 'sub' }, `${fmtDate(from)} – ${fmtDate(to)} · current week included`),
       h('div', { class: 'tiles' },
-        tile('Sessions', sum.sessions, sum.due ? `${sum.due} planned so far` : ''),
-        tile('Time', sum.minutes < 120 ? sum.minutes + ' min' : dec((sum.minutes / 60).toFixed(1)) + ' h', sum.sessions ? `${Math.round(sum.minutes / sum.sessions)} min per session` : ''),
-        tile('Average RPE', sum.rpe == null ? '—' : dec(sum.rpe.toFixed(1)), sum.rpeN ? `over ${sum.rpeN} ${sum.rpeN === 1 ? 'session' : 'sessions'}` : 'no RPE logged'),
-        tile('Adherence', sum.due ? Math.round(sum.dueDone / sum.due * 100) + '%' : '—', sum.due ? `${sum.dueDone} of ${sum.due} sessions done` : 'nothing planned'))];
+        tile('Training days', sum.sessions, sum.due ? `${sum.due} planned so far` : ''),
+        tile('Time', sum.minutes < 120 ? sum.minutes + ' min' : dec((sum.minutes / 60).toFixed(1)) + ' h', sum.sessions ? `${Math.round(sum.minutes / sum.sessions)} min per day` : ''),
+        tile('Average RPE', sum.rpe == null ? '—' : dec(sum.rpe.toFixed(1)), sum.rpeN ? `over ${sum.rpeN} ${sum.rpeN === 1 ? 'day' : 'days'}` : 'no RPE logged'),
+        tile('Adherence', sum.due ? Math.round(sum.dueDone / sum.due * 100) + '%' : '—', sum.due ? `${sum.dueDone} of ${sum.due} planned days trained` : 'nothing planned'))];
     if (!sum.sessions && !wk.some(w => w.plannedMinutes))
-      return out.concat(h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin:0' }, 'No data in this period. Charts fill in when you complete a session or log one from Home.')));
+      return out.concat(h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin:0' }, 'No data in this period. Charts fill in as you log exercises.')));
 
     // Tempo per categoria, nell'ordine fisso delle categorie (colore = categoria, come le barrette degli esercizi)
     const cat = C.timeBySection(S.logs, from, to), grp = C.weeklyGroups(S.logs, from, to), SEC = C.SECTIONS;
@@ -785,16 +783,16 @@
       const pct = m => Math.round(m / cat.classified * 100) + '%'; // stessa base della cifra in evidenza: il tempo classificato
       const rows = cat.rows.map(r => ({ label: SEC[r.section], value: r.minutes, text: `${hm(r.minutes)} · ${pct(r.minutes)}`, cls: 'c-' + r.section }));
       if (cat.unclassified) rows.push({ label: 'Unclassified', value: cat.unclassified, text: hm(cat.unclassified), cls: 'g-none' });
-      out.push(chartCard('Time by category', cat.classified ? 'From the minutes logged for each exercise.' : 'Needs sessions done with the timer: only there are minutes logged per exercise.',
+      out.push(chartCard('Time by category', cat.classified ? 'From the minutes logged for each exercise.' : 'Needs logged exercises: their minutes are counted by category.',
         Charts.hbars(rows),
-        cat.unclassified ? h('p', { class: 'sub', style: 'margin-bottom:0' }, 'Unclassified: sessions logged by hand, or time not assigned to an exercise. Left out of the percentages.') : null));
+        cat.unclassified ? h('p', { class: 'sub', style: 'margin-bottom:0' }, 'Unclassified: days logged by hand in earlier versions, or time not assigned to an exercise. Left out of the percentages.') : null));
     }
     if (wk.some(w => w.minutes || w.plannedMinutes)) out.push(chartCard('Weekly volume', 'Minutes logged by category, compared with the planned ones.',
       Charts.stacked({ labels, longLabels: long, unit: 'min', targets: wk.map(w => w.plannedMinutes), targetName: 'Planned', aria: 'Training minutes per week, split by category',
         series: [...Object.entries(C.SECTIONS), ['unclassified', 'Unclassified']].map(([k, name]) => ({ name, cls: k === 'unclassified' ? 'g-none' : 'c-' + k, values: grp.map(w => w[k]) })).filter(x => x.values.some(v => v > 0)) })));
-    if (wk.some(w => w.load)) out.push(chartCard('Weekly load', 'Sum of minutes × RPE for sessions with an RPE (arbitrary units).',
+    if (wk.some(w => w.load)) out.push(chartCard('Weekly load', 'Sum of minutes × RPE for days with an RPE (arbitrary units).',
       Charts.columns({ labels, longLabels: long, values: wk.map(w => Math.round(w.load)), name: 'Load', aria: 'Training load (sRPE) per week' })));
-    if (wk.some(w => w.rpe != null)) out.push(chartCard('Perceived effort', 'Average RPE of the sessions in the week (scale 1–10).',
+    if (wk.some(w => w.rpe != null)) out.push(chartCard('Perceived effort', 'Average RPE of the days in the week (scale 1–10).',
       Charts.line({ labels, longLabels: long, values: wk.map(w => w.rpe), name: 'Average RPE', domain: { min: 0, max: 10, step: 5 }, height: 120, aria: 'Average RPE per week' })));
     if (wk.some(w => w.feel != null)) out.push(chartCard('Feeling', 'Average of "how you felt" (1 wrecked – 5 great).',
       Charts.line({ labels, longLabels: long, values: wk.map(w => w.feel), name: 'Average feeling', domain: { min: 1, max: 5, step: 2 }, height: 120, aria: 'Average feeling per week' })));
@@ -802,7 +800,7 @@
     // Superfici: tempo, blocchi chiusi e grado massimo; poi un pannello per superficie, tutti sulla stessa scala di gradi
     const surf = C.surfaceStats(S.logs, from, to);
     if (surf.length) {
-      const table = h('table', { class: 'tbl' }, h('tr', {}, ['Surface', 'Sessions', 'Problems sent', 'Top grade'].map(x => h('th', {}, x))),
+      const table = h('table', { class: 'tbl' }, h('tr', {}, ['Surface', 'Days', 'Problems sent', 'Top grade'].map(x => h('th', {}, x))),
         surf.map(x => h('tr', {}, h('td', {}, surfName(x.surface)), h('td', {}, x.sessions), h('td', {}, x.sends), h('td', {}, x.top ? fmtG(x.top) : '—'))));
       out.push(chartCard('Climbing surfaces', 'Minutes spent on each surface in the period.',
         Charts.hbars(surf.map(x => ({ label: surfName(x.surface), value: x.minutes, text: x.minutes + ' min' }))), table));
@@ -862,7 +860,7 @@
   }
   function viewProgress() {
     const missing = C.TEST_TEMPLATES.filter(t => !S.testDefs.some(d => d.key === t.key));
-    return [anHead('tests'), h('div', { class: 'sub' }, 'The latest result of each test is the max used to compute kg. A test can also be added to a session: the result lands here when the exercise ends.'),
+    return [anHead('tests'), h('div', { class: 'sub' }, 'The latest result of each test is the max used to compute kg. A test can also be added to a day: the result lands here when the exercise ends.'),
       S.testDefs.map(def => {
         const hist = S.tests.filter(t => t.key === def.key).sort((a, b) => (a.date < b.date ? -1 : 1)), last = hist[hist.length - 1];
         return h('div', { class: 'card tap row', onclick: () => testSheet(def) },
@@ -884,7 +882,7 @@
     const ov = openSheet('Surface', [field('Name', name),
       btn('Save', () => { const n = name.value.trim().slice(0, 40); if (!n) return toast('A name is required.'); x.name = n; save(); ov.remove(); render(); }, 'pri block'),
       btn(used ? 'In use: cannot be deleted' : 'Delete', async () => {
-        if (used) return toast('It is used by exercises or log entries: you can rename it.');
+        if (used) return toast('It is used by exercises or logged exercises: you can rename it.');
         if (await confirmDlg(`Delete the surface "${x.name}"?`, 'Delete')) { S.surfaces = S.surfaces.filter(s => s !== x); save(); ov.remove(); render(); }
       }, 'danger block')]);
   }
@@ -939,7 +937,7 @@
         btn('Clear', async () => { if (await confirmDlg(`Delete all ${notes.length} notes?`, 'Clear')) { S.notes = []; save(); render(); } }, 'sm danger')) : null,
       notes.length ? notes.map(n => h('div', { class: 'card' }, h('div', {}, n.text), h('div', { class: 'row', style: 'margin-top:6px' }, h('div', { class: 'grow sub' }, `${n.at.slice(0, 16).replace('T', ' ')} · ${n.where} · v${n.version}`),
         btn('✕', () => { S.notes = S.notes.filter(x => x !== n); save(); render(); }, 'sm'))))
-        : h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin:0' }, 'No notes. Use "Note" in the bottom bar (or in the session in progress) when something feels off.'))];
+        : h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin:0' }, 'No notes. Use "Note" in the bottom bar when something feels off.'))];
   }
 
   /* ---------- Diagnostica: cosa funziona davvero su questo dispositivo ---------- */
@@ -961,9 +959,9 @@
     try { audioInit(); SOUND.setEnd(); add('Sound signals', ac && ac.state === 'running' ? true : null, ac && ac.state === 'running' ? 'a signal was just played: if you did not hear it, check the volume and the silent switch' : 'audio not started: try again by tapping "Run the checks"'); }
     catch (e) { add('Sound signals', false, 'audio not available'); }
     try {
-      if (navigator.wakeLock) { const l = await navigator.wakeLock.request('screen'); await l.release(); add('Screen stays on during a session', true, 'granted'); }
-      else add('Screen stays on during a session', false, 'not supported: the screen may turn off during the timer');
-    } catch (e) { add('Screen stays on during a session', false, 'refused by the system (for example with Low Power Mode on)'); }
+      if (navigator.wakeLock) { const l = await navigator.wakeLock.request('screen'); await l.release(); add('Screen stays on while a timer runs', true, 'granted'); }
+      else add('Screen stays on while a timer runs', false, 'not supported: the screen may turn off during the timer');
+    } catch (e) { add('Screen stays on while a timer runs', false, 'refused by the system (for example with Low Power Mode on)'); }
     add('Network', navigator.onLine !== false ? true : null, navigator.onLine !== false ? 'online' : 'offline');
     add('Backup', cloudOn() ? !S.settings.gh.error : null, cloudOn() ? (S.settings.gh.error ? 'last attempt failed: ' + S.settings.gh.error : 'automatic to GitHub, active') : S.settings.lastBackup ? 'manual, last on ' + fmtDate(S.settings.lastBackup) : 'no backup yet');
     diag = out; log('diagnostics', 'run', out.map(x => `${x.name}: ${x.ok === true ? 'ok' : x.ok === false ? 'no' : 'warning'}`));
@@ -998,11 +996,11 @@
       h('div', { class: 'card tap row', onclick: () => { location.hash = 'library'; } }, h('div', { class: 'grow' }, h('div', { class: 'n', style: 'font-weight:600' }, 'Exercise library'), h('div', { class: 'sub' }, (C.LIBRARY.length + S.custom.length) + ' exercises')), '›'),
       h('div', { class: 'card tap row', onclick: () => go('notebook') }, h('div', { class: 'grow' }, h('div', { class: 'n', style: 'font-weight:600' }, 'Notebook'), h('div', { class: 'sub' }, S.notes.length ? `${S.notes.length} notes` : 'Note what is wrong while you use the app')), '›'),
       h('div', { class: 'card tap row', onclick: () => go('diagnostics') }, h('div', { class: 'grow' }, h('div', { class: 'n', style: 'font-weight:600' }, 'Diagnostics'), h('div', { class: 'sub' }, 'Audio, screen on, offline and storage on this device · v' + VERSION)), '›'),
-      h('h2', {}, 'Programmes'), h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin-top:0' }, 'A programme is a set of sessions: import it, choose when it starts and find it in the calendar.'),
+      h('h2', {}, 'Programmes'), h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin-top:0' }, 'A programme is a set of training days: import it, choose when it starts and find it in the calendar.'),
         S.plans.map(p => h('div', { class: 'blk', style: 'cursor:pointer', onclick: () => planSheet(p) }, h('div', { class: 'grow' }, h('div', { class: 'n' }, p.title),
           h('div', { class: 'p' }, `${fmtDate(C.firstSessionDate(p))} – ${fmtDate(C.dateOf(p, p.weeks.length - 1, 6))} · ${p.weeks.length} weeks`)), h('div', { class: 'm' }, '›'))),
         h('div', { class: 'btns' }, fileBtn('Import programme (.yaml)'))),
-      h('h2', {}, 'Climbing surfaces'), h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin-top:0' }, 'Assigned to exercises and log entries, to compare progress in the charts. Tap to rename.'),
+      h('h2', {}, 'Climbing surfaces'), h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin-top:0' }, 'Assigned to exercises and logged exercises, to compare progress in the charts. Tap to rename.'),
         h('div', { class: 'btns', style: 'margin-top:0' }, S.surfaces.map(x => btn(x.name, () => surfaceSheet(x), 'sm'))),
         h('div', { class: 'row', style: 'margin-top:10px' }, h('div', { class: 'grow' }, sfNew), btn('Add', () => { const n = sfNew.value.trim().slice(0, 40); if (!n) return toast('Type a name.'); addSurface(n); save(); render(); }, 'sm')),
         h('p', { class: 'sub', style: 'margin-bottom:0' }, `Grade scale: ${C.GRADE_SCALES[S.settings.gradeScale] || 'Font'}. Other scales will be selectable here.`)),
@@ -1014,7 +1012,7 @@
       h('h2', {}, 'Automatic backup'), cloudCard(),
       h('h2', {}, 'Data'), h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin-top:0' }, (cloudOn() ? 'Automatic backup to GitHub is active. ' : 'Data stays on this device only. "Save backup" opens the share sheet: choose "Save to Files" to put it in iCloud Drive.') + (S.settings.lastBackup ? ` Last backup: ${fmtDate(S.settings.lastBackup)}.` : ' No backup yet.')),
         h('div', { class: 'btns' }, btn(cloudOn() ? 'Back up now' : 'Save backup', doBackup, 'sm pri'), fileBtn('Restore / import file'),
-          btn('Reset everything', async () => { if (await confirmDlg('Delete programmes, sessions, exercises, log entries and tests? This cannot be undone: make a backup first.', 'Reset')) { S = fresh(); calSel = calMonth = null; save(); render(); } }, 'sm danger')))];
+          btn('Reset everything', async () => { if (await confirmDlg('Delete programmes, days, exercises, logs and tests? This cannot be undone: make a backup first.', 'Reset')) { S = fresh(); calSel = calMonth = null; save(); render(); } }, 'sm danger')))];
   }
 
   /* ---------- Player ---------- */
