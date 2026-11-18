@@ -88,7 +88,7 @@ days:
 **Rules**
 - Each entry is a training day: all its exercises go together. The same day in several weeks is written once, with a range in `week`. Days that are not listed are rest days.
 - Files written with `sessions:` instead of `days:` still work.
-- `name` is free text. Names of the standard exercises (Exercise library) are recognised, so time is counted in the right category in Analytics.
+- `name` is free text. If it is recognised as a standard exercise (also in Italian, e.g. "Flessione polso"), the app shows the library name ("Wrist curl") and counts the time in the right category. Put details such as the board or the edge in `note`. Names that are not recognised become your own exercises and are shown as written.
 - Timer: `sets` plus either `work` (a time, or `done`) or `reps`. `rest`, `rounds` + `set_rest` and `sides: L/R` are optional.
 - `minutes`: only for exercises without a timer (required unless it is a standard exercise). With a timer the minutes are calculated from its parameters; with `reps` or `work: done` each round counts about 45 s.
 - Durations: `7s`, `45s`, `3min`, `1min30s` (also `3'` and `1'30"`).

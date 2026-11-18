@@ -48,7 +48,7 @@ await clickText('Import', '.sheet');
 ok((await txt('#toast')).includes('Imported Karma 8A+'), 'programma importato');
 ok(await pg.evaluate(() => location.hash === '#calendar-2026-11-16'), 'dopo l\'import si apre il calendario sul primo giorno');
 let cal = await txt('#view');
-ok(cal.includes('Test: Open hand') && cal.includes('KB press 1 braccio') && !/Off the wall|Wall ·/.test(cal), 'una sola sessione al giorno, senza etichette Muro / Fuori muro');
+ok(cal.includes('Test: Open hand') && cal.includes('Overhead press') && !/Off the wall|Wall ·/.test(cal), 'una sola sessione al giorno, senza etichette Muro / Fuori muro');
 ok(await pg.evaluate(() => __app.state.plans[0].weeks.every(w => w.every(d => d.sessions.length <= 1))), 'ogni giorno del programma ha al massimo una sessione');
 ok(await pg.evaluate(() => Object.values(__app.state.exercises).every(e => !('prescription' in e) && !('base' in e)) && new Set(__app.state.plans[0].weeks.flatMap(w => w.flatMap(d => d.sessions.flatMap(x => x.blocks.map(b => b.exId))))).size === Object.keys(__app.state.exercises).length), 'import: nessuna descrizione testuale negli esercizi; ogni blocco ha i suoi parametri (nessuna versione condivisa)');
 ok(await pg.evaluate(() => Object.values(__app.state.exercises).every(e => !e.interval || e.interval.cues.length === 0 || e.interval.cues.join() === 'L,R')), 'import: i cue diventano solo l\'alternanza SX/DX (il resto va nella nota)');
@@ -67,7 +67,7 @@ for (const [name, v] of [['Body weight', '70'], ['Sloper', '20'], ['Pinch block 
 }
 await go('home');
 home = await txt('#view');
-ok(home.includes('Sloper BM2000 7"') && home.includes('Trazioni zavorrate'), 'Home: la sessione di oggi con tutti gli esercizi');
+ok(home.includes('Sloper hang') && home.includes('Weighted pull-ups') && !home.includes('Sloper BM2000'), 'Home: la giornata di oggi con i nomi della libreria');
 ok(home.includes('+4.5 kg') && home.includes('L 15 kg · R 18 kg') && home.includes('20.5 kg'), 'kg calcolati dai massimali');
 await shot('2-home');
 
@@ -89,7 +89,7 @@ ok(!(await pg.$eval('#runner', e => e.hidden)) && (await pg.$eval('#player', e =
 ok((await pg.$$('#runner .run-r')).length === before.length, 'elenco: un esercizio per riga');
 await shot('4-sessione');
 await clickText('Start', '#runner', true); // riscaldamento, 20 minuti a durata
-ok((await txt('#p-clock')) === '20:00' && (await txt('#p-name')) === 'Riscaldamento', 'riscaldamento: timer suo, 20:00');
+ok((await txt('#p-clock')) === '20:00' && (await txt('#p-name')) === 'Wall warm-up', 'riscaldamento: timer suo, 20:00');
 await adv(20 * 60000 + 500);
 ok((await pg.$eval('#player', e => e.hidden)) && (await txt('.sheet')).includes('Exercise complete'), 'allo scadere il timer si ferma e chiede la registrazione (non parte l\'esercizio dopo)');
 ok((await pg.$eval('.sheet input', e => e.value)) === '20', 'minuti misurati precompilati');
@@ -99,8 +99,8 @@ ok((await pg.$$('#runner .run-r.done')).length === 1 && (await pg.$eval('#player
 // Esercizio a tempo (sloper 4 × 7"): preparazione → lavoro → recupero, kg nel timer
 await clickText('Start', '#runner', true);
 // dopo il trascinamento il secondo esercizio è quello spostato: cerco lo sloper per nome
-if ((await txt('#p-name')) !== 'Sloper BM2000 7"') { await pg.click('#p-quit'); await clickText('Not done', '.sheet'); await pg.evaluate(() => [...document.querySelectorAll('#runner .run-r')].find(r => r.innerText.includes('Sloper BM2000')).querySelector('button').click()); await sleep(60); }
-ok((await txt('#p-ph')) === 'GET READY' && (await txt('#p-name')) === 'Sloper BM2000 7"', 'sloper: preparazione');
+if ((await txt('#p-name')) !== 'Sloper hang') { await pg.click('#p-quit'); await clickText('Not done', '.sheet'); await pg.evaluate(() => [...document.querySelectorAll('#runner .run-r')].find(r => r.innerText.includes('Sloper hang')).querySelector('button').click()); await sleep(60); }
+ok((await txt('#p-ph')) === 'GET READY' && (await txt('#p-name')) === 'Sloper hang', 'sloper: preparazione');
 await adv(10500);
 ok((await txt('#p-ph')) === 'WORK' && (await txt('#p-round')) === 'Round 1 of 4' && (await txt('#p-kg')).startsWith('+4.5'), 'lavoro: round 1/4 con i kg');
 await shot('5-timer');
@@ -140,7 +140,7 @@ await pg.type('.sheet textarea', 'Prova automatica');
 await clickText('Save', '.sheet');
 ok(await pg.evaluate(() => location.hash === '#calendar-2026-11-25'), 'a fine sessione si torna al giorno nel calendario (non c\'è più il Diario)');
 let diary = await txt('#view');
-ok(diary.includes('Prova automatica') && diary.includes('MoonBoard 7A+ · 3 sends') && diary.includes('Sloper BM2000 7": +4.5 kg') && diary.includes('buone sensazioni'), 'registrazione nel calendario: carico, superficie, grado e nota dei singoli esercizi');
+ok(diary.includes('Prova automatica') && diary.includes('MoonBoard 7A+ · 3 sends') && diary.includes('Sloper hang: +4.5 kg') && diary.includes('buone sensazioni'), 'registrazione nel calendario: carico, superficie, grado e nota dei singoli esercizi');
 await shot('7-diario');
 await go('home'); ok((await txt('#view')).includes('Done'), 'Home: sessione segnata come fatta');
 ok((await txt('#view')).includes('has no backup yet') && (await txt('#view')).includes('Save backup'), 'Home: promemoria backup quando ci sono dati non salvati');
@@ -291,7 +291,7 @@ await pg.evaluate(() => { __app.state.settings.gh = null; });
 
 // Persistenza e migrazione di un backup v2 con due sessioni nello stesso giorno
 await pg.reload();
-ok(await pg.evaluate(() => __app.state.logs.length === 3 && __app.state.extras.length === 1 && __app.state.v === 9), 'i dati sopravvivono al ricaricamento');
+ok(await pg.evaluate(() => __app.state.logs.length === 3 && __app.state.extras.length === 1 && __app.state.v === 10), 'i dati sopravvivono al ricaricamento');
 const mig = await pg.evaluate(async () => {
   const mk = (id, ex) => ({ id, type: 'wall', period: 'base', blocks: [{ id: id + 'b', exId: ex, minutes: 5 }] });
   const old = { v: 2, plans: [{ id: 'p', title: 'Vecchio', startDate: '2026-11-23', weeks: [[{ sessions: [mk('s1', 'e1'), mk('s2', 'e2')] }, ...Array.from({ length: 6 }, () => ({ sessions: [] }))]] }],
@@ -341,17 +341,18 @@ await pg.evaluate(() => {
     testDefs: [{ key: 'bw', name: 'Peso corporeo', unit: 'kg', mode: 'value' }, { key: 'pinchL', name: 'Pinch block SX', unit: 'kg', mode: 'lift', seconds: 7, hands: 1 }, { key: 'pinchR', name: 'Pinch block DX', unit: 'kg', mode: 'lift', seconds: 7, hands: 1 }],
     tests: [{ id: 't1', key: 'pinchL', date: '2026-11-20', value: 20 }, { id: 't2', key: 'pinchR', date: '2026-11-20', value: 24 }], custom: [], notes: [],
     surfaces: [{ key: 'gym', name: 'Indoor (palestra)' }, { key: 'mine', name: 'Pannello di casa' }],
-    logs: [{ id: 'l1', date: '2026-11-24', minutes: 30, blocks: [{ name: 'Pinch block', key: 'pinch-lift|pinch', label: 'Pinch block', kgs: [{ side: 'SX', kg: 15 }, { side: 'DX', kg: 18 }], rpe: 7, mode: 'lift' }] }] };
+    logs: [{ id: 'l1', date: '2026-11-24', minutes: 30, blocks: [{ name: 'Pinch block', key: 'pinch-lift|pinch', label: 'Pinch block', kgs: [{ side: 'SX', kg: 15 }, { side: 'DX', kg: 18 }], rpe: 7, mode: 'lift' }, { name: 'Flessione polso (manubri)', key: 'wrist-curl|wrist', minutes: 6 }], loads: [{ name: 'Flessione polso (manubri)', kg: '20 kg' }] }] };
   localStorage.setItem('allenamento.v1', JSON.stringify(old)); location.reload();
 });
 await sleep(500);
-const m7 = await pg.evaluate(() => { const s = __app.state; return { v: s.v, e1: s.exercises.e1.name, cues: s.exercises.e2.interval.cues.join(), e3: s.exercises.e3.name, defs: s.testDefs.map(d => d.name).join('|'), surf: s.surfaces.map(x => x.name).join('|'), sides: s.logs[0].blocks[0].kgs.map(k => k.side).join(), title: s.extras[0].title, note: s.extras[0].blocks[0].note, mins: s.extras[0].blocks.map(b => b.minutes).join(), nx: s.extras.length }; });
-ok(m7.v === 9 && m7.e1 === 'Wrist curl' && m7.cues === 'L,R' && m7.defs === 'Body weight|Pinch block L|Pinch block R' && m7.surf === 'Indoor (gym)|Pannello di casa' && m7.sides === 'L,R', 'dati v6 in italiano: nomi predefiniti, superfici e lati SX/DX passano all\'inglese');
+const m7 = await pg.evaluate(() => { const s = __app.state; return { v: s.v, e1: s.exercises.e1.name, cues: s.exercises.e2.interval.cues.join(), e3: s.exercises.e3.name, defs: s.testDefs.map(d => d.name).join('|'), surf: s.surfaces.map(x => x.name).join('|'), sides: s.logs[0].blocks[0].kgs.map(k => k.side).join(), title: s.extras[0].title, note: s.extras[0].blocks[0].note, mins: s.extras[0].blocks.map(b => b.minutes).join(), nx: s.extras.length, lb: s.logs[0].blocks[1].name + '|' + s.logs[0].loads[0].name }; });
+ok(m7.v === 10 && m7.e1 === 'Wrist curl' && m7.cues === 'L,R' && m7.defs === 'Body weight|Pinch block L|Pinch block R' && m7.surf === 'Indoor (gym)|Pannello di casa' && m7.sides === 'L,R', 'dati v6 in italiano: nomi predefiniti, superfici e lati SX/DX passano all\'inglese');
+ok(m7.lb === 'Wrist curl|Wrist curl', 'migrazione v10: le registrazioni passate prendono il nome della libreria');
 ok(m7.nx === 1, 'migrazione v9: le giornate senza esercizi spariscono');
 ok(m7.mins === '7,7,5', 'migrazione v8: con un timer i minuti diventano quelli calcolati (8 → 7), senza timer restano');
 ok(m7.e3 === 'Sospensioni di Leo' && m7.title === 'Dita a casa' && m7.note === 'lento', 'nomi, titoli e note scritti dall\'utente restano come sono');
 await go('home');
-ok((await txt('#view')).includes('L 15 kg · R 18 kg') && (await txt('#view')).includes('Wrist curl'), 'dopo la migrazione i kg per lato si calcolano ancora dai massimali');
+ok((await txt('#view')).includes('L 15 kg · R 18 kg') && (await txt('#view')).includes('Wrist curl') && (await txt('#view')).includes('Sospensioni di Leo'), 'dopo la migrazione i kg per lato si calcolano ancora dai massimali');
 await go('analytics');
 ok(/Pinch block L/.test(await txt('#view')) && /Pinch block R/.test(await txt('#view')), 'i carichi registrati prima della migrazione restano nelle serie per lato');
 ok(errors.length === 0, 'nessun errore in console' + (errors.length ? ': ' + errors.join(' | ') : ''));

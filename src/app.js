@@ -15,7 +15,7 @@
 
   /* ---------- Stato e persistenza ---------- */
   // Primo avvio: nessun piano precaricato, ogni utente importa o crea i propri.
-  const fresh = () => migrate({ v: 9, plans: [], activePlan: null, exercises: {}, logs: [], tests: [] });
+  const fresh = () => migrate({ v: 10, plans: [], activePlan: null, exercises: {}, logs: [], tests: [] });
   /** I test da cui dipendono i kg degli esercizi (e il peso corporeo) devono esistere nella sezione Test. */
   function ensureTests(s) {
     const need = new Set(['bw'].concat(Object.values(s.exercises).filter(e => e.load).flatMap(e => C.refKeys(e.load.ref))));
@@ -113,7 +113,16 @@
       fix(s.extras);
     }
     if (fromV < 9) pruneEmpty(s); // v9: niente più sessioni vuote
-    s.v = 9;
+    // v10: si mostra il nome della libreria; anche le registrazioni passate lo prendono, dalla chiave std|riferimento.
+    if (fromV < 10) for (const l of s.logs) {
+      const ren = new Map();
+      for (const b of l.blocks || []) {
+        const k = typeof b.key === 'string' ? b.key.split('|')[0] : '', st = C.STD[k];
+        if (st && k !== 'test' && b.name !== st.name) { ren.set(b.name, st.name); b.name = st.name; }
+      }
+      for (const x of l.loads || []) if (ren.has(x.name)) x.name = ren.get(x.name);
+    }
+    s.v = 10;
     return s;
   }
   let rescued = false;
@@ -288,7 +297,7 @@
   const sessOf = r => (r.x ? r.x : r.p.weeks[r.w][r.d].sessions[r.si]);
   const isDone = r => { const id = sessOf(r).id; return S.logs.some(l => l.sid === id); };
   // Titolo per diario e sessione in corso: quello scelto, altrimenti i primi due esercizi che non sono riscaldamento.
-  const autoTitle = s => s.title || s.blocks.map(b => S.exercises[b.exId]).filter(e => e && e.slot !== 'warmup').slice(0, 2).map(e => e.name).join(' · ') || 'Session';
+  const autoTitle = s => s.title || s.blocks.map(b => S.exercises[b.exId]).filter(e => e && e.slot !== 'warmup').slice(0, 2).map(C.exName).join(' · ') || 'Session';
   function findRef(sid) {
     const x = S.extras.find(e => e.id === sid);
     if (x) return { x };
@@ -359,16 +368,15 @@
     }
     return out.join(' · ');
   }
-  // Se la versione ha un nome suo ("Limit Karma"), accanto si legge l'esercizio standard da cui deriva ("Limit bouldering").
-  const stdName = e => (e.std && C.STD[e.std] && C.STD[e.std].name !== e.name ? C.STD[e.std].name : '');
-  const exLine = e => [stdName(e), C.describe(e), e.surface ? surfName(e.surface) : ''].filter(Boolean).join(' · ');
+  // Il titolo è sempre il nome della libreria (C.exName): la riga sotto ha solo parametri e superficie.
+  const exLine = e => [C.describe(e), e.surface ? surfName(e.surface) : ''].filter(Boolean).join(' · ');
   function blockRow(b, onclick, drag) {
     const ex = S.exercises[b.exId];
     const grip = drag ? h('span', { class: 'grip', 'data-grip': '', role: 'img', 'aria-label': 'Drag to reorder', onclick: e => e.stopPropagation() }, '≡') : null;
     if (!ex) return h('div', { class: 'blk', 'data-id': b.id }, grip, h('span', { class: 'p' }, 'Exercise removed'));
     const hint = loadHint(ex);
     return h('div', { class: 'blk', 'data-id': b.id, onclick, style: onclick ? 'cursor:pointer' : null }, grip,
-      h('div', { class: 'grow' }, h('div', { class: 'n' }, ex.name), h('div', { class: 'p' }, exLine(ex)), hint ? h('div', { class: 'kg' }, hint) : null, propLine(ex), b.note ? h('div', { class: 'p note' }, b.note) : null),
+      h('div', { class: 'grow' }, h('div', { class: 'n' }, C.exName(ex)), exLine(ex) ? h('div', { class: 'p' }, exLine(ex)) : null, hint ? h('div', { class: 'kg' }, hint) : null, propLine(ex), b.note ? h('div', { class: 'p note' }, b.note) : null),
       h('div', { class: 'm' }, b.minutes + ' min'));
   }
   /** Riordino per trascinamento dalla maniglia: la riga segue il dito, l'ordine si salva al rilascio. */
@@ -577,7 +585,7 @@
     const s = sessOf(r), b = s.blocks[bi], e = S.exercises[b.exId];
     const close = () => { save(); ov.remove(); render(); };
     if (!e) { const ov0 = openSheet('Exercise removed', btn('Remove from session', () => { s.blocks.splice(bi, 1); save(); ov0.remove(); render(); }, 'danger block')); return; }
-    const iv = e.interval || {}, ld = e.load || {};
+    const iv = e.interval || {}, ld = e.load || {}, isStd = !!(e.std && e.std !== 'test' && C.STD[e.std]);
     const name = h('input', { value: e.name }), min = numInp(b.minutes), note = h('input', { value: b.note || '', placeholder: 'Optional: also shown in the timer' });
     const sfSel = opts(surfOpts().concat([['+new', '＋ Add new…']]), e.surface || '', { onchange: () => sync() }), sfNew = h('input', { placeholder: 'E.g. Spray wall' });
     const sfNewField = field('Name of the new surface', sfNew);
@@ -601,16 +609,17 @@
     sides.addEventListener('change', showDur);
     const sync = () => { minF.hidden = mode.value !== 'none'; durLine.hidden = mode.value === 'none'; showDur(); timer.hidden = mode.value === 'none'; workF.hidden = mode.value !== 'timed'; repsF.hidden = mode.value !== 'reps'; sfNewField.hidden = sfSel.value !== '+new'; };
     const isTest = !!ld.test;
-    const ov = openSheet(e.std && C.STD[e.std] ? C.STD[e.std].name : e.name, [h('p', { class: 'sub' }, 'Parameters of this exercise in this session.'),
-      field('Name', name), field('Timer', mode), minF, durLine, timer,
+    const ov = openSheet(C.exName(e), [h('p', { class: 'sub' }, isStd ? 'Parameters of this exercise on this day. To change exercise use Replace.' : 'Parameters of this exercise on this day.'),
+      isStd ? null : field('Name', name), field('Timer', mode), minF, durLine, timer,
       isTest ? null : h('div', { class: 'cols' }, field('Load: reference test', ref), field('% of max', pct)),
       e.slot === 'wall' || e.slot === 'warmup' || e.surface ? [field('Climbing surface', sfSel), sfNewField] : null,
       field('Note', note),
       btn('Save', () => {
-        if (!name.value.trim()) return toast('A name is required.');
+        if (!isStd && !name.value.trim()) return toast('A name is required.');
         let sf = sfSel.value;
         if (sf === '+new') { const nm = sfNew.value.trim().slice(0, 40); if (!nm) return toast('Type the name of the new surface.'); sf = addSurface(nm); }
-        e.name = name.value.trim().slice(0, 80); e.surface = sf;
+        if (!isStd) e.name = name.value.trim().slice(0, 80); // uno standard ha il nome della libreria
+        e.surface = sf;
         if (mode.value === 'none' && !(val(min) > 0)) return toast('Type the minutes.');
         e.interval = mode.value === 'none' ? null : draft();
         if (!isTest) { const d = S.testDefs.find(t => t.key === C.refKeys(ref.value)[0]); e.load = ref.value ? { ref: ref.value, mode: d && d.mode === 'hang' ? 'hang' : 'lift', pct: val(pct), test: false } : null; }
@@ -1005,7 +1014,7 @@
     const row = (b, i) => {
       const ex = S.exercises[b.exId], d = done[b.id], hint = ex ? loadHint(ex) : '';
       return h('div', { class: 'run-r' + (d ? ' done' : '') }, h('div', { class: 'st' }, d ? '✓' : i + 1),
-        h('div', { class: 'grow' }, h('div', { class: 'n', style: 'font-weight:600' }, ex ? ex.name : 'Exercise removed'), ex ? h('div', { class: 'sub' }, exLine(ex)) : null,
+        h('div', { class: 'grow' }, h('div', { class: 'n', style: 'font-weight:600' }, ex ? C.exName(ex) : 'Exercise removed'), ex ? h('div', { class: 'sub' }, exLine(ex)) : null,
           hint && !d ? h('div', { style: 'color:var(--ac);font-size:13px;font-weight:600' }, hint) : null, ex && !d ? propLine(ex) : null, d && d.minutes ? h('div', { class: 'sub' }, `done · ${d.minutes} min`) : null),
         ex ? btn(d ? 'Redo' : 'Start', () => startBlock(b), 'sm' + (b === nextB ? ' pri' : '')) : null);
     };
@@ -1102,18 +1111,18 @@
       rec.testIds = (rec.tests || []).map(t => { const id = C.uid(); S.tests.push({ id, key: t.key, date, value: t.value }); return id; });
       R.done[b.id] = rec; S.live.done = R.done; save(); ov.remove(); drawRunner();
     };
-    const ov = openSheet(ex.name, [h('p', { class: 'sub' }, 'Exercise complete: log how it went.'),
+    const ov = openSheet(C.exName(ex), [h('p', { class: 'sub' }, 'Exercise complete: log how it went.'),
       field('Minutes', min),
       tests.length ? [tests.map(x => field(`Result: ${x.def.name} (${x.def.unit})`, x.inp)), h('p', { class: 'sub' }, 'On save, the result immediately updates the max in the Tests section.')] : null,
       load ? h('div', { class: 'cols' }, field('Load used', load), field('Exercise RPE', rpe)) : null,
       load && prop && planned ? h('p', { class: 'sub' }, `Suggested: ${prop.text} (${prop.why}).`) : null,
       isClimb ? [h('div', { class: 'cols' }, field('Surface', sf), field('Top grade sent', gr)), field('Problems sent', sends)] : null,
       field('Note', note),
-      btn('Save', () => put({ name: ex.name, minutes: Math.max(0, Math.round(val(min) || 0)), note: note.value.trim().slice(0, 200), load: load ? load.value.trim() : '', sec: exSection(ex),
+      btn('Save', () => put({ name: C.exName(ex), minutes: Math.max(0, Math.round(val(min) || 0)), note: note.value.trim().slice(0, 200), load: load ? load.value.trim() : '', sec: exSection(ex),
         key: exKey(ex), label: exLabel(ex), kgs: load ? C.parseLoads(load.value) : [], rpe: rpe ? val(rpe) : null, mode: ex.load ? ex.load.mode : 'lift',
         tests: tests.map(x => ({ key: x.def.key, value: val(x.inp) })).filter(x => x.value != null),
         climb: isClimb && sf.value ? { name: ex.name, surface: sf.value, top: gr.value || null, sends: val(sends) == null ? null : Math.max(0, Math.round(val(sends))), minutes: Math.max(0, Math.round(val(min) || 0)) } : null }), 'pri block'),
-      btn('Done, without logging', () => put({ name: ex.name, minutes: Math.round(ms / 60000) }), 'block'),
+      btn('Done, without logging', () => put({ name: C.exName(ex), minutes: Math.round(ms / 60000) }), 'block'),
       btn('Not done: back to the list', () => { ov.remove(); drawRunner(); }, 'block')]);
   }
   function finishSession() {

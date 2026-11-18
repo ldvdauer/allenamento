@@ -134,7 +134,7 @@ test('YAML: export → import senza perdite, sessioni uguali raggruppate', () =>
   assert.match(text, /\n  - week: 1-3\n    day: wed\n/); // la stessa giornata in tre settimane si scrive una volta
   assert.match(text, /first_session: "2026-11-16"/);
   const b = C.importYaml(text), shape = (r, m) => r.plan.weeks.map(w => w.map(d => d.sessions.map(s => [s.title || '', s.blocks.map(x => {
-    const e = m[x.exId]; return [e.name, e.std, x.minutes, x.note || '', e.interval, e.load, e.surface || ''];
+    const e = m[x.exId]; return [C.exName(e), e.std, x.minutes, x.note || '', e.interval, e.load, e.surface || ''];
   })])));
   assert.deepEqual(shape(b, exMapOf(b)), shape(a, exMapOf(a)));
   assert.equal(b.firstSession, '2026-11-16');
@@ -464,4 +464,12 @@ test('YAML: "sessions" (nome precedente) resta valido, ma non insieme a "days"',
   const body = '\n  - week: 1\n    day: mon\n    exercises:\n      - name: Board\n';
   assert.equal(C.importYaml('title: x\nweeks: 1\nsessions:' + body).plan.weeks[0][0].sessions.length, 1);
   assert.match(errorsOf('title: x\nweeks: 1\ndays:' + body + 'sessions:' + body)[0], /either days or sessions/);
+});
+
+test('nomi: un esercizio standard si mostra con il nome della libreria', () => {
+  assert.equal(C.exName({ std: 'wrist-curl', name: 'Flessione polso (manubri)' }), 'Wrist curl');
+  assert.equal(C.exName({ std: null, name: 'Circuito spray' }), 'Circuito spray');
+  assert.equal(C.exName({ std: 'test', name: 'Test: Open hand' }), 'Test: Open hand');
+  const r = C.importYaml('title: x\nweeks: 1\ndays:\n  - week: 1\n    day: mon\n    exercises:\n      - name: Flessione polso (manubri)\n        sets: 3\n        reps: 6\n');
+  assert.match(C.exportYaml(r.plan, Object.fromEntries(r.exercises.map(e => [e.id, e]))), /name: Wrist curl\n/);
 });

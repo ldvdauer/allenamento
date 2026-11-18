@@ -119,6 +119,8 @@ review|mental|Attempt review|10|`.split('\n').map(line => {
   const EXACT = Object.fromEntries(LIBRARY.map(x => [x.name.toLowerCase(), x.key]));
   for (const [old, now] of Object.entries(LEGACY_NAMES)) if (EXACT[now.toLowerCase()]) EXACT[old.toLowerCase()] = EXACT[now.toLowerCase()];
   /** Prima il nome esatto di un esercizio standard (anche nella vecchia versione italiana), poi le regole. */
+  /** Nome mostrato: per un esercizio standard quello della libreria, altrimenti quello scritto (esercizi personali e test). */
+  const exName = e => (e && e.std && e.std !== 'test' && STD[e.std] ? STD[e.std].name : (e && e.name) || '');
   const matchStd = name => { const n = String(name || '').trim(); if (EXACT[n.toLowerCase()]) return EXACT[n.toLowerCase()]; const r = STD_RULES.find(([re]) => re.test(n)); return r ? r[1] : null; };
 
   // Scala dei gradi boulder. I dati salvano l'etichetta Font; `fmtGrade` è l'unico punto in cui si sceglie la scala mostrata.
@@ -221,7 +223,7 @@ review|mental|Attempt review|10|`.split('\n').map(line => {
     blocks.forEach((b, bi) => {
       const ex = exMap[b.exId];
       if (!ex) return;
-      const base = { block: bi, exId: ex.id, name: ex.name };
+      const base = { block: bi, exId: ex.id, name: exName(ex) };
       const iv = ex.interval;
       if (!iv || !iv.rounds) {
         steps.push({ ...base, kind: 'free', seconds: (b.minutes || 0) * 60, cue: ex.prescription || '', round: 1, rounds: 1 });
@@ -472,7 +474,7 @@ review|mental|Attempt review|10|`.split('\n').map(line => {
       const e = exMap[b.exId];
       if (!e) return null;
       const o = {}, iv = e.interval;
-      if (e.load && e.load.test) o.test = yamlRefName(e.load.ref); else o.name = e.name;
+      if (e.load && e.load.test) o.test = yamlRefName(e.load.ref); else o.name = exName(e);
       if (!(iv && iv.rounds)) o.minutes = b.minutes || 1; // con un timer i minuti si calcolano
       if (iv && iv.rounds) {
         const sided = iv.cues && iv.cues.length === 2 && iv.cues[0] === 'L' && iv.cues[1] === 'R';
@@ -679,7 +681,7 @@ review|mental|Attempt review|10|`.split('\n').map(line => {
   }
 
   return {
-    GROUPS, SECTION_GROUP, blockSection, timeBySection, weeklyGroups, describe, leftoverNote, splitCues, fmtRest, PAIRS, refKeys, LEGACY_NAMES, normSide, firstOffset, firstSessionDate, startForFirst, recordsOf, lastRecord, nextLoad, TEST_TEMPLATES, testLabel, SECTIONS, LIBRARY, STD, stdVariant, matchStd,
+    GROUPS, SECTION_GROUP, blockSection, timeBySection, weeklyGroups, describe, leftoverNote, splitCues, fmtRest, PAIRS, refKeys, LEGACY_NAMES, normSide, firstOffset, firstSessionDate, startForFirst, recordsOf, lastRecord, nextLoad, TEST_TEMPLATES, testLabel, SECTIONS, LIBRARY, STD, stdVariant, matchStd, exName,
     DAY_TYPES, PERIODS, SLOTS, GRADES, GRADE_SCALES, gradeIdx, fmtGrade, DEFAULT_SURFACES, inferSurface, validISO, uid, toISO, fromISO, todayISO, addDays, diffDays, mondayOf,
     inferLoad, loadKey, loadKg, latestMaxes, fmtKg, cycle, cueAt, intervalMinutes, buildSteps, normInterval,
     importYaml, exportYaml, parseDuration, parseWeeks, fmtWeeks, testExercise, YAML_REFS, locate, dateOf, sessionMinutes, cloneSession, validState,
