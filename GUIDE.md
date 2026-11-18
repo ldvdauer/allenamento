@@ -26,9 +26,23 @@
 - **+ Test** in a session adds a test as an exercise: the result updates the max straight away.
 - Hangboard hangs are two-handed; lifts (max lift, pinch) have one test per side, L and R.
 
+## Categories
+Every exercise has a category, shown as a coloured bar next to its name; the same colours are used in Analytics.
+
+| Category | What goes there |
+|---|---|
+| Fingers | Everything on the hangboard and lifts (block, pinch), whatever the goal |
+| Strength | Hard climbing: limit, project, board, campus, outdoor bouldering |
+| Power endurance | 4x4, flash sets, volume |
+| Endurance | Circuits, outdoor routes |
+| Technique | Isolated moves |
+| Conditioning | Everything that is not climbing: pull-ups, core, shoulders, antagonists, legs, wrists |
+| Mobility | Stretching and mobility |
+| Other | Mental work, activation sessions, your exercises without a category |
+
 ## Analytics
-Filter by period, then: sessions, time, RPE, adherence; time by category with the share on the wall; weekly volume
-by group against the planned one; load (minutes × RPE); effort and feeling; surfaces and grades; loads by exercise.
+Filter by period, then: sessions, time, RPE, adherence; time by category; weekly volume by category against the
+planned one; load (minutes × RPE); effort and feeling; surfaces and grades; loads by exercise.
 Tap a chart to see the values; the table is underneath.
 
 ## During the trial
@@ -55,8 +69,6 @@ days:
     day: tue                 # mon tue wed thu fri sat sun
     title: Fingers           # optional
     exercises:
-      - name: Wall warm-up
-        minutes: 20
       - name: Sloper hang
         sets: 4
         work: 7s
@@ -82,13 +94,17 @@ days:
       - name: Limit bouldering
         minutes: 30
         surface: moonboard
+      - name: Spray circuit
+        minutes: 25
+        category: power endurance   # your own exercise, in this category
       - test: open-hand      # a test: the result updates the max
 ```
 
 **Rules**
 - Each entry is a training day: all its exercises go together. The same day in several weeks is written once, with a range in `week`. Days that are not listed are rest days.
 - Files written with `sessions:` instead of `days:` still work.
-- `name` is free text. If it is recognised as a standard exercise (also in Italian, e.g. "Flessione polso"), the app shows the library name ("Wrist curl") and counts the time in the right category. Put details such as the board or the edge in `note`. Names that are not recognised become your own exercises and are shown as written.
+- Warm-up is taken for granted: it is not written in programmes and is not a category.
+- `name` is free text. If it is recognised as a standard exercise (also in Italian, e.g. "Flessione polso"), the app shows the library name ("Wrist curl") and counts the time in the right category. Put details such as the board or the edge in `note`. Names that are not recognised become your own exercises and are shown as written, in Other unless you add `category` (Fingers, Strength, Power endurance, Endurance, Technique, Conditioning, Mobility, Other). With `category` the exercise is always your own, even if its name looks like a standard one.
 - Timer: `sets` plus either `work` (a time, or `done`) or `reps`. `rest`, `rounds` + `set_rest` and `sides: L/R` are optional.
 - `minutes`: only for exercises without a timer (required unless it is a standard exercise). With a timer the minutes are calculated from its parameters; with `reps` or `work: done` each round counts about 45 s.
 - Durations: `7s`, `45s`, `3min`, `1min30s` (also `3'` and `1'30"`).

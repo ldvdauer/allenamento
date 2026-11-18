@@ -7,9 +7,6 @@ days:
   - week: 1
     day: tue
     exercises:
-      - name: Riscaldamento
-        minutes: 20
-        note: Mobilità · arrampicata progressiva
       - test: open-hand
         sets: 4
         work: 7s
@@ -20,16 +17,16 @@ days:
         work: 7s
         rest: 3min
         note: 7" · carico crescente
-      - name: Limit MoonBoard
+      - name: Limit bouldering
         minutes: 30
         surface: moonboard
         note: ≥ 3 tentativi per problema · stop quando cala la qualità
-      - name: KB press 1 braccio
+      - name: Overhead press
         sets: 3
         reps: 6
         rest: 2min
         note: 6-8 rip. per braccio
-      - name: Extrarotazioni
+      - name: External rotations
         sets: 2
         reps: 12
         rest: 1min
@@ -51,9 +48,6 @@ days:
   - week: 1
     day: thu
     exercises:
-      - name: Riscaldamento
-        minutes: 20
-        note: Mobilità · arrampicata progressiva
       - test: sloper
         sets: 4
         work: 7s
@@ -70,20 +64,20 @@ days:
         reps: 6
         rest: 3min
         note: 6RM · carico crescente · 6 rip. · carico crescente
-      - name: Limit sloper/compressione
+      - name: Limit bouldering
         minutes: 30
         note: Blocchi di qualità al muro commerciale
-      - name: Trazioni zavorrate
+      - name: Weighted pull-ups
         sets: 3
         reps: 4
         rest: 3min
         note: 4-5 rip.
-      - name: Croci agli anelli
+      - name: Flys (compression)
         sets: 3
         reps: 6
         rest: 1min30s
         note: 6-8 rip.
-      - name: Leg raise alla sbarra
+      - name: Hanging leg raise
         sets: 3
         reps: 6
         rest: 1min30s
@@ -92,7 +86,7 @@ days:
   - week: 1-4
     day: fri
     exercises:
-      - name: Mobilità anche
+      - name: Hip mobility
         minutes: 10
         note: 90/90 · rotazioni
       - name: Pallof press
@@ -104,17 +98,14 @@ days:
   - week: 1-2
     day: sat
     exercises:
-      - name: Riscaldamento
-        minutes: 20
-        note: Mobilità · arrampicata progressiva
-      - name: Limit Karma
+      - name: Limit bouldering
         minutes: 60
         note: Qualità/pattern 70/30 · P1 posizione 5"
-      - name: Croci isometriche
+      - name: Isometric flys
         sets: 3
         work: 10s
         rest: 1min
-      - name: Push-up zavorrati o dip
+      - name: Push-ups or dips
         sets: 3
         reps: 6
         rest: 2min
@@ -123,31 +114,28 @@ days:
   - week: 2
     day: mon
     exercises:
-      - name: Riscaldamento
-        minutes: 20
-        note: Mobilità · arrampicata progressiva
-      - name: Open hand 20 mm 7"
+      - name: Max hang
         sets: 4
         work: 7s
         rest: 3min
         load: 85% open-hand
         note: margine 2-3"
-      - name: Half-crimp 20 mm 7"
+      - name: Max hang
         sets: 2
         work: 7s
         rest: 3min
         load: 85% half-crimp
         note: margine 2-3"
-      - name: Limit MoonBoard
+      - name: Limit bouldering
         minutes: 35
         surface: moonboard
         note: ≥ 3 tentativi per problema · stop quando cala la qualità
-      - name: KB press 1 braccio
+      - name: Overhead press
         sets: 3
         reps: 6
         rest: 2min
         note: 6-8 rip. per braccio
-      - name: Extrarotazioni
+      - name: External rotations
         sets: 2
         reps: 12
         rest: 1min
@@ -169,66 +157,60 @@ days:
   - week: 2
     day: wed
     exercises:
-      - name: Riscaldamento
-        minutes: 20
-        note: Mobilità · arrampicata progressiva
-      - name: Sloper BM2000 7"
+      - name: Sloper hang
         sets: 4
         work: 7s
         rest: 3min
         load: 82.5% sloper
         note: margine 2-3" · stesso sloper del test
-      - name: Pinch block 7"
+      - name: Pinch block
         sets: 6
         work: 7s
         rest: 1min15s
         sides: L/R
         load: 75% pinch
-      - name: Flessione polso
+      - name: Wrist curl
         sets: 3
         reps: 6
         rest: 2min
         load: 90% wrist
         note: 6-8 rip.
-      - name: Limit sloper/compressione
+      - name: Limit bouldering
         minutes: 30
         note: Blocchi di qualità al muro commerciale
-      - name: Trazioni zavorrate
+      - name: Weighted pull-ups
         sets: 3
         reps: 4
         rest: 3min
         note: 4-5 rip.
-      - name: Croci agli anelli
+      - name: Flys (compression)
         sets: 3
         reps: 6
         rest: 1min30s
         note: 6-8 rip.
-      - name: Leg raise alla sbarra
+      - name: Hanging leg raise
         sets: 3
         reps: 6
         rest: 1min30s
         note: 6-8 rip.
 
-  - week: 2
+  - week: 2-3
     day: thu
     exercises:
-      - name: Riscaldamento
-        minutes: 15
-        note: Generale · attivazione leggera di core e dita
-      - name: Technical Triples
+      - name: Flash set
         sets: 6
         rounds: 3
         work: done
         rest: 2min
         set_rest: 5min
         note: Lettura (flash) → Piedi e tecnica → Lentezza e controllo
-      - name: Tallone su strapiombo
+      - name: "Technique: isolated move"
         sets: 10
         reps: 1
         rest: 1min
         sides: L/R
         note: singolo movimento · Lato Karma → Lato opposto
-      - name: Compressione su sloper
+      - name: "Technique: isolated move"
         sets: 10
         reps: 1
         rest: 1min
@@ -238,31 +220,28 @@ days:
   - week: 3
     day: mon
     exercises:
-      - name: Riscaldamento
-        minutes: 20
-        note: Mobilità · arrampicata progressiva
-      - name: Open hand 20 mm 7"
+      - name: Max hang
         sets: 4
         work: 7s
         rest: 3min
         load: 87.5% open-hand
         note: margine 2-3"
-      - name: Half-crimp 20 mm 7"
+      - name: Max hang
         sets: 2
         work: 7s
         rest: 3min
         load: 87.5% half-crimp
         note: margine 2-3"
-      - name: Limit MoonBoard
+      - name: Limit bouldering
         minutes: 35
         surface: moonboard
         note: ≥ 3 tentativi per problema · stop quando cala la qualità
-      - name: KB press 1 braccio
+      - name: Overhead press
         sets: 3
         reps: 6
         rest: 2min
         note: 6-8 rip. per braccio
-      - name: Extrarotazioni
+      - name: External rotations
         sets: 2
         reps: 12
         rest: 1min
@@ -271,86 +250,54 @@ days:
   - week: 3
     day: wed
     exercises:
-      - name: Riscaldamento
-        minutes: 20
-        note: Mobilità · arrampicata progressiva
-      - name: Sloper BM2000 7"
+      - name: Sloper hang
         sets: 4
         work: 7s
         rest: 3min
         load: 85% sloper
         note: margine 2-3" · stesso sloper del test
-      - name: Pinch block 7"
+      - name: Pinch block
         sets: 6
         work: 7s
         rest: 1min15s
         sides: L/R
         load: 80% pinch
-      - name: Flessione polso
+      - name: Wrist curl
         sets: 3
         reps: 6
         rest: 2min
         load: 92.5% wrist
         note: 6-8 rip.
-      - name: Limit sloper/compressione
+      - name: Limit bouldering
         minutes: 30
         note: Blocchi di qualità al muro commerciale
-      - name: Trazioni zavorrate
+      - name: Weighted pull-ups
         sets: 3
         reps: 4
         rest: 3min
         note: 4-5 rip.
-      - name: Croci agli anelli
+      - name: Flys (compression)
         sets: 3
         reps: 6
         rest: 1min30s
         note: 6-8 rip.
-      - name: Leg raise alla sbarra
+      - name: Hanging leg raise
         sets: 3
         reps: 6
         rest: 1min30s
         note: 6-8 rip.
-
-  - week: 3
-    day: thu
-    exercises:
-      - name: Riscaldamento
-        minutes: 15
-        note: Generale · attivazione leggera di core e dita
-      - name: Technical Triples
-        sets: 6
-        rounds: 3
-        work: done
-        rest: 2min
-        set_rest: 5min
-        note: Lettura (flash) → Piedi e tecnica → Lentezza e controllo
-      - name: Tallone su strapiombo
-        sets: 10
-        reps: 1
-        rest: 1min
-        sides: L/R
-        note: singolo movimento · Lato Karma → Lato opposto
-      - name: Ristabilimento su forme tonde
-        sets: 10
-        reps: 1
-        rest: 1min
-        sides: L/R
-        note: singolo movimento · Lato Karma → Lato opposto
 
   - week: 3
     day: sat
     exercises:
-      - name: Riscaldamento
-        minutes: 20
-        note: Mobilità · arrampicata progressiva
-      - name: Limit Karma
+      - name: Limit bouldering
         minutes: 60
         note: Qualità/pattern 70/30 · P1 → tocca la tacca
-      - name: Croci isometriche
+      - name: Isometric flys
         sets: 3
         work: 10s
         rest: 1min
-      - name: Push-up zavorrati o dip
+      - name: Push-ups or dips
         sets: 3
         reps: 6
         rest: 2min
@@ -359,31 +306,28 @@ days:
   - week: 4
     day: mon
     exercises:
-      - name: Riscaldamento
-        minutes: 20
-        note: Mobilità · arrampicata progressiva
-      - name: Open hand 20 mm 7"
+      - name: Max hang
         sets: 2
         work: 7s
         rest: 3min
         load: 80% open-hand
         note: margine ampio
-      - name: Half-crimp 20 mm 7"
+      - name: Max hang
         sets: 1
         work: 7s
         rest: 3min
         load: 80% half-crimp
         note: margine ampio
-      - name: Limit MoonBoard
+      - name: Limit bouldering
         minutes: 20
         surface: moonboard
         note: Facile
-      - name: KB press 1 braccio
+      - name: Overhead press
         sets: 2
         reps: 6
         rest: 2min
         note: 6-8 rip. per braccio
-      - name: Extrarotazioni
+      - name: External rotations
         sets: 2
         reps: 12
         rest: 1min
@@ -405,41 +349,38 @@ days:
   - week: 4
     day: wed
     exercises:
-      - name: Riscaldamento
-        minutes: 20
-        note: Mobilità · arrampicata progressiva
-      - name: Sloper BM2000 7"
+      - name: Sloper hang
         sets: 2
         work: 7s
         rest: 3min
         load: 75% sloper
         note: margine ampio · stesso sloper del test
-      - name: Pinch block 7"
+      - name: Pinch block
         sets: 4
         work: 7s
         rest: 1min15s
         sides: L/R
         load: 70% pinch
-      - name: Flessione polso
+      - name: Wrist curl
         sets: 2
         reps: 8
         rest: 2min
         load: 80% wrist
         note: 8 rip.
-      - name: Limit sloper/compressione
+      - name: Limit bouldering
         minutes: 15
         note: Facile
-      - name: Trazioni zavorrate
+      - name: Weighted pull-ups
         sets: 2
         reps: 4
         rest: 3min
         note: 4-5 rip.
-      - name: Croci agli anelli
+      - name: Flys (compression)
         sets: 2
         reps: 6
         rest: 1min30s
         note: 6-8 rip.
-      - name: Leg raise alla sbarra
+      - name: Hanging leg raise
         sets: 2
         reps: 6
         rest: 1min30s
@@ -448,23 +389,20 @@ days:
   - week: 4
     day: thu
     exercises:
-      - name: Riscaldamento
-        minutes: 15
-        note: Generale · attivazione leggera di core e dita
-      - name: Technical Triples
+      - name: Flash set
         sets: 4
         rounds: 3
         work: done
         rest: 2min
         set_rest: 5min
         note: Lettura (flash) → Piedi e tecnica → Lentezza e controllo
-      - name: Tallone su strapiombo
+      - name: "Technique: isolated move"
         sets: 6
         reps: 1
         rest: 1min
         sides: L/R
         note: singolo movimento · Lato Karma → Lato opposto
-      - name: Compressione su sloper
+      - name: "Technique: isolated move"
         sets: 6
         reps: 1
         rest: 1min
@@ -474,17 +412,14 @@ days:
   - week: 4
     day: sat
     exercises:
-      - name: Riscaldamento
-        minutes: 20
-        note: Mobilità · arrampicata progressiva
-      - name: Limit Karma
+      - name: Limit bouldering
         minutes: 30
         note: Solo posizioni · P1 posizione
-      - name: Croci isometriche
+      - name: Isometric flys
         sets: 2
         work: 10s
         rest: 1min
-      - name: Push-up zavorrati o dip
+      - name: Push-ups or dips
         sets: 2
         reps: 6
         rest: 2min

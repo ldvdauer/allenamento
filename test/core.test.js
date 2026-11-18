@@ -18,9 +18,9 @@ test('import YAML: struttura del piano di esempio', () => {
   const blocks = plan.weeks.flat().flatMap(d => d.sessions.flatMap(s => s.blocks));
   assert.equal(exercises.length, blocks.length); // ogni esercizio di ogni sessione è un'istanza privata
   assert.equal(new Set(blocks.map(b => b.exId)).size, blocks.length);
-  assert.deepEqual(plan.weeks.map(weekMinutes), [135, 135, 135]);
+  assert.deepEqual(plan.weeks.map(weekMinutes), [95, 95, 95]);
   assert.deepEqual(plan.weeks[0].map(d => d.sessions.length), [1, 0, 1, 1, 0, 1, 0]);
-  assert.deepEqual(plan.weeks[0][0].sessions[0].blocks.map(b => b.minutes), [20, 7, 30, 4]);
+  assert.deepEqual(plan.weeks[0][0].sessions[0].blocks.map(b => b.minutes), [7, 30, 4]);
 });
 
 test('import YAML: parametri del timer, carico, lati, superficie, nota', () => {
@@ -216,8 +216,8 @@ test('sessioni: id stabili, copie con id nuovi, superficie dedotta dal nome', ()
   const copy = C.cloneSession(all[0]);
   assert.notEqual(copy.id, all[0].id);
   assert.deepEqual(copy.blocks.map(b => b.exId), all[0].blocks.map(b => b.exId));
-  assert.equal(exercises.find(e => e.name === 'Limit MoonBoard').surface, 'moonboard');
-  assert.equal(exercises.find(e => e.name === 'Press').surface, '');
+  assert.equal(exercises.find(e => e.std === 'limit').surface, 'moonboard');
+  assert.equal(exercises.find(e => e.std === 'press').surface, '');
   assert.equal(C.inferSurface('Volume Kilter Board'), 'kilter');
   assert.equal(C.inferSurface('Tension 40°'), 'tension');
   assert.equal(C.inferSurface('Blocchi su roccia'), 'outdoor');
@@ -255,8 +255,8 @@ test('analisi: settimane, carico sRPE e aderenza al piano', () => {
   ];
   const wk = C.weeklyStats(logs, sched, '2026-11-16', '2026-11-29');
   assert.deepEqual(wk, [
-    { week: '2026-11-16', sessions: 3, minutes: 150, load: 780, rpe: 7, feel: 3, plannedMinutes: 180, plannedSessions: 5 },
-    { week: '2026-11-23', sessions: 1, minutes: 30, load: 150, rpe: 5, feel: null, plannedMinutes: 135, plannedSessions: 4 },
+    { week: '2026-11-16', sessions: 3, minutes: 150, load: 780, rpe: 7, feel: 3, plannedMinutes: 140, plannedSessions: 5 },
+    { week: '2026-11-23', sessions: 1, minutes: 30, load: 150, rpe: 5, feel: null, plannedMinutes: 95, plannedSessions: 4 },
   ]);
   // al 19 nov erano in programma 4 sessioni (lun, extra di martedì, mer, gio) e 3 hanno una registrazione
   const sum = C.summary(logs, sched, '2026-11-16', '2026-11-29', '2026-11-19');
@@ -331,7 +331,7 @@ test('libreria standard: voci valide, versioni e abbinamento dei nomi', () => {
   const cases = { 'Limit Karma': 'limit', 'Limit MoonBoard': 'limit', 'Limit sloper/compressione': 'limit', 'Compressione su sloper': 'technique', 'Tallone su strapiombo': 'technique',
     'Open hand 20 mm 7"': 'max-hang', 'Half-crimp 20 mm 7"': 'max-hang', 'Sloper BM2000 7"': 'sloper-hang', 'Pinch block 7"': 'pinch-lift', 'TEST open hand 20 mm 7"': 'test',
     'Trazioni zavorrate': 'weighted-pullup', 'KB press 1 braccio': 'press', 'Croci isometriche': 'iso-fly', 'Croci ai cavi (compressione)': 'fly', 'Push-up zavorrati o dip': 'pushup',
-    'Karma a Bleau': 'outdoor', 'Mobilità anche': 'hips', 'Riscaldamento': 'warmup-wall', 'Set tecnici al flash': 'flash', 'Technical Triples': 'flash', 'Leg raise alla sbarra': 'leg-raise', 'Croci agli anelli': 'fly', 'Pallof press': 'pallof', 'Qualcosa di mio': null };
+    'Karma a Bleau': 'outdoor', 'Mobilità anche': 'hips', 'Riscaldamento': null, 'Falesia: vie di resistenza': 'outdoor-routes', 'Lead outdoor': 'outdoor-routes', 'Set tecnici al flash': 'flash', 'Technical Triples': 'flash', 'Leg raise alla sbarra': 'leg-raise', 'Croci agli anelli': 'fly', 'Pallof press': 'pallof', 'Qualcosa di mio': null };
   for (const [name, std] of Object.entries(cases)) assert.equal(C.matchStd(name), std, name);
   assert.equal(imported().exercises.find(e => /^Limit/.test(e.name)).std, 'limit');
 });
@@ -409,23 +409,36 @@ test('cue importati → interruttore SX/DX + nota', () => {
   assert.deepEqual(C.splitCues(undefined), { sided: false, note: '' });
 });
 
-test('tempo per categoria: sezioni, quota di arrampicata, gruppi settimanali', () => {
+test('categorie per qualità: libreria, tempo per categoria, volume settimanale', () => {
+  // Il riscaldamento non è una categoria e non ha esercizi generici in libreria
+  assert.equal(C.SECTIONS.warmup, undefined);
+  assert.equal(C.STD['warmup-wall'], undefined);
+  assert.deepEqual(Object.keys(C.SECTIONS), ['fingers', 'strength', 'powerEndurance', 'endurance', 'technique', 'conditioning', 'mobility', 'other']);
+  for (const [k, sec] of [['max-hang', 'fingers'], ['pinch-lift', 'fingers'], ['warmup-fingers', 'fingers'], ['wrist-curl', 'conditioning'], ['weighted-pullup', 'conditioning'], ['ab-wheel', 'conditioning'],
+    ['limit', 'strength'], ['campus', 'strength'], ['outdoor', 'strength'], ['flash', 'powerEndurance'], ['volume', 'powerEndurance'], ['four-by-four', 'powerEndurance'],
+    ['circuit', 'endurance'], ['outdoor-routes', 'endurance'], ['technique', 'technique'], ['butterfly', 'mobility'], ['visualize', 'other']])
+    assert.equal(C.STD[k].section, sec, k);
+  // Sul muro (superficie, gradi) solo le categorie di arrampicata
+  assert.equal(C.stdVariant('volume').slot, 'wall');
+  assert.equal(C.stdVariant('max-hang').slot, 'strength');
+  assert.equal(C.stdVariant('stretch').slot, 'mobility');
   const logs = [
-    { date: '2026-11-16', minutes: 100, blocks: [{ name: 'Riscaldamento', sec: 'warmup', minutes: 20 }, { name: 'Half-crimp', key: 'max-hang|hc', minutes: 10 }, { name: 'Limit Karma', key: 'limit|', minutes: 50 }, { name: 'Nordic curl', minutes: 5 }] },
+    { date: '2026-11-16', minutes: 100, blocks: [{ name: 'Half-crimp', key: 'max-hang|hc', minutes: 10 }, { name: 'Limit Karma', key: 'limit|', minutes: 50 }, { name: 'Nordic curl', minutes: 5 }, { name: 'Mio', sec: 'mobility', minutes: 20 }] },
     { date: '2026-11-18', minutes: 60 }, // registrata a mano: nessun esercizio
     { date: '2026-11-24', minutes: 30, blocks: [{ name: 'Test: Half-crimp', key: 'test|hc', minutes: 10 }, { name: 'Volume', key: 'volume|', minutes: 30 }] },
     { date: '2026-10-01', minutes: 500, blocks: [{ name: 'Volume', key: 'volume|', minutes: 500 }] },
   ];
   assert.equal(C.blockSection({ name: 'Qualcosa di mio' }), 'other');
-  assert.equal(C.blockSection({ name: 'x', sec: 'core' }), 'core');
+  assert.equal(C.blockSection({ name: 'x', sec: 'core' }), 'other'); // vecchia sezione non migrata: non classificabile qui
   const t = C.timeBySection(logs, '2026-11-16', '2026-11-29');
-  assert.deepEqual(t.rows, [{ section: 'wall', minutes: 80 }, { section: 'fingers', minutes: 20 }, { section: 'warmup', minutes: 20 }, { section: 'strength', minutes: 5 }]);
-  assert.deepEqual([t.classified, t.unclassified, t.wall, t.wallShare], [125, 15 + 60, 80, 0.64]); // 15 min della prima sessione non attribuiti a un esercizio
-  assert.equal(C.timeBySection([], '2026-11-16', '2026-11-29').wallShare, null);
-  assert.deepEqual(C.weeklyGroups(logs, '2026-11-16', '2026-11-29'), [
-    { week: '2026-11-16', wall: 50, strength: 15, other: 20, unclassified: 75 },
-    { week: '2026-11-23', wall: 30, strength: 10, other: 0, unclassified: 0 }]); // se gli esercizi superano il totale, il non classificato resta 0
+  // ordine fisso delle categorie, non per minuti
+  assert.deepEqual(t.rows, [{ section: 'fingers', minutes: 20 }, { section: 'strength', minutes: 50 }, { section: 'powerEndurance', minutes: 30 }, { section: 'conditioning', minutes: 5 }, { section: 'mobility', minutes: 20 }]);
+  assert.deepEqual([t.classified, t.unclassified], [125, 15 + 60]);
+  const w = C.weeklyGroups(logs, '2026-11-16', '2026-11-29');
+  assert.deepEqual([w[0].fingers, w[0].strength, w[0].conditioning, w[0].mobility, w[0].unclassified], [10, 50, 5, 20, 75]);
+  assert.deepEqual([w[1].fingers, w[1].powerEndurance, w[1].unclassified], [10, 30, 0]); // se gli esercizi superano il totale, il non classificato resta 0
 });
+
 
 test('nomi: la libreria è in inglese, i nomi italiani delle versioni precedenti restano riconosciuti', () => {
   assert.equal(C.STD['wrist-curl'].name, 'Wrist curl');

@@ -88,11 +88,13 @@ await clickText('Start', '#view', true);
 ok(!(await pg.$eval('#runner', e => e.hidden)) && (await pg.$eval('#player', e => e.hidden)), 'avvio: elenco della sessione, nessun timer partito da solo');
 ok((await pg.$$('#runner .run-r')).length === before.length, 'elenco: un esercizio per riga');
 await shot('4-sessione');
-await clickText('Start', '#runner', true); // riscaldamento, 20 minuti a durata
-ok((await txt('#p-clock')) === '20:00' && (await txt('#p-name')) === 'Wall warm-up', 'riscaldamento: timer suo, 20:00');
-await adv(20 * 60000 + 500);
+// Esercizio a sola durata (Limit bouldering, 30 minuti): si avvia dalla sua riga
+const startRow = name => pg.evaluate(n => [...document.querySelectorAll('#runner .run-r')].find(r => r.innerText.includes(n)).querySelector('button').click(), name);
+await startRow('Limit bouldering'); await sleep(60);
+ok((await txt('#p-clock')) === '30:00' && (await txt('#p-name')) === 'Limit bouldering', 'esercizio a durata: timer suo, 30:00');
+await adv(30 * 60000 + 500);
 ok((await pg.$eval('#player', e => e.hidden)) && (await txt('.sheet')).includes('Exercise complete'), 'allo scadere il timer si ferma e chiede la registrazione (non parte l\'esercizio dopo)');
-ok((await pg.$eval('.sheet input', e => e.value)) === '20', 'minuti misurati precompilati');
+ok((await pg.$eval('.sheet input', e => e.value)) === '30', 'minuti misurati precompilati');
 await clickText('Save', '.sheet');
 ok((await pg.$$('#runner .run-r.done')).length === 1 && (await pg.$eval('#player', e => e.hidden)), 'tornato all\'elenco con l\'esercizio segnato come fatto');
 
@@ -237,7 +239,8 @@ ok(await pg.evaluate(n => __app.state.plans.length === n, nPlans), 'import con e
 await pg.evaluate(() => document.querySelectorAll('.overlay').forEach(o => o.remove()));
 await go('analytics'); ok((await txt('#view')).includes('Weekly volume') && !(await txt('#view')).includes('session type'), 'Analisi: grafici presenti, niente "tipo di sessione"');
 const an = await txt('#view'); if (process.env.DBG) console.log(an.slice(0, 900));
-ok(an.includes('Time by category') && /\d+%\s*on the wall/.test(an) && an.includes('Unclassified') && an.includes('On the wall') && an.includes('6 min · 23%') && an.includes('Mobility and other'), 'Analisi: tempo per categoria con quota sul muro, volume settimanale per gruppo');
+ok(an.includes('Time by category') && an.includes('Strength\n36 min · 100%') && an.includes('Unclassified') && !/on the wall/i.test(an) && an.includes('Minutes logged by category'), 'Analisi: tempo e volume settimanale per categoria, niente "on the wall"');
+ok(await pg.evaluate(() => { const b = [...document.querySelectorAll('#view .viz-hb-t i')][0]; return b.className === 'c-strength' && getComputedStyle(b).backgroundColor === 'rgb(217, 89, 38)'; }), 'Analisi: barra della categoria con il suo colore (Strength = arancione)');
 ok(!an.includes('most time'), 'nessuna classifica dei dieci esercizi');
 await pg.evaluate(() => { const hit = [...document.querySelectorAll('#view .viz')][0].querySelectorAll('.hit'); hit[hit.length - 1].dispatchEvent(new MouseEvent('click', { bubbles: true })); });
 ok(/in total/.test(await pg.$eval('#view .viz-tip', e => e.innerText)), 'grafico impilato: tocco su una settimana → totale e gruppi');
@@ -291,7 +294,7 @@ await pg.evaluate(() => { __app.state.settings.gh = null; });
 
 // Persistenza e migrazione di un backup v2 con due sessioni nello stesso giorno
 await pg.reload();
-ok(await pg.evaluate(() => __app.state.logs.length === 3 && __app.state.extras.length === 1 && __app.state.v === 10), 'i dati sopravvivono al ricaricamento');
+ok(await pg.evaluate(() => __app.state.logs.length === 3 && __app.state.extras.length === 1 && __app.state.v === 11), 'i dati sopravvivono al ricaricamento');
 const mig = await pg.evaluate(async () => {
   const mk = (id, ex) => ({ id, type: 'wall', period: 'base', blocks: [{ id: id + 'b', exId: ex, minutes: 5 }] });
   const old = { v: 2, plans: [{ id: 'p', title: 'Vecchio', startDate: '2026-11-23', weeks: [[{ sessions: [mk('s1', 'e1'), mk('s2', 'e2')] }, ...Array.from({ length: 6 }, () => ({ sessions: [] }))]] }],
@@ -334,20 +337,23 @@ if (fs.existsSync(REAL)) {
 
 // Dati salvati con l'interfaccia in italiano (v6): nomi predefiniti e lati passano all'inglese, quello che ha scritto l'utente resta
 await pg.evaluate(() => {
-  const old = { v: 6, plans: [], activePlan: null, extras: [{ id: 'x0', date: '2026-11-26', title: 'Vuota', blocks: [] }, { id: 'x1', date: '2026-11-25', title: 'Dita a casa', blocks: [{ id: 'b1', exId: 'e1', minutes: 7, note: 'lento' }, { id: 'b2', exId: 'e2', minutes: 8 }, { id: 'b3', exId: 'e3', minutes: 5 }] }],
+  const old = { v: 6, plans: [], activePlan: null, extras: [{ id: 'x0', date: '2026-11-26', title: 'Vuota', blocks: [] }, { id: 'x1', date: '2026-11-25', title: 'Dita a casa', blocks: [{ id: 'b1', exId: 'e1', minutes: 7, note: 'lento' }, { id: 'b2', exId: 'e2', minutes: 8 }, { id: 'b3', exId: 'e3', minutes: 5 }, { id: 'b4', exId: 'e4', minutes: 20 }] }],
     exercises: { e1: { id: 'e1', std: 'wrist-curl', name: 'Flessione polso', slot: 'strength', interval: null, load: null, surface: '' },
       e2: { id: 'e2', std: 'pinch-lift', name: 'Pinch block', slot: 'strength', interval: { rounds: 6, workSeconds: 7, restSeconds: 75, cues: ['SX', 'DX'] }, load: { ref: 'pinch', mode: 'lift', pct: 75 }, surface: '' },
-      e3: { id: 'e3', std: null, name: 'Sospensioni di Leo', slot: 'strength', interval: null, load: null, surface: '' } },
+      e3: { id: 'e3', std: null, name: 'Sospensioni di Leo', slot: 'strength', interval: null, load: null, surface: '' },
+      e4: { id: 'e4', std: 'warmup-wall', name: 'Riscaldamento al muro', slot: 'warmup', interval: null, load: null, surface: '' } },
     testDefs: [{ key: 'bw', name: 'Peso corporeo', unit: 'kg', mode: 'value' }, { key: 'pinchL', name: 'Pinch block SX', unit: 'kg', mode: 'lift', seconds: 7, hands: 1 }, { key: 'pinchR', name: 'Pinch block DX', unit: 'kg', mode: 'lift', seconds: 7, hands: 1 }],
     tests: [{ id: 't1', key: 'pinchL', date: '2026-11-20', value: 20 }, { id: 't2', key: 'pinchR', date: '2026-11-20', value: 24 }], custom: [], notes: [],
     surfaces: [{ key: 'gym', name: 'Indoor (palestra)' }, { key: 'mine', name: 'Pannello di casa' }],
-    logs: [{ id: 'l1', date: '2026-11-24', minutes: 30, blocks: [{ name: 'Pinch block', key: 'pinch-lift|pinch', label: 'Pinch block', kgs: [{ side: 'SX', kg: 15 }, { side: 'DX', kg: 18 }], rpe: 7, mode: 'lift' }, { name: 'Flessione polso (manubri)', key: 'wrist-curl|wrist', minutes: 6 }], loads: [{ name: 'Flessione polso (manubri)', kg: '20 kg' }] }] };
+    logs: [{ id: 'l1', date: '2026-11-24', minutes: 30, blocks: [{ name: 'Pinch block', key: 'pinch-lift|pinch', label: 'Pinch block', kgs: [{ side: 'SX', kg: 15 }, { side: 'DX', kg: 18 }], rpe: 7, mode: 'lift' }, { name: 'Flessione polso (manubri)', key: 'wrist-curl|wrist', minutes: 6 }, { name: 'Circuito mio', sec: 'wall', minutes: 25 }], loads: [{ name: 'Flessione polso (manubri)', kg: '20 kg' }] }] };
   localStorage.setItem('allenamento.v1', JSON.stringify(old)); location.reload();
 });
 await sleep(500);
-const m7 = await pg.evaluate(() => { const s = __app.state; return { v: s.v, e1: s.exercises.e1.name, cues: s.exercises.e2.interval.cues.join(), e3: s.exercises.e3.name, defs: s.testDefs.map(d => d.name).join('|'), surf: s.surfaces.map(x => x.name).join('|'), sides: s.logs[0].blocks[0].kgs.map(k => k.side).join(), title: s.extras[0].title, note: s.extras[0].blocks[0].note, mins: s.extras[0].blocks.map(b => b.minutes).join(), nx: s.extras.length, lb: s.logs[0].blocks[1].name + '|' + s.logs[0].loads[0].name }; });
-ok(m7.v === 10 && m7.e1 === 'Wrist curl' && m7.cues === 'L,R' && m7.defs === 'Body weight|Pinch block L|Pinch block R' && m7.surf === 'Indoor (gym)|Pannello di casa' && m7.sides === 'L,R', 'dati v6 in italiano: nomi predefiniti, superfici e lati SX/DX passano all\'inglese');
+const m7 = await pg.evaluate(() => { const s = __app.state; return { v: s.v, e1: s.exercises.e1.name, cues: s.exercises.e2.interval.cues.join(), e3: s.exercises.e3.name, defs: s.testDefs.map(d => d.name).join('|'), surf: s.surfaces.map(x => x.name).join('|'), sides: s.logs[0].blocks[0].kgs.map(k => k.side).join(), title: s.extras[0].title, note: s.extras[0].blocks[0].note, mins: s.extras[0].blocks.map(b => b.minutes).join(), nx: s.extras.length, lb: s.logs[0].blocks[1].name + '|' + s.logs[0].loads[0].name, nb: s.extras[0].blocks.length, e4: !!s.exercises.e4, secs: s.logs[0].blocks.map(b => b.sec).join(), e3s: s.exercises.e3.section }; });
+ok(m7.v === 11 && m7.e1 === 'Wrist curl' && m7.cues === 'L,R' && m7.defs === 'Body weight|Pinch block L|Pinch block R' && m7.surf === 'Indoor (gym)|Pannello di casa' && m7.sides === 'L,R', 'dati v6 in italiano: nomi predefiniti, superfici e lati SX/DX passano all\'inglese');
 ok(m7.lb === 'Wrist curl|Wrist curl', 'migrazione v10: le registrazioni passate prendono il nome della libreria');
+ok(m7.nb === 3 && !m7.e4, 'migrazione v11: il riscaldamento esce dalle giornate e dai dati');
+ok(m7.secs === 'fingers,conditioning,strength' && m7.e3s === 'conditioning', 'migrazione v11: registrazioni ed esercizi personali nelle nuove categorie');
 ok(m7.nx === 1, 'migrazione v9: le giornate senza esercizi spariscono');
 ok(m7.mins === '7,7,5', 'migrazione v8: con un timer i minuti diventano quelli calcolati (8 → 7), senza timer restano');
 ok(m7.e3 === 'Sospensioni di Leo' && m7.title === 'Dita a casa' && m7.note === 'lento', 'nomi, titoli e note scritti dall\'utente restano come sono');

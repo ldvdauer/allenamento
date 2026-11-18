@@ -32,11 +32,12 @@
   /* Libreria standard: ogni esercizio del calendario è una versione personalizzata di uno di questi.
      Riga: chiave | sezione | nome | minuti | timer. Timer: "t:round/lavoro/recupero" a tempo, "r:round/rip/recupero" a ripetizioni,
      "+serie/recuperoSerie" per le serie raggruppate, "=cue~cue" per i cue a rotazione; vuoto = solo durata. */
-  const SECTIONS = { warmup: 'Warm-up', fingers: 'Fingers', pull: 'Pulling', strength: 'General strength and antagonists', core: 'Core', wall: 'On the wall', mobility: 'Mobility and recovery', mental: 'Mental' };
-  const LIBRARY = `warmup-general|warmup|General warm-up|15|
-warmup-wall|warmup|Wall warm-up|20|
-warmup-fingers|warmup|Finger activation|6|t:5/7/60
-warmup-shoulders|warmup|Shoulder activation with band|5|r:2/15/45
+  /* Categorie = qualità dell'allenamento (non luoghi). Il riscaldamento non è una categoria: si dà per scontato.
+     L'ordine è quello dei colori (palette validata per il daltonismo, vedi style.css) e delle pile nei grafici. */
+  const SECTIONS = { fingers: 'Fingers', strength: 'Strength', powerEndurance: 'Power endurance', endurance: 'Endurance', technique: 'Technique', conditioning: 'Conditioning', mobility: 'Mobility', other: 'Other' };
+  const CLIMBING = ['strength', 'powerEndurance', 'endurance', 'technique'];
+  const LIBRARY = `warmup-fingers|fingers|Finger activation|6|t:5/7/60
+warmup-shoulders|conditioning|Shoulder activation with band|5|r:2/15/45
 max-hang|fingers|Max hang|13|t:4/7/180
 repeaters|fingers|Repeaters 7/3|14|t:24/7/3+6/180
 min-edge|fingers|Minimum edge|13|t:4/7/180
@@ -45,38 +46,38 @@ sloper-hang|fingers|Sloper hang|13|t:4/7/180
 pinch-lift|fingers|Pinch block|8|t:6/7/75=L~R
 block-lift|fingers|Max lift|13|t:6/7/120=L~R
 density-hang|fingers|Long hangs|9|t:4/30/120
-wrist-curl|fingers|Wrist curl|7|r:3/6/120
-finger-ext|fingers|Finger extensors|4|r:2/15/45
-weighted-pullup|pull|Weighted pull-ups|9|r:3/4/180
-pullup|pull|Pull-ups|7|r:3/6/120
-one-arm-pull|pull|One-arm pull-up (progression)|14|r:6/2/150=L~R
-lockoff|pull|Lock-offs|9|t:6/7/90=L~R
-row|pull|Rows|6|r:3/8/90
-campus|pull|Campus board|12|r:5/1/150
-pushup|strength|Push-ups or dips|7|r:3/8/120
-press|strength|Overhead press|7|r:3/6/120=L~R
-ext-rot|strength|External rotations|4|r:2/12/60
-fly|strength|Flys (compression)|6|r:3/8/90
-iso-fly|strength|Isometric flys|4|t:3/10/60
-nordic|strength|Nordic curl|7|r:3/5/120
-deadlift|strength|Deadlift|10|r:3/5/180
-squat|strength|Squat or pistol|7|r:3/6/120
-hollow|core|Hollow body hold|4|t:3/25/60
-ab-wheel|core|Ab wheel|6|r:3/6/90
-pallof|core|Pallof press|7|r:6/10/45=L~R
-leg-raise|core|Hanging leg raise|6|r:3/8/90
-front-lever|core|Front lever (progression)|9|t:4/6/120
-plank|core|Plank|5|t:3/40/60
-limit|wall|Limit bouldering|40|
-project|wall|Project|45|
-board|wall|Board benchmark|40|
-flash|wall|Flash set|60|r:18/0/120+3/300
-volume|wall|Volume|40|
-technique|wall|Technique: isolated move|8|r:6/1/60=L~R
-four-by-four|wall|4x4|25|r:16/1/30+4/240
-circuit|wall|Endurance circuits|30|
-outdoor|wall|Rock|120|
-activation|wall|Activation session|30|
+wrist-curl|conditioning|Wrist curl|7|r:3/6/120
+finger-ext|conditioning|Finger extensors|4|r:2/15/45
+weighted-pullup|conditioning|Weighted pull-ups|9|r:3/4/180
+pullup|conditioning|Pull-ups|7|r:3/6/120
+one-arm-pull|conditioning|One-arm pull-up (progression)|14|r:6/2/150=L~R
+lockoff|conditioning|Lock-offs|9|t:6/7/90=L~R
+row|conditioning|Rows|6|r:3/8/90
+campus|strength|Campus board|12|r:5/1/150
+pushup|conditioning|Push-ups or dips|7|r:3/8/120
+press|conditioning|Overhead press|7|r:3/6/120=L~R
+ext-rot|conditioning|External rotations|4|r:2/12/60
+fly|conditioning|Flys (compression)|6|r:3/8/90
+iso-fly|conditioning|Isometric flys|4|t:3/10/60
+nordic|conditioning|Nordic curl|7|r:3/5/120
+deadlift|conditioning|Deadlift|10|r:3/5/180
+squat|conditioning|Squat or pistol|7|r:3/6/120
+hollow|conditioning|Hollow body hold|4|t:3/25/60
+ab-wheel|conditioning|Ab wheel|6|r:3/6/90
+pallof|conditioning|Pallof press|7|r:6/10/45=L~R
+leg-raise|conditioning|Hanging leg raise|6|r:3/8/90
+front-lever|conditioning|Front lever (progression)|9|t:4/6/120
+plank|conditioning|Plank|5|t:3/40/60
+limit|strength|Limit bouldering|40|
+project|strength|Project|45|
+board|strength|Board benchmark|40|
+outdoor|strength|Outdoor bouldering|120|
+flash|powerEndurance|Flash set|60|r:18/0/120+3/300
+volume|powerEndurance|Volume|40|
+four-by-four|powerEndurance|4x4|25|r:16/1/30+4/240
+circuit|endurance|Endurance circuits|30|
+outdoor-routes|endurance|Outdoor routes|180|
+technique|technique|Technique: isolated move|8|r:6/1/60=L~R
 hips|mobility|Hip mobility|10|
 shoulders|mobility|Shoulder mobility|8|
 stretch|mobility|General stretching|10|
@@ -85,8 +86,9 @@ side-split|mobility|Side split|5|
 frog|mobility|Frog stretch|5|
 biceps-stretch|mobility|Biceps stretch|5|
 cooldown|mobility|Cool-down|10|
-visualize|mental|Project visualisation|5|
-review|mental|Attempt review|10|`.split('\n').map(line => {
+activation|other|Activation session|30|
+visualize|other|Project visualisation|5|
+review|other|Attempt review|10|`.split('\n').map(line => {
     const [key, section, name, minutes, timer] = line.split('|');
     let interval = null;
     if (timer) {
@@ -98,18 +100,19 @@ review|mental|Attempt review|10|`.split('\n').map(line => {
     return { key, section, name, minutes: +minutes, interval };
   });
   const STD = Object.fromEntries(LIBRARY.map(x => [x.key, x]));
-  const SECTION_SLOT = { warmup: 'warmup', wall: 'wall', mobility: 'mobility', mental: 'mobility' };
+  /** "Slot" interno: decide se l'esercizio si fa sul muro (superficie, gradi) o fuori. Deriva dalla categoria. */
+  const slotOf = (section, key) => (CLIMBING.includes(section) || key === 'activation' ? 'wall' : section === 'mobility' ? 'mobility' : 'strength');
   /** Nuova versione di un esercizio standard, con i valori predefiniti (senza id). `base` resta vero finché non la personalizzi. */
   function stdVariant(key) {
     const d = STD[key];
     if (!d) return null;
-    const slot = SECTION_SLOT[d.section] || 'strength';
+    const slot = slotOf(d.section, key);
     return { std: key, base: true, name: d.name, prescription: '', slot, location: slot === 'wall' || slot === 'warmup' ? 'wall' : 'off_wall', domain: 'other', intensity: 'moderate', risk: 'low',
       equipment: [], interval: d.interval ? JSON.parse(JSON.stringify(d.interval)) : null, load: null, surface: '', minutes: d.minutes };
   }
   // Riconduce un nome libero (es. da un programma importato) all'esercizio standard. L'ordine conta: le regole più specifiche prima.
   const STD_RULES = [[/^test\b/i, 'test'], [/limit|progett|\bproject/i, 'limit'], [/flash|\btriples?\b|triplett/i, 'flash'], [/pallof/i, 'pallof'], [/tallone|ristabilimento|compressione su|tecnic|movimento isolato|techni|isolated move|heel hook|mantle/i, 'technique'],
-    [/a bleau|roccia|outdoor|\brock\b/i, 'outdoor'], [/attivazione dita|finger activation/i, 'warmup-fingers'], [/attivazione|activation/i, 'activation'], [/riscaldamento|warm.?up/i, 'warmup-wall'], [/open hand|half.?crimp|max hang/i, 'max-hang'], [/repeater/i, 'repeaters'],
+    [/falesia|\blead\b|\bvie\b|\broutes?\b|sport climb/i, 'outdoor-routes'], [/a bleau|roccia|outdoor|\brock\b/i, 'outdoor'], [/attivazione dita|finger activation/i, 'warmup-fingers'], [/attivazione|activation/i, 'activation'], [/open hand|half.?crimp|max hang/i, 'max-hang'], [/repeater/i, 'repeaters'],
     [/sloper/i, 'sloper-hang'], [/pinch/i, 'pinch-lift'], [/\blift\b/i, 'block-lift'], [/polso|wrist/i, 'wrist-curl'], [/trazion\w* zavorr|weighted pull/i, 'weighted-pullup'], [/trazion|pull.?up/i, 'pullup'], [/bloccagg|lock.?off/i, 'lockoff'],
     [/campus/i, 'campus'], [/\bpress\b/i, 'press'], [/extrarot|external rot/i, 'ext-rot'], [/croci isometr|isometric fl/i, 'iso-fly'], [/croci|\bfl(y|ys|ies)\b/i, 'fly'], [/nordic/i, 'nordic'], [/hollow/i, 'hollow'], [/ab wheel/i, 'ab-wheel'], [/leg.?raise/i, 'leg-raise'],
     [/pallof/i, 'pallof'], [/push.?up|\bdip/i, 'pushup'], [/plank/i, 'plank'], [/front lever/i, 'front-lever'], [/mobilit.* anche|hip mobility/i, 'hips'], [/mobilit.* spall|shoulder mobility/i, 'shoulders'], [/butterfly|farfalla/i, 'butterfly'], [/side.?split|spaccata laterale|straddle/i, 'side-split'], [/\bfrog\b|\brana\b/i, 'frog'], [/(biceps|bicipit).*(stretch|allungament)|(stretch|allungament).*(biceps|bicipit)/i, 'biceps-stretch'], [/mobilit|stretch/i, 'stretch'],
@@ -311,7 +314,7 @@ review|mental|Attempt review|10|`.split('\n').map(line => {
   const yamlRefName = ref => Object.keys(YAML_REFS).find(k => YAML_REFS[k] === ref) || ref;
   const PROGRAMME_FIELDS = ['title', 'weeks', 'first_session', 'days', 'sessions']; // "sessions": nome dei file scritti prima di "days"
   const DAY_FIELDS = ['week', 'day', 'title', 'exercises'];
-  const EXERCISE_FIELDS = ['name', 'test', 'minutes', 'sets', 'rounds', 'work', 'reps', 'rest', 'set_rest', 'sides', 'load', 'surface', 'note'];
+  const EXERCISE_FIELDS = ['name', 'test', 'category', 'minutes', 'sets', 'rounds', 'work', 'reps', 'rest', 'set_rest', 'sides', 'load', 'surface', 'note'];
 
   /** "7s", "45 s", "3min", "3 min", "1min30s", "2'", "1'30\"", oppure un numero (secondi). Restituisce i secondi o null. */
   function parseDuration(v) {
@@ -425,8 +428,16 @@ review|mental|Attempt review|10|`.split('\n').map(line => {
         if (!e) { err(where, `test: "${x.test}" is not a known test (${Object.keys(YAML_REFS).join(', ')})`); return null; }
       } else {
         if (typeof x.name !== 'string' || !x.name.trim()) { err(where, 'name: required'); return null; }
-        const name = x.name.trim().slice(0, 80), std = matchStd(name), v = std && std !== 'test' ? stdVariant(std) : null;
-        e = { std, name, slot: v ? v.slot : 'strength', location: v ? v.location : 'off_wall', domain: 'other', intensity: 'moderate', risk: 'low', equipment: [], interval: null, load: null, surface: inferSurface(name) };
+        // Con "category" l'esercizio è dell'utente, con quella categoria, anche se il nome somiglia a uno standard.
+        const name = x.name.trim().slice(0, 80), std = x.category !== undefined ? null : matchStd(name), v = std && std !== 'test' ? stdVariant(std) : null;
+        // Categoria: quella della libreria per gli standard; per gli altri quella scritta nel file, altrimenti Other.
+        let section = v ? STD[std].section : 'other';
+        if (x.category !== undefined) {
+          const c = Object.keys(SECTIONS).find(k => k.toLowerCase() === String(x.category).toLowerCase().replace(/[\s_-]/g, '') || SECTIONS[k].toLowerCase() === String(x.category).toLowerCase());
+          if (!c) err(where, `category: "${x.category}" is not valid (${Object.values(SECTIONS).join(', ')})`);
+          else section = c;
+        }
+        e = { std, name, section: v ? undefined : section, slot: v ? v.slot : slotOf(section), location: v ? v.location : slotOf(section) === 'wall' ? 'wall' : 'off_wall', domain: 'other', intensity: 'moderate', risk: 'low', equipment: [], interval: null, load: null, surface: inferSurface(name) };
       }
       // Timer: sets (round in tutto, i due lati contano entrambi) × rounds per set, lavoro a tempo o a ripetizioni.
       const has = k => x[k] !== undefined, posInt = k => (Number.isInteger(x[k]) && x[k] > 0 ? x[k] : (err(where, `${k}: must be a whole number greater than 0`), null));
@@ -475,6 +486,7 @@ review|mental|Attempt review|10|`.split('\n').map(line => {
       if (!e) return null;
       const o = {}, iv = e.interval;
       if (e.load && e.load.test) o.test = yamlRefName(e.load.ref); else o.name = exName(e);
+      if (!e.std && e.section && e.section !== 'other' && SECTIONS[e.section]) o.category = SECTIONS[e.section];
       if (!(iv && iv.rounds)) o.minutes = b.minutes || 1; // con un timer i minuti si calcolano
       if (iv && iv.rounds) {
         const sided = iv.cues && iv.cues.length === 2 && iv.cues[0] === 'L' && iv.cues[1] === 'R';
@@ -605,11 +617,12 @@ review|mental|Attempt review|10|`.split('\n').map(line => {
     return { kg: Math.round(((base + kg) * (1 + dir * rule.step / 100) - base) * 2) / 2, dir };
   }
   /* Tempo per categoria: le categorie sono le sezioni della libreria; i gruppi servono al grafico nel tempo. */
-  const GROUPS = { wall: 'On the wall', strength: 'Strength', other: 'Mobility and other' };
-  const SECTION_GROUP = { wall: 'wall', fingers: 'strength', pull: 'strength', strength: 'strength', core: 'strength', warmup: 'other', mobility: 'other', mental: 'other', other: 'other' };
+  /* Categorie delle versioni precedenti (sezioni per luogo) → categorie attuali, per le registrazioni salvate prima.
+     Vale solo se l'esercizio non è riconducibile a uno standard, che ha già la sua categoria. */
+  const LEGACY_SECTION = { warmup: 'other', fingers: 'fingers', pull: 'conditioning', strength: 'conditioning', core: 'conditioning', wall: 'strength', mobility: 'mobility', mental: 'other' };
   /** Sezione di un esercizio registrato: quella salvata, altrimenti ricavata dallo standard o dal nome. */
   function blockSection(b) {
-    if (b.sec && SECTION_GROUP[b.sec]) return b.sec;
+    if (b.sec && SECTIONS[b.sec]) return b.sec;
     const k = String(b.key || '').split('|')[0], std = STD[k] ? k : k === 'test' ? 'test' : matchStd(b.name);
     return std === 'test' ? 'fingers' : STD[std] ? STD[std].section : 'other';
   }
@@ -629,19 +642,19 @@ review|mental|Attempt review|10|`.split('\n').map(line => {
       for (const k in r.sections) m[k] = (m[k] || 0) + r.sections[k];
       un += r.unclassified;
     }
-    const rows = Object.entries(m).map(([section, minutes]) => ({ section, minutes })).sort((a, b) => b.minutes - a.minutes || a.section.localeCompare(b.section));
-    const classified = rows.reduce((t, r) => t + r.minutes, 0), wall = rows.filter(r => SECTION_GROUP[r.section] === 'wall').reduce((t, r) => t + r.minutes, 0);
-    return { rows, classified, unclassified: un, wall, wallShare: classified ? wall / classified : null };
+    // Ordine fisso delle categorie (lo stesso dei colori), non per minuti: un colore resta sempre nello stesso posto.
+    const rows = Object.keys(SECTIONS).filter(k => m[k]).map(section => ({ section, minutes: m[section] }));
+    return { rows, classified: rows.reduce((t, r) => t + r.minutes, 0), unclassified: un };
   }
   /** Minuti per settimana divisi nei tre gruppi (più il non classificato). */
   function weeklyGroups(logs, from, to) {
     const start = mondayOf(from), acc = [];
-    for (let d = start; d <= to; d = addDays(d, 7)) acc.push({ week: d, wall: 0, strength: 0, other: 0, unclassified: 0 });
+    for (let d = start; d <= to; d = addDays(d, 7)) acc.push(Object.assign({ week: d, unclassified: 0 }, Object.fromEntries(Object.keys(SECTIONS).map(k => [k, 0]))));
     for (const l of logs || []) {
       const i = acc.length && l.date >= start && l.date <= addDays(acc[acc.length - 1].week, 6) ? Math.floor(diffDays(l.date, start) / 7) : -1;
       if (i < 0) continue;
       const r = logSections(l);
-      for (const k in r.sections) acc[i][SECTION_GROUP[k]] += r.sections[k];
+      for (const k in r.sections) acc[i][k] += r.sections[k];
       acc[i].unclassified += r.unclassified;
     }
     return acc;
@@ -681,7 +694,7 @@ review|mental|Attempt review|10|`.split('\n').map(line => {
   }
 
   return {
-    GROUPS, SECTION_GROUP, blockSection, timeBySection, weeklyGroups, describe, leftoverNote, splitCues, fmtRest, PAIRS, refKeys, LEGACY_NAMES, normSide, firstOffset, firstSessionDate, startForFirst, recordsOf, lastRecord, nextLoad, TEST_TEMPLATES, testLabel, SECTIONS, LIBRARY, STD, stdVariant, matchStd, exName,
+    CLIMBING, LEGACY_SECTION, slotOf, blockSection, timeBySection, weeklyGroups, describe, leftoverNote, splitCues, fmtRest, PAIRS, refKeys, LEGACY_NAMES, normSide, firstOffset, firstSessionDate, startForFirst, recordsOf, lastRecord, nextLoad, TEST_TEMPLATES, testLabel, SECTIONS, LIBRARY, STD, stdVariant, matchStd, exName,
     DAY_TYPES, PERIODS, SLOTS, GRADES, GRADE_SCALES, gradeIdx, fmtGrade, DEFAULT_SURFACES, inferSurface, validISO, uid, toISO, fromISO, todayISO, addDays, diffDays, mondayOf,
     inferLoad, loadKey, loadKg, latestMaxes, fmtKg, cycle, cueAt, intervalMinutes, buildSteps, normInterval,
     importYaml, exportYaml, parseDuration, parseWeeks, fmtWeeks, testExercise, YAML_REFS, locate, dateOf, sessionMinutes, cloneSession, validState,

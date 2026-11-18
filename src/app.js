@@ -15,7 +15,7 @@
 
   /* ---------- Stato e persistenza ---------- */
   // Primo avvio: nessun piano precaricato, ogni utente importa o crea i propri.
-  const fresh = () => migrate({ v: 10, plans: [], activePlan: null, exercises: {}, logs: [], tests: [] });
+  const fresh = () => migrate({ v: 11, plans: [], activePlan: null, exercises: {}, logs: [], tests: [] });
   /** I test da cui dipendono i kg degli esercizi (e il peso corporeo) devono esistere nella sezione Test. */
   function ensureTests(s) {
     const need = new Set(['bw'].concat(Object.values(s.exercises).filter(e => e.load).flatMap(e => C.refKeys(e.load.ref))));
@@ -122,7 +122,27 @@
       }
       for (const x of l.loads || []) if (ren.has(x.name)) x.name = ren.get(x.name);
     }
-    s.v = 10;
+    // v11: categorie per qualità (non più per luogo) e niente riscaldamento.
+    if (fromV < 11) {
+      const legacy = sec => C.LEGACY_SECTION[sec] || 'conditioning';
+      for (const c of s.custom) if (!c.section) { c.section = legacy(c.slot); delete c.slot; }
+      const customs = Object.fromEntries(s.custom.map(c => [c.key, c]));
+      const gone = new Set(['warmup-general', 'warmup-wall']); // riscaldamento generico: dato per scontato, esce dai programmi
+      const drop = list => { for (const x of list) { const n = x.blocks.length; x.blocks = x.blocks.filter(b => { const e = s.exercises[b.exId]; return !(e && gone.has(e.std)); }); if (n !== x.blocks.length && s.live && s.live.sid === x.id) s.live = null; } };
+      for (const p of s.plans) for (const w of p.weeks) for (const d of w) drop(d.sessions);
+      drop(s.extras);
+      for (const e of Object.values(s.exercises)) {
+        if (gone.has(e.std)) { e.std = null; e.section = 'other'; } // resta solo se registrato altrove; prune lo toglie se non serve più
+        else if (e.std && C.STD[e.std]) { e.slot = C.slotOf(C.STD[e.std].section, e.std); e.location = e.slot === 'wall' ? 'wall' : 'off_wall'; }
+        else if (e.std !== 'test' && !e.section) e.section = e.custom && customs[e.custom] ? customs[e.custom].section : legacy(e.slot);
+      }
+      for (const l of s.logs) for (const b of l.blocks || []) {
+        const k = typeof b.key === 'string' ? b.key.split('|')[0] : '';
+        b.sec = k === 'test' ? 'fingers' : C.STD[k] ? C.STD[k].section : b.sec ? legacy(b.sec) : b.sec;
+      }
+      pruneEmpty(s); prune(s); // e gli esercizi rimasti senza giornata
+    }
+    s.v = 11;
     return s;
   }
   let rescued = false;
@@ -376,7 +396,7 @@
     if (!ex) return h('div', { class: 'blk', 'data-id': b.id }, grip, h('span', { class: 'p' }, 'Exercise removed'));
     const hint = loadHint(ex);
     return h('div', { class: 'blk', 'data-id': b.id, onclick, style: onclick ? 'cursor:pointer' : null }, grip,
-      h('div', { class: 'grow' }, h('div', { class: 'n' }, C.exName(ex)), exLine(ex) ? h('div', { class: 'p' }, exLine(ex)) : null, hint ? h('div', { class: 'kg' }, hint) : null, propLine(ex), b.note ? h('div', { class: 'p note' }, b.note) : null),
+      h('div', { class: 'grow' }, h('div', { class: 'n' }, catBar(exSection(ex)), C.exName(ex)), exLine(ex) ? h('div', { class: 'p' }, exLine(ex)) : null, hint ? h('div', { class: 'kg' }, hint) : null, propLine(ex), b.note ? h('div', { class: 'p note' }, b.note) : null),
       h('div', { class: 'm' }, b.minutes + ' min'));
   }
   /** Riordino per trascinamento dalla maniglia: la riga segue il dito, l'ordine si salva al rilascio. */
@@ -632,15 +652,17 @@
   }
 
   /* ---------- Esercizi: libreria standard + esercizi propri (solo nome e sezione; i parametri si impostano nella sessione) ---------- */
-  const secHead = t => h('div', { class: 'sec' }, t);
-  const customTpl = c => ({ std: null, custom: c.key, name: c.name, slot: c.slot, location: c.slot === 'wall' || c.slot === 'warmup' ? 'wall' : 'off_wall', domain: 'other', intensity: 'moderate', risk: 'low', equipment: [], interval: null, load: null, surface: '' });
+  /** Barretta colorata della categoria. Il colore aiuta a leggere la giornata; il nome della categoria è nell'etichetta accessibile e nella libreria. */
+  const catBar = sec => h('i', { class: 'cb c-' + (C.SECTIONS[sec] ? sec : 'other'), title: C.SECTIONS[sec] || 'Other', 'aria-label': 'Category: ' + (C.SECTIONS[sec] || 'Other') });
+  const secHead = (t, sec) => h('div', { class: 'sec' }, sec ? catBar(sec) : null, t);
+  const customTpl = c => { const sec = c.section || 'other', slot = C.slotOf(sec); return { std: null, custom: c.key, name: c.name, section: sec, slot, location: slot === 'wall' ? 'wall' : 'off_wall', domain: 'other', intensity: 'moderate', risk: 'low', equipment: [], interval: null, load: null, surface: '' }; };
   function customSheet(onDone) {
-    const name = h('input', { placeholder: 'E.g. Spray circuit' }), slot = opts(C.SLOTS, 'wall');
-    const ov = openSheet('New exercise', [h('p', { class: 'sub' }, 'It joins your library. Sets, times and loads are set each time in the session.'), h('div', { class: 'cols' }, field('Name', name), field('Section', slot)),
+    const name = h('input', { placeholder: 'E.g. Spray circuit' }), cat = opts(C.SECTIONS, 'strength');
+    const ov = openSheet('New exercise', [h('p', { class: 'sub' }, 'It joins your library. Sets, times and loads are set each time on the day.'), field('Name', name), field('Category', cat),
       btn('Create exercise', () => {
         const n = name.value.trim().slice(0, 80);
         if (!n) return toast('A name is required.');
-        const c = { key: 'c-' + C.uid().slice(0, 8), name: n, slot: slot.value };
+        const c = { key: 'c-' + C.uid().slice(0, 8), name: n, section: cat.value };
         S.custom.push(c); save(); ov.remove();
         if (onDone) onDone(customTpl(c)); else render();
       }, 'pri block')]);
@@ -651,10 +673,10 @@
     const row = (name, sub, tpl) => h('div', { class: 'blk', style: 'cursor:pointer', onclick: () => { ov.remove(); cb(tpl()); } }, h('div', { class: 'grow n' }, name), sub ? h('div', { class: 'm' }, sub) : null);
     const fill = () => {
       const t = q.value.trim().toLowerCase(), nodes = [], mine = S.custom.filter(c => !t || c.name.toLowerCase().includes(t));
-      if (mine.length) nodes.push(secHead('My exercises'), ...mine.map(c => row(c.name, '', () => customTpl(c))));
+      if (mine.length) nodes.push(secHead('My exercises'), ...mine.map(c => row(h('span', {}, catBar(c.section), c.name), '', () => customTpl(c))));
       for (const [sec, label] of Object.entries(C.SECTIONS)) {
         const items = C.LIBRARY.filter(x => x.section === sec && (!t || x.name.toLowerCase().includes(t)));
-        if (items.length) nodes.push(secHead(label), ...items.map(x => row(x.name, '', () => C.stdVariant(x.key))));
+        if (items.length) nodes.push(secHead(label, sec), ...items.map(x => row(x.name, '', () => C.stdVariant(x.key))));
       }
       list.replaceChildren(...(nodes.length ? nodes : [h('p', { class: 'sub' }, 'No exercise with this name: create it with "+ New".')]));
     };
@@ -665,11 +687,11 @@
     const list = h('div', {}), q = h('input', { class: 'inp', placeholder: 'Search…', oninput: () => fill() });
     const fill = () => {
       const t = q.value.trim().toLowerCase(), nodes = [], mine = S.custom.filter(c => !t || c.name.toLowerCase().includes(t));
-      if (mine.length) nodes.push(secHead('My exercises'), ...mine.map(c => h('div', { class: 'blk' }, h('div', { class: 'grow' }, h('div', { class: 'n' }, c.name), h('div', { class: 'p' }, C.SLOTS[c.slot])),
+      if (mine.length) nodes.push(secHead('My exercises'), ...mine.map(c => h('div', { class: 'blk' }, h('div', { class: 'grow' }, h('div', { class: 'n' }, catBar(c.section), c.name), h('div', { class: 'p' }, C.SECTIONS[c.section] || 'Other')),
         btn('Delete', async () => { if (await confirmDlg(`Delete "${c.name}" from the library? Sessions that contain it do not change.`, 'Delete')) { S.custom = S.custom.filter(x => x !== c); save(); render(); } }, 'sm danger'))));
       for (const [sec, label] of Object.entries(C.SECTIONS)) {
         const items = C.LIBRARY.filter(x => x.section === sec && (!t || x.name.toLowerCase().includes(t)));
-        if (items.length) nodes.push(secHead(label), ...items.map(x => h('div', { class: 'blk' }, h('div', { class: 'grow n' }, x.name))));
+        if (items.length) nodes.push(secHead(label, sec), ...items.map(x => h('div', { class: 'blk' }, h('div', { class: 'grow n' }, x.name))));
       }
       list.replaceChildren(...(nodes.length ? nodes : [h('p', { class: 'sub' }, 'No results.')]));
     };
@@ -717,7 +739,8 @@
   const anHead = cur => [h('h1', {}, 'Analytics'), seg([['analytics', 'Charts'], ['tests', 'Tests and maxes']], cur, k => { location.hash = k; })];
   const chartCard = (title, sub, ...nodes) => h('div', { class: 'card' }, h('div', { class: 'ct' }, title), sub ? h('div', { class: 'sub' }, sub) : null, nodes);
   /** Sezione della libreria a cui appartiene un esercizio (per il tempo per categoria). */
-  const exSection = e => (e.std === 'test' ? 'fingers' : e.std && C.STD[e.std] ? C.STD[e.std].section : ({ warmup: 'warmup', wall: 'wall', mobility: 'mobility' }[e.slot] || 'strength'));
+  /** Categoria di un esercizio: quella della libreria per gli standard e i test (dita), altrimenti quella scelta. */
+  const exSection = e => (!e ? 'other' : e.std === 'test' ? 'fingers' : e.std && C.STD[e.std] ? C.STD[e.std].section : C.SECTIONS[e.section] ? e.section : 'other');
   const hm = m => (m < 120 ? m + ' min' : dec(Math.round(m / 6) / 10) + ' h');
   const tile = (label, value, sub) => h('div', { class: 'tile' }, h('div', { class: 'l' }, label), h('div', { class: 'v' }, value), h('div', { class: 's' }, sub || ' '));
   let anWeeks = 8;
@@ -742,20 +765,19 @@
     if (!sum.sessions && !wk.some(w => w.plannedMinutes))
       return out.concat(h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin:0' }, 'No data in this period. Charts fill in when you complete a session or log one from Home.')));
 
-    // Tempo per categoria: quota di arrampicata in evidenza, poi le sezioni ordinate (colore = gruppo)
-    const cat = C.timeBySection(S.logs, from, to), grp = C.weeklyGroups(S.logs, from, to), SEC = { ...C.SECTIONS, strength: 'General strength', mobility: 'Mobility', other: 'Other' };
+    // Tempo per categoria, nell'ordine fisso delle categorie (colore = categoria, come le barrette degli esercizi)
+    const cat = C.timeBySection(S.logs, from, to), grp = C.weeklyGroups(S.logs, from, to), SEC = C.SECTIONS;
     if (cat.classified || cat.unclassified) {
       const pct = m => Math.round(m / cat.classified * 100) + '%'; // stessa base della cifra in evidenza: il tempo classificato
-      const rows = cat.rows.map(r => ({ label: SEC[r.section], value: r.minutes, text: `${hm(r.minutes)} · ${pct(r.minutes)}`, cls: 'g-' + C.SECTION_GROUP[r.section] }));
+      const rows = cat.rows.map(r => ({ label: SEC[r.section], value: r.minutes, text: `${hm(r.minutes)} · ${pct(r.minutes)}`, cls: 'c-' + r.section }));
       if (cat.unclassified) rows.push({ label: 'Unclassified', value: cat.unclassified, text: hm(cat.unclassified), cls: 'g-none' });
       out.push(chartCard('Time by category', cat.classified ? 'From the minutes logged for each exercise.' : 'Needs sessions done with the timer: only there are minutes logged per exercise.',
-        cat.wallShare == null ? null : [h('div', { class: 'hero', style: 'margin-top:4px' }, Math.round(cat.wallShare * 100) + '%', h('small', {}, 'on the wall')), h('div', { class: 'sub', style: 'margin-bottom:10px' }, `${hm(cat.wall)} of ${hm(cat.classified)} classified`)],
         Charts.hbars(rows),
         cat.unclassified ? h('p', { class: 'sub', style: 'margin-bottom:0' }, 'Unclassified: sessions logged by hand, or time not assigned to an exercise. Left out of the percentages.') : null));
     }
-    if (wk.some(w => w.minutes || w.plannedMinutes)) out.push(chartCard('Weekly volume', 'Minutes logged by group, compared with the planned ones.',
-      Charts.stacked({ labels, longLabels: long, unit: 'min', targets: wk.map(w => w.plannedMinutes), targetName: 'Planned', aria: 'Training minutes per week, split by group',
-        series: [['wall', C.GROUPS.wall], ['strength', C.GROUPS.strength], ['other', C.GROUPS.other], ['unclassified', 'Unclassified']].map(([k, name]) => ({ name, cls: k === 'unclassified' ? 'g-none' : 'g-' + k, values: grp.map(w => w[k]) })).filter(x => x.values.some(v => v > 0)) })));
+    if (wk.some(w => w.minutes || w.plannedMinutes)) out.push(chartCard('Weekly volume', 'Minutes logged by category, compared with the planned ones.',
+      Charts.stacked({ labels, longLabels: long, unit: 'min', targets: wk.map(w => w.plannedMinutes), targetName: 'Planned', aria: 'Training minutes per week, split by category',
+        series: [...Object.entries(C.SECTIONS), ['unclassified', 'Unclassified']].map(([k, name]) => ({ name, cls: k === 'unclassified' ? 'g-none' : 'c-' + k, values: grp.map(w => w[k]) })).filter(x => x.values.some(v => v > 0)) })));
     if (wk.some(w => w.load)) out.push(chartCard('Weekly load', 'Sum of minutes × RPE for sessions with an RPE (arbitrary units).',
       Charts.columns({ labels, longLabels: long, values: wk.map(w => Math.round(w.load)), name: 'Load', aria: 'Training load (sRPE) per week' })));
     if (wk.some(w => w.rpe != null)) out.push(chartCard('Perceived effort', 'Average RPE of the sessions in the week (scale 1–10).',
@@ -1014,7 +1036,7 @@
     const row = (b, i) => {
       const ex = S.exercises[b.exId], d = done[b.id], hint = ex ? loadHint(ex) : '';
       return h('div', { class: 'run-r' + (d ? ' done' : '') }, h('div', { class: 'st' }, d ? '✓' : i + 1),
-        h('div', { class: 'grow' }, h('div', { class: 'n', style: 'font-weight:600' }, ex ? C.exName(ex) : 'Exercise removed'), ex ? h('div', { class: 'sub' }, exLine(ex)) : null,
+        h('div', { class: 'grow' }, h('div', { class: 'n', style: 'font-weight:600' }, ex ? catBar(exSection(ex)) : null, ex ? C.exName(ex) : 'Exercise removed'), ex ? h('div', { class: 'sub' }, exLine(ex)) : null,
           hint && !d ? h('div', { style: 'color:var(--ac);font-size:13px;font-weight:600' }, hint) : null, ex && !d ? propLine(ex) : null, d && d.minutes ? h('div', { class: 'sub' }, `done · ${d.minutes} min`) : null),
         ex ? btn(d ? 'Redo' : 'Start', () => startBlock(b), 'sm' + (b === nextB ? ' pri' : '')) : null);
     };
