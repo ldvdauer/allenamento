@@ -763,7 +763,9 @@ review|other|Attempt review|10|`.split('\n').map(line => {
   /* ---- Viaggi e progetti ----
      Sezione a sé: non tocca giornate, programmi né analisi. Le date possono essere approssimative:
      "2027-03" (solo il mese), "2027-03-14" (il giorno) oppure assenti (un'idea). */
-  const TRIP_STATUS = [['idea', 'Idea'], ['possible', 'Possible'], ['confirmed', 'Confirmed'], ['done', 'Done'], ['dropped', 'Dropped']];
+  const TRIP_STATUS = [['idea', 'Idea'], ['confirmed', 'Confirmed'], ['done', 'Done']];
+  // Stati tolti il 2026-11-19 (scelta di Leo): Possible e Dropped diventano Idea, così nessun viaggio si perde
+  const OLD_TRIP_STATUS = { possible: 'idea', dropped: 'idea' };
   const PROJECT_STATUS = [['todo', 'To do'], ['working', 'Working'], ['sent', 'Sent']];
   const STYLES = [['boulder', 'Boulder'], ['route', 'Route']];
   const has = (list, k) => list.some(x => x[0] === k);
@@ -782,8 +784,8 @@ review|other|Attempt review|10|`.split('\n').map(line => {
       if (from && to && tripLast(to) < tripFirst(from)) to = ''; // fine prima dell'inizio: si tiene solo l'inizio
       return {
         id: typeof t.id === 'string' && t.id ? t.id : uid(), name: clip(t.name, 80) || 'Trip', place: clip(t.place, 80), from, to,
-        status: has(TRIP_STATUS, t.status) ? t.status : 'idea', notes: clip(t.notes, 2000),
-        since: validISO(t.since) || now, // da quando il viaggio è possibile o confermato (o almeno da quando l'app lo conosce): inizio dell'anello del countdown
+        status: has(TRIP_STATUS, t.status) ? t.status : OLD_TRIP_STATUS[t.status] || 'idea', notes: clip(t.notes, 2000),
+        since: validISO(t.since) || now, // da quando il viaggio esiste (o almeno da quando l'app lo conosce): inizio dell'anello del countdown
         projects: (Array.isArray(t.projects) ? t.projects : []).filter(p => p && typeof p === 'object').map(p => ({
           id: typeof p.id === 'string' && p.id ? p.id : uid(), name: clip(p.name, 80) || 'Project', grade: GRADES.includes(p.grade) ? p.grade : '',
           sector: clip(p.sector, 80), style: has(STYLES, p.style) ? p.style : 'boulder', status: has(PROJECT_STATUS, p.status) ? p.status : 'todo',
@@ -820,10 +822,10 @@ review|other|Attempt review|10|`.split('\n').map(line => {
     const days = diffDays(first, today), span = diffDays(first, t.since && t.since < first ? t.since : today);
     return { now: false, days, fill: span > 0 ? Math.max(0, Math.min(1, 1 - days / span)) : 0, approx };
   }
-  /** Prossimo viaggio per la Home: confermato o possibile, non ancora finito; il più vicino (quello in corso prima),
+  /** Prossimo viaggio per la Home: confermato o idea con date, non ancora finito; il più vicino (quello in corso prima),
       a parità di data il confermato. */
   function nextTrip(trips, today) {
-    return trips.filter(t => (t.status === 'confirmed' || t.status === 'possible') && ['future', 'now'].includes(tripPhase(t, today)))
+    return trips.filter(t => (t.status === 'confirmed' || t.status === 'idea') && ['future', 'now'].includes(tripPhase(t, today)))
       .sort((a, b) => tripFirst(a.from).localeCompare(tripFirst(b.from)) || (b.status === 'confirmed') - (a.status === 'confirmed'))[0] || null;
   }
   /** Gruppi della sezione: confermati in arrivo (per data), idee e possibili (datati prima, per data), archivio (dal più recente).
@@ -832,7 +834,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
     const key = t => tripFirst(t.from) || '9999';
     const upcoming = [], ideas = [], archive = [];
     for (const t of trips) {
-      if (t.status === 'done' || t.status === 'dropped' || (t.status === 'confirmed' && tripPhase(t, today) === 'past')) archive.push(t);
+      if (t.status === 'done' || (t.status === 'confirmed' && tripPhase(t, today) === 'past')) archive.push(t);
       else if (t.status === 'confirmed') upcoming.push(t);
       else ideas.push(t);
     }

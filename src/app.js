@@ -516,7 +516,7 @@
     return out;
   }
 
-  /** Countdown del prossimo viaggio (confermato o possibile, pallino verde o giallo): anello che si riempie verso la partenza, come la ciambella di Analytics. */
+  /** Countdown del prossimo viaggio (confermato o idea con date, pallino verde o giallo): anello che si riempie verso la partenza, come la ciambella di Analytics. */
   function countdownCard(trip, today) {
     const cd = C.tripCountdown(trip, today), pr = C.tripProgress(trip);
     const NS = 'http://www.w3.org/2000/svg', R = 34, L = 2 * Math.PI * R;
@@ -1110,7 +1110,7 @@
     return [h('div', { class: 'row' }, h('h1', { class: 'grow' }, 'Trips'), btn('+ Trip', () => tripSheet(null), 'sm pri')),
       !S.trips.length ? h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin:0' }, 'Climbing trips and the projects you want to do there. Add a trip, even just an idea, then its projects: tick them off as you send them.')) : null,
       g.upcoming.length ? [h('h2', {}, 'Coming up'), g.upcoming.map(t => tripCard(t, true))] : null,
-      g.ideas.length ? [h('h2', {}, 'Ideas and maybes'), g.ideas.map(t => tripCard(t))] : null,
+      g.ideas.length ? [h('h2', {}, 'Ideas'), g.ideas.map(t => tripCard(t))] : null,
       g.archive.length ? [h('h2', {}, 'Archive'), g.archive.map(t => tripCard(t))] : null];
   }
   /** Date approssimative: nessuna, solo il mese o i giorni esatti. */
@@ -1144,8 +1144,8 @@
         const d = dates.read();
         if (d.from && d.to && C.tripLast(d.to) < C.tripFirst(d.from)) return toast('The end is before the start.');
         const x = t || { id: C.uid(), projects: [], checklist: [], since: C.todayISO() };
-        // L'anello del countdown parte dal giorno in cui il viaggio entra in Home (Possible o Confirmed); passare da Possible a Confirmed non lo azzera
-        const inHome = k => k === 'possible' || k === 'confirmed';
+        // L'anello del countdown parte dal giorno in cui il viaggio entra in Home (Idea o Confirmed); confermare un'idea non lo azzera
+        const inHome = k => k === 'idea' || k === 'confirmed';
         if (inHome(st.value) && (!t || !inHome(t.status))) x.since = C.todayISO();
         Object.assign(x, { name: n.slice(0, 80), place: place.value.trim().slice(0, 80), status: st.value, from: d.from, to: d.from ? d.to : '', notes: notes.value.trim().slice(0, 2000) });
         if (!t) S.trips.push(x);

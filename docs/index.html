@@ -162,7 +162,7 @@ label.f input[type=checkbox]{display:inline-block;width:auto;margin:0 8px 0 0;ve
 .logged-x > div + div { margin-top: 6px; }
 .logged-day { padding-top: 8px; border-top: 1px solid var(--line); font-size: 14px; color: var(--tx); }
 /* Viaggi e progetti */
-.tag.ts-confirmed{background:#0f2e1b;color:var(--ac)}.tag.ts-possible{background:#3a3218;color:var(--warn)}.tag.ts-done{background:#16263a;color:#6da7ec}.tag.ts-dropped{opacity:.6}
+.tag.ts-confirmed{background:#0f2e1b;color:var(--ac)}.tag.ts-done{background:#16263a;color:#6da7ec}
 .trip .n{font-weight:600;font-size:17px}.trip .sub{margin-top:2px}
 .trip.next{border-color:rgba(61,242,124,.25)}.trip.next .n{font-size:20px}
 .tprog{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:13px;color:var(--mu)}
@@ -205,7 +205,7 @@ h2 .cnt{color:var(--mu);font-weight:400;font-size:.85em}
 .cd-n{font-weight:700;font-size:18px;margin:1px 0 2px}
 .cd-p{margin-top:4px;font-size:13px;color:var(--ac);font-weight:600}
 .cd .m{color:var(--mu);font-size:20px}
-.cd-k{display:flex;align-items:center;gap:6px}.cd-dot{width:8px;height:8px;border-radius:50%;flex:none;background:var(--ac)}.cd-dot.possible{background:var(--warn)}
+.cd-k{display:flex;align-items:center;gap:6px}.cd-dot{width:8px;height:8px;border-radius:50%;flex:none;background:var(--ac)}.cd-dot.idea{background:var(--warn)}
 </style>
 </head>
 <body>
@@ -1007,7 +1007,9 @@ review|other|Attempt review|10|`.split('\n').map(line => {
   /* ---- Viaggi e progetti ----
      Sezione a sé: non tocca giornate, programmi né analisi. Le date possono essere approssimative:
      "2027-03" (solo il mese), "2027-03-14" (il giorno) oppure assenti (un'idea). */
-  const TRIP_STATUS = [['idea', 'Idea'], ['possible', 'Possible'], ['confirmed', 'Confirmed'], ['done', 'Done'], ['dropped', 'Dropped']];
+  const TRIP_STATUS = [['idea', 'Idea'], ['confirmed', 'Confirmed'], ['done', 'Done']];
+  // Stati tolti il 2026-11-19 (scelta di Leo): Possible e Dropped diventano Idea, così nessun viaggio si perde
+  const OLD_TRIP_STATUS = { possible: 'idea', dropped: 'idea' };
   const PROJECT_STATUS = [['todo', 'To do'], ['working', 'Working'], ['sent', 'Sent']];
   const STYLES = [['boulder', 'Boulder'], ['route', 'Route']];
   const has = (list, k) => list.some(x => x[0] === k);
@@ -1026,8 +1028,8 @@ review|other|Attempt review|10|`.split('\n').map(line => {
       if (from && to && tripLast(to) < tripFirst(from)) to = ''; // fine prima dell'inizio: si tiene solo l'inizio
       return {
         id: typeof t.id === 'string' && t.id ? t.id : uid(), name: clip(t.name, 80) || 'Trip', place: clip(t.place, 80), from, to,
-        status: has(TRIP_STATUS, t.status) ? t.status : 'idea', notes: clip(t.notes, 2000),
-        since: validISO(t.since) || now, // da quando il viaggio è possibile o confermato (o almeno da quando l'app lo conosce): inizio dell'anello del countdown
+        status: has(TRIP_STATUS, t.status) ? t.status : OLD_TRIP_STATUS[t.status] || 'idea', notes: clip(t.notes, 2000),
+        since: validISO(t.since) || now, // da quando il viaggio esiste (o almeno da quando l'app lo conosce): inizio dell'anello del countdown
         projects: (Array.isArray(t.projects) ? t.projects : []).filter(p => p && typeof p === 'object').map(p => ({
           id: typeof p.id === 'string' && p.id ? p.id : uid(), name: clip(p.name, 80) || 'Project', grade: GRADES.includes(p.grade) ? p.grade : '',
           sector: clip(p.sector, 80), style: has(STYLES, p.style) ? p.style : 'boulder', status: has(PROJECT_STATUS, p.status) ? p.status : 'todo',
@@ -1064,10 +1066,10 @@ review|other|Attempt review|10|`.split('\n').map(line => {
     const days = diffDays(first, today), span = diffDays(first, t.since && t.since < first ? t.since : today);
     return { now: false, days, fill: span > 0 ? Math.max(0, Math.min(1, 1 - days / span)) : 0, approx };
   }
-  /** Prossimo viaggio per la Home: confermato o possibile, non ancora finito; il più vicino (quello in corso prima),
+  /** Prossimo viaggio per la Home: confermato o idea con date, non ancora finito; il più vicino (quello in corso prima),
       a parità di data il confermato. */
   function nextTrip(trips, today) {
-    return trips.filter(t => (t.status === 'confirmed' || t.status === 'possible') && ['future', 'now'].includes(tripPhase(t, today)))
+    return trips.filter(t => (t.status === 'confirmed' || t.status === 'idea') && ['future', 'now'].includes(tripPhase(t, today)))
       .sort((a, b) => tripFirst(a.from).localeCompare(tripFirst(b.from)) || (b.status === 'confirmed') - (a.status === 'confirmed'))[0] || null;
   }
   /** Gruppi della sezione: confermati in arrivo (per data), idee e possibili (datati prima, per data), archivio (dal più recente).
@@ -1076,7 +1078,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
     const key = t => tripFirst(t.from) || '9999';
     const upcoming = [], ideas = [], archive = [];
     for (const t of trips) {
-      if (t.status === 'done' || t.status === 'dropped' || (t.status === 'confirmed' && tripPhase(t, today) === 'past')) archive.push(t);
+      if (t.status === 'done' || (t.status === 'confirmed' && tripPhase(t, today) === 'past')) archive.push(t);
       else if (t.status === 'confirmed') upcoming.push(t);
       else ideas.push(t);
     }
@@ -1882,7 +1884,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
     return out;
   }
 
-  /** Countdown del prossimo viaggio (confermato o possibile, pallino verde o giallo): anello che si riempie verso la partenza, come la ciambella di Analytics. */
+  /** Countdown del prossimo viaggio (confermato o idea con date, pallino verde o giallo): anello che si riempie verso la partenza, come la ciambella di Analytics. */
   function countdownCard(trip, today) {
     const cd = C.tripCountdown(trip, today), pr = C.tripProgress(trip);
     const NS = 'http://www.w3.org/2000/svg', R = 34, L = 2 * Math.PI * R;
@@ -2332,7 +2334,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
         cloudOn() ? [btn('Restore from GitHub', cloudRestore, 'sm'), btn('Disconnect', async () => { if (await confirmDlg('Disconnect GitHub? The token is deleted from this device; backups already uploaded stay in the repository.', 'Disconnect')) { S.settings.gh = null; clearTimeout(cloudTimer); save(); render(); } }, 'sm danger')] : null));
   }
   /* ---------- Taccuino: note al volo durante la prova dell'app, con il contesto per poterle riprodurre ---------- */
-  const VERSION = '20261119.0929';
+  const VERSION = '20261119.0938';
   function noteSheet() {
     const text = h('textarea', { class: 'inp', placeholder: 'What is wrong, or what would you like to be different?' });
     const where = P ? 'timer: ' + P.steps[P.idx].name : (location.hash.slice(1) || 'home');
@@ -2476,7 +2478,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
     return [h('div', { class: 'row' }, h('h1', { class: 'grow' }, 'Trips'), btn('+ Trip', () => tripSheet(null), 'sm pri')),
       !S.trips.length ? h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin:0' }, 'Climbing trips and the projects you want to do there. Add a trip, even just an idea, then its projects: tick them off as you send them.')) : null,
       g.upcoming.length ? [h('h2', {}, 'Coming up'), g.upcoming.map(t => tripCard(t, true))] : null,
-      g.ideas.length ? [h('h2', {}, 'Ideas and maybes'), g.ideas.map(t => tripCard(t))] : null,
+      g.ideas.length ? [h('h2', {}, 'Ideas'), g.ideas.map(t => tripCard(t))] : null,
       g.archive.length ? [h('h2', {}, 'Archive'), g.archive.map(t => tripCard(t))] : null];
   }
   /** Date approssimative: nessuna, solo il mese o i giorni esatti. */
@@ -2510,8 +2512,8 @@ review|other|Attempt review|10|`.split('\n').map(line => {
         const d = dates.read();
         if (d.from && d.to && C.tripLast(d.to) < C.tripFirst(d.from)) return toast('The end is before the start.');
         const x = t || { id: C.uid(), projects: [], checklist: [], since: C.todayISO() };
-        // L'anello del countdown parte dal giorno in cui il viaggio entra in Home (Possible o Confirmed); passare da Possible a Confirmed non lo azzera
-        const inHome = k => k === 'possible' || k === 'confirmed';
+        // L'anello del countdown parte dal giorno in cui il viaggio entra in Home (Idea o Confirmed); confermare un'idea non lo azzera
+        const inHome = k => k === 'idea' || k === 'confirmed';
         if (inHome(st.value) && (!t || !inHome(t.status))) x.since = C.todayISO();
         Object.assign(x, { name: n.slice(0, 80), place: place.value.trim().slice(0, 80), status: st.value, from: d.from, to: d.from ? d.to : '', notes: notes.value.trim().slice(0, 2000) });
         if (!t) S.trips.push(x);

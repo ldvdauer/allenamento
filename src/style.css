@@ -151,7 +151,7 @@ label.f input[type=checkbox]{display:inline-block;width:auto;margin:0 8px 0 0;ve
 .logged-x > div + div { margin-top: 6px; }
 .logged-day { padding-top: 8px; border-top: 1px solid var(--line); font-size: 14px; color: var(--tx); }
 /* Viaggi e progetti */
-.tag.ts-confirmed{background:#0f2e1b;color:var(--ac)}.tag.ts-possible{background:#3a3218;color:var(--warn)}.tag.ts-done{background:#16263a;color:#6da7ec}.tag.ts-dropped{opacity:.6}
+.tag.ts-confirmed{background:#0f2e1b;color:var(--ac)}.tag.ts-done{background:#16263a;color:#6da7ec}
 .trip .n{font-weight:600;font-size:17px}.trip .sub{margin-top:2px}
 .trip.next{border-color:rgba(61,242,124,.25)}.trip.next .n{font-size:20px}
 .tprog{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:13px;color:var(--mu)}
@@ -194,4 +194,4 @@ h2 .cnt{color:var(--mu);font-weight:400;font-size:.85em}
 .cd-n{font-weight:700;font-size:18px;margin:1px 0 2px}
 .cd-p{margin-top:4px;font-size:13px;color:var(--ac);font-weight:600}
 .cd .m{color:var(--mu);font-size:20px}
-.cd-k{display:flex;align-items:center;gap:6px}.cd-dot{width:8px;height:8px;border-radius:50%;flex:none;background:var(--ac)}.cd-dot.possible{background:var(--warn)}
+.cd-k{display:flex;align-items:center;gap:6px}.cd-dot{width:8px;height:8px;border-radius:50%;flex:none;background:var(--ac)}.cd-dot.idea{background:var(--warn)}
