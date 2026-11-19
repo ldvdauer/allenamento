@@ -521,3 +521,28 @@ test('analisi: serie completate, massimali e gradi per periodo', () => {
   const d = C.dailyGroups([], '2026-11-01', '2026-11-03');
   assert.deepEqual(d.map(x => x.date), ['2026-11-01', '2026-11-02', '2026-11-03']);
 });
+
+test('viaggi: pulizia di dati rotti, date approssimative, fasi e gruppi', () => {
+  const t = C.cleanTrips([null, 'x', { name: '', from: '2027-02-30', to: 'boh', status: 'boh', projects: [null, { grade: 'Z', status: 'sent', sentOn: 'ieri', style: 'x' }], checklist: [{ text: '  ' }, { text: 'Pads', done: 1 }] }]);
+  assert.equal(t.length, 1, 'voci non oggetto scartate');
+  assert.deepEqual([t[0].name, t[0].from, t[0].to, t[0].status], ['Trip', '', '', 'idea'], 'data inesistente e stato sconosciuto ripuliti');
+  assert.deepEqual([t[0].projects.length, t[0].projects[0].grade, t[0].projects[0].style, t[0].projects[0].sentOn], [1, '', 'boulder', ''], 'progetto con grado e data non validi');
+  assert.deepEqual(t[0].checklist.map(c => [c.text, c.done]), [['Pads', true]], 'voci vuote della checklist scartate');
+  assert.equal(C.cleanTrips([{ from: '2027-03', to: '2027-02' }])[0].to, '', 'fine prima dell\'inizio: resta solo l\'inizio');
+  assert.deepEqual(C.cleanTrips(undefined), [], 'backup precedente ai viaggi');
+  assert.equal(C.tripLast('2028-02'), '2028-02-29', 'un mese copre fino all\'ultimo giorno (anno bisestile)');
+  const mk = (name, status, from, to) => C.cleanTrips([{ name, status, from, to }])[0];
+  const today = '2026-11-25';
+  const font = mk('Font', 'confirmed', '2027-03-14', '2027-03-28'), now = mk('Now', 'confirmed', '2026-11', ''), old = mk('Old', 'confirmed', '2026-10-01', '2026-10-05');
+  const idea = mk('Idea', 'idea', '', ''), done = mk('Done', 'done', '2026-09', ''), maybe = mk('Maybe', 'possible', '2027-06', '');
+  assert.equal(C.daysTo(font, today), 109); assert.equal(C.daysTo(now, today), 0, 'mese in corso: il viaggio è in corso');
+  assert.equal(C.daysTo(old, today), null); assert.equal(C.daysTo(idea, today), null);
+  assert.equal(C.nextTrip([font, now, old, maybe], today).name, 'Now', 'prossimo: quello in corso prima di quelli futuri');
+  assert.equal(C.nextTrip([font, maybe], today).name, 'Font', 'solo confermati');
+  assert.equal(C.nextTrip([maybe, idea], today), null);
+  const g = C.groupTrips([idea, done, font, old, maybe, now], today);
+  assert.deepEqual(g.upcoming.map(x => x.name), ['Now', 'Font']);
+  assert.deepEqual(g.ideas.map(x => x.name), ['Maybe', 'Idea'], 'idee datate prima, senza date in fondo');
+  assert.deepEqual(g.archive.map(x => x.name), ['Old', 'Done'], 'confermato già finito in archivio, dal più recente');
+  assert.deepEqual(C.tripProgress(C.cleanTrips([{ projects: [{ status: 'sent', sentOn: '2027-03-20' }, {}] }])[0]), { sent: 1, total: 2 });
+});

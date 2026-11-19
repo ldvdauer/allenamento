@@ -161,6 +161,35 @@ label.f input[type=checkbox]{display:inline-block;width:auto;margin:0 8px 0 0;ve
 .logged-x { padding: 8px 0; border-top: 1px solid var(--line); font-size: 14px; }
 .logged-x > div + div { margin-top: 6px; }
 .logged-day { padding-top: 8px; border-top: 1px solid var(--line); font-size: 14px; color: var(--tx); }
+/* Viaggi e progetti */
+.tag.ts-confirmed{background:#0f2e1b;color:var(--ac)}.tag.ts-possible{background:#3a3218;color:var(--warn)}.tag.ts-done{background:#16263a;color:#6da7ec}.tag.ts-dropped{opacity:.6}
+.trip .n{font-weight:600;font-size:17px}.trip .sub{margin-top:2px}
+.trip.next{border-color:rgba(61,242,124,.25)}.trip.next .n{font-size:20px}
+.tprog{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:13px;color:var(--mu)}
+.tbar{flex:1;height:6px;border-radius:3px;background:#252a30;overflow:hidden}.tbar i{display:block;height:100%;background:var(--ac);border-radius:3px}
+.trip-h{margin-bottom:6px}.trip-notes{color:var(--note);white-space:pre-wrap;font-size:15px}
+h2 .cnt{color:var(--mu);font-weight:400;font-size:.85em}
+.prj{align-items:flex-start}.prj .n .gr{margin-left:8px;color:var(--ac);font-weight:700}
+.prj.sent .n{color:var(--mu)}.prj.sent .n .gr{color:var(--mu)}
+.clamp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-wrap}
+/* Cerchio del progetto: vuoto = da fare, a metà = in lavorazione, pieno con spunta = chiuso. Area di tocco 44px. */
+.pdot{flex:none;width:44px;height:44px;margin:-6px 4px -6px -8px;padding:0;border:0;background:none;display:grid;place-items:center;cursor:pointer;-webkit-tap-highlight-color:transparent;position:relative}
+.pdot::before{content:"";position:absolute;width:26px;height:26px;border-radius:50%;border:2px solid #4a525b;box-sizing:border-box}
+.pdot.working::before{border-color:var(--warn);background:conic-gradient(var(--warn) 0 50%,transparent 50%);background-clip:padding-box}
+.pdot svg{position:relative;width:16px;height:16px;fill:none;stroke:#0e1012;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;opacity:0}
+.pdot.sent::before{background:var(--ac);border-color:var(--ac)}.pdot.sent svg{opacity:1}
+.pdot.pop::before{background:var(--ac);border-color:var(--ac);animation:pdot-pop .45s cubic-bezier(.3,1.6,.5,1)}
+.pdot.pop svg{opacity:1;animation:pdot-tick .45s ease-out}
+.pdot.pop::after{content:"";position:absolute;width:26px;height:26px;border-radius:50%;border:2px solid var(--ac);animation:pdot-ring .5s ease-out forwards}
+@keyframes pdot-pop{0%{transform:scale(.6)}60%{transform:scale(1.25)}100%{transform:scale(1)}}
+@keyframes pdot-tick{0%{opacity:0;transform:scale(.4)}100%{opacity:1;transform:scale(1)}}
+@keyframes pdot-ring{0%{transform:scale(1);opacity:.9}100%{transform:scale(2.1);opacity:0}}
+@media (prefers-reduced-motion:reduce){.pdot.pop::before,.pdot.pop svg,.pdot.pop::after{animation:none}}
+.chk-i{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--line)}.chk-i:first-child{border-top:0}
+.chk-i label{font-size:15px;display:flex;align-items:center;gap:8px;min-height:32px}.chk-i input{width:20px;height:20px;accent-color:var(--ac)}
+.chk-i.done label{color:var(--mu);text-decoration:line-through}
+.chk-i .x{background:none;border:0;color:var(--mu);font-size:22px;width:36px;height:36px;cursor:pointer}
+.chk-add{margin-top:8px}
 </style>
 </head>
 <body>
@@ -168,9 +197,9 @@ label.f input[type=checkbox]{display:inline-block;width:auto;margin:0 8px 0 0;ve
 <nav id="tabs">
   <a href="#home"><svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v9h-5v-6h-6v6H4z"/></svg>Home</a>
   <a href="#calendar"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Calendar</a>
+  <a href="#trips"><svg viewBox="0 0 24 24"><path d="M2 20l7-12 4 6 3-4 6 10z"/><path d="M9 8V3l4 1.5L9 6"/></svg>Trips</a>
   <a href="#analytics"><svg viewBox="0 0 24 24"><path d="M3 20h18M7 20v-7M12 20V5M17 20v-10"/></svg>Analytics</a>
   <a href="#more"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>More</a>
-  <a href="#" id="tab-note" role="button"><svg viewBox="0 0 24 24"><path d="M5 4h10l4 4v12H5zM9 12h6M9 16h4"/></svg>Note</a>
 </nav>
 <section id="runner" hidden></section>
 <section id="player" hidden>
@@ -959,12 +988,79 @@ review|other|Attempt review|10|`.split('\n').map(line => {
     return { weeks, series };
   }
 
+  /* ---- Viaggi e progetti ----
+     Sezione a sé: non tocca giornate, programmi né analisi. Le date possono essere approssimative:
+     "2027-03" (solo il mese), "2027-03-14" (il giorno) oppure assenti (un'idea). */
+  const TRIP_STATUS = [['idea', 'Idea'], ['possible', 'Possible'], ['confirmed', 'Confirmed'], ['done', 'Done'], ['dropped', 'Dropped']];
+  const PROJECT_STATUS = [['todo', 'To do'], ['working', 'Working'], ['sent', 'Sent']];
+  const STYLES = [['boulder', 'Boulder'], ['route', 'Route']];
+  const has = (list, k) => list.some(x => x[0] === k);
+  /** Data di un viaggio: 'YYYY-MM' o 'YYYY-MM-DD' validi, altrimenti ''. */
+  const tripDate = v => { const t = String(v == null ? '' : v).trim(); return /^\d{4}-\d{2}$/.test(t) && +t.slice(5) >= 1 && +t.slice(5) <= 12 ? t : validISO(t) || ''; };
+  /** Primo e ultimo giorno coperti da una data approssimativa: un mese vale dal primo all'ultimo giorno. */
+  const tripFirst = v => (v.length === 7 ? v + '-01' : v || null);
+  const tripLast = v => { if (v.length !== 7) return v || null; const [y, m] = v.split('-').map(Number); return toISO(new Date(y, m, 0)); };
+  const clip = (v, n) => String(v == null ? '' : v).slice(0, n);
+  /** Pulisce i viaggi di un backup o del salvataggio: campi sconosciuti o rotti spariscono, niente fa fallire il ripristino. */
+  function cleanTrips(raw) {
+    if (!Array.isArray(raw)) return [];
+    return raw.filter(t => t && typeof t === 'object').map(t => {
+      const from = tripDate(t.from); let to = tripDate(t.to);
+      if (from && to && tripLast(to) < tripFirst(from)) to = ''; // fine prima dell'inizio: si tiene solo l'inizio
+      return {
+        id: typeof t.id === 'string' && t.id ? t.id : uid(), name: clip(t.name, 80) || 'Trip', place: clip(t.place, 80), from, to,
+        status: has(TRIP_STATUS, t.status) ? t.status : 'idea', notes: clip(t.notes, 2000),
+        projects: (Array.isArray(t.projects) ? t.projects : []).filter(p => p && typeof p === 'object').map(p => ({
+          id: typeof p.id === 'string' && p.id ? p.id : uid(), name: clip(p.name, 80) || 'Project', grade: GRADES.includes(p.grade) ? p.grade : '',
+          sector: clip(p.sector, 80), style: has(STYLES, p.style) ? p.style : 'boulder', status: has(PROJECT_STATUS, p.status) ? p.status : 'todo',
+          sentOn: p.status === 'sent' ? validISO(p.sentOn) || '' : '', notes: clip(p.notes, 2000),
+        })),
+        checklist: (Array.isArray(t.checklist) ? t.checklist : []).filter(c => c && typeof c === 'object' && String(c.text || '').trim())
+          .map(c => ({ id: typeof c.id === 'string' && c.id ? c.id : uid(), text: clip(c.text, 120).trim(), done: !!c.done })),
+      };
+    });
+  }
+  /** Progetti chiusi su totali. */
+  const tripProgress = t => ({ sent: t.projects.filter(p => p.status === 'sent').length, total: t.projects.length });
+  /** Fase del viaggio rispetto a oggi: 'future', 'now' (in corso), 'past', oppure null senza date. */
+  function tripPhase(t, today) {
+    const a = tripFirst(t.from); if (!a) return null;
+    const b = tripLast(t.to || t.from);
+    return today < a ? 'future' : today > b ? 'past' : 'now';
+  }
+  /** Giorni alla partenza (0 = oggi o già in corso); null senza data o a viaggio finito. */
+  function daysTo(t, today) {
+    const ph = tripPhase(t, today);
+    return ph === 'future' ? diffDays(tripFirst(t.from), today) : ph === 'now' ? 0 : null;
+  }
+  /** Prossimo viaggio confermato non ancora finito: quello in corso o il più vicino. */
+  function nextTrip(trips, today) {
+    return trips.filter(t => t.status === 'confirmed' && ['future', 'now'].includes(tripPhase(t, today)))
+      .sort((a, b) => tripFirst(a.from).localeCompare(tripFirst(b.from)))[0] || null;
+  }
+  /** Gruppi della sezione: confermati in arrivo (per data), idee e possibili (datati prima, per data), archivio (dal più recente).
+      Un confermato già finito va in archivio anche se non è stato segnato Done. */
+  function groupTrips(trips, today) {
+    const key = t => tripFirst(t.from) || '9999';
+    const upcoming = [], ideas = [], archive = [];
+    for (const t of trips) {
+      if (t.status === 'done' || t.status === 'dropped' || (t.status === 'confirmed' && tripPhase(t, today) === 'past')) archive.push(t);
+      else if (t.status === 'confirmed') upcoming.push(t);
+      else ideas.push(t);
+    }
+    upcoming.sort((a, b) => key(a).localeCompare(key(b)));
+    ideas.sort((a, b) => key(a).localeCompare(key(b)) || a.name.localeCompare(b.name));
+    archive.sort((a, b) => (tripFirst(b.from) || '').localeCompare(tripFirst(a.from) || ''));
+    return { upcoming, ideas, archive };
+  }
+
   return {
     CLIMBING, LEGACY_SECTION, slotOf, blockSection, timeBySection, weeklyGroups, describe, leftoverNote, splitCues, fmtRest, PAIRS, refKeys, LEGACY_NAMES, normSide, firstOffset, firstSessionDate, startForFirst, recordsOf, lastRecord, nextLoad, TEST_TEMPLATES, testLabel, SECTIONS, LIBRARY, STD, stdVariant, matchStd, exName, GRIPS, gripKey, gripText,
     DAY_TYPES, PERIODS, SLOTS, GRADES, GRADE_SCALES, gradeIdx, fmtGrade, DEFAULT_SURFACES, inferSurface, validISO, uid, toISO, fromISO, todayISO, addDays, diffDays, mondayOf,
     inferLoad, loadKey, loadKg, latestMaxes, fmtKg, cycle, cueAt, intervalMinutes, buildSteps, normInterval,
     importYaml, exportYaml, parseDuration, parseWeeks, fmtWeeks, testExercise, YAML_REFS, locate, dateOf, sessionMinutes, cloneSession, validState,
     niceRange, scheduled, weeklyStats, summary, parseLoads, loadSeries, surfaceStats, weeklyTopGrades, dailyGroups, setsCompletion, testProgress, gradeProgress,
+    TRIP_STATUS, PROJECT_STATUS, STYLES, tripDate, tripFirst, tripLast, cleanTrips, tripProgress, tripPhase, daysTo, nextTrip, groupTrips,
   };
 });
 </script>
@@ -1253,7 +1349,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
 
   /* ---------- Stato e persistenza ---------- */
   // Primo avvio: nessun piano precaricato, ogni utente importa o crea i propri.
-  const fresh = () => migrate({ v: 12, plans: [], activePlan: null, exercises: {}, logs: [], tests: [] });
+  const fresh = () => migrate({ v: 13, plans: [], activePlan: null, exercises: {}, logs: [], tests: [] });
   /** I test da cui dipendono i kg degli esercizi (e il peso corporeo) devono esistere nella sezione Test. */
   function ensureTests(s) {
     const need = new Set(['bw'].concat(Object.values(s.exercises).filter(e => e.load).flatMap(e => C.refKeys(e.load.ref))));
@@ -1381,7 +1477,8 @@ review|other|Attempt review|10|`.split('\n').map(line => {
       pruneEmpty(s); prune(s); // e gli esercizi rimasti senza giornata
     }
     if (fromV < 12) delete s.live; // v12: niente più sessione in corso: ogni esercizio si avvia dalla giornata
-    s.v = 12;
+    s.trips = C.cleanTrips(s.trips); // v13: viaggi e progetti (sezione a sé); un backup precedente non li ha
+    s.v = 13;
     return s;
   }
   let rescued = false;
@@ -2184,7 +2281,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
         cloudOn() ? [btn('Restore from GitHub', cloudRestore, 'sm'), btn('Disconnect', async () => { if (await confirmDlg('Disconnect GitHub? The token is deleted from this device; backups already uploaded stay in the repository.', 'Disconnect')) { S.settings.gh = null; clearTimeout(cloudTimer); save(); render(); } }, 'sm danger')] : null));
   }
   /* ---------- Taccuino: note al volo durante la prova dell'app, con il contesto per poterle riprodurre ---------- */
-  const VERSION = '20261118.1636';
+  const VERSION = '20261119.0913';
   function noteSheet() {
     const text = h('textarea', { class: 'inp', placeholder: 'What is wrong, or what would you like to be different?' });
     const where = P ? 'timer: ' + P.steps[P.idx].name : (location.hash.slice(1) || 'home');
@@ -2263,8 +2360,10 @@ review|other|Attempt review|10|`.split('\n').map(line => {
     const prep = numInp(S.settings.prep), sound = h('input', { type: 'checkbox', checked: S.settings.sound, onchange: () => { S.settings.sound = sound.checked; save(); } });
     const sfNew = h('input', { class: 'inp', style: 'margin:0', placeholder: 'New surface' });
     return [h('h1', {}, 'More'),
+      // Strumento della prova d'uso (prima stava nella barra): sparirà nella versione definitiva
+      h('div', { class: 'card tap row', id: 'more-note', onclick: noteSheet }, h('div', { class: 'grow' }, h('div', { class: 'n', style: 'font-weight:600' }, 'Note'), h('div', { class: 'sub' }, 'Write down what is wrong while you use the app')), '+'),
       h('div', { class: 'card tap row', onclick: () => { location.hash = 'library'; } }, h('div', { class: 'grow' }, h('div', { class: 'n', style: 'font-weight:600' }, 'Exercise library'), h('div', { class: 'sub' }, (C.LIBRARY.length + S.custom.length) + ' exercises')), '›'),
-      h('div', { class: 'card tap row', onclick: () => go('notebook') }, h('div', { class: 'grow' }, h('div', { class: 'n', style: 'font-weight:600' }, 'Notebook'), h('div', { class: 'sub' }, S.notes.length ? `${S.notes.length} notes` : 'Note what is wrong while you use the app')), '›'),
+      h('div', { class: 'card tap row', onclick: () => go('notebook') }, h('div', { class: 'grow' }, h('div', { class: 'n', style: 'font-weight:600' }, 'Notebook'), h('div', { class: 'sub' }, S.notes.length ? `${S.notes.length} notes` : 'No notes yet')), '›'),
       h('div', { class: 'card tap row', onclick: () => go('diagnostics') }, h('div', { class: 'grow' }, h('div', { class: 'n', style: 'font-weight:600' }, 'Diagnostics'), h('div', { class: 'sub' }, 'Audio, screen on, offline and storage on this device · v' + VERSION)), '›'),
       h('h2', {}, 'Programmes'), h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin-top:0' }, 'A programme is a set of training days: import it, choose when it starts and find it in the calendar.'),
         S.plans.map(p => h('div', { class: 'blk', style: 'cursor:pointer', onclick: () => planSheet(p) }, h('div', { class: 'grow' }, h('div', { class: 'n' }, p.title),
@@ -2283,6 +2382,167 @@ review|other|Attempt review|10|`.split('\n').map(line => {
       h('h2', {}, 'Data'), h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin-top:0' }, (cloudOn() ? 'Automatic backup to GitHub is active. ' : 'Data stays on this device only. "Save backup" opens the share sheet: choose "Save to Files" to put it in iCloud Drive.') + (S.settings.lastBackup ? ` Last backup: ${fmtDate(S.settings.lastBackup)}.` : ' No backup yet.')),
         h('div', { class: 'btns' }, btn(cloudOn() ? 'Back up now' : 'Save backup', doBackup, 'sm pri'), fileBtn('Restore / import file'),
           btn('Reset everything', async () => { if (await confirmDlg('Delete programmes, days, exercises, logs and tests? This cannot be undone: make a backup first.', 'Reset')) { S = fresh(); calSel = calMonth = null; save(); render(); } }, 'sm danger')))];
+  }
+
+
+  /* ---------- Viaggi e progetti ----------
+     Sezione a sé: non programma nulla e non tocca giornate, esercizi, test e analisi. Logica pura in core.js. */
+  const TRIP_ST = Object.fromEntries(C.TRIP_STATUS);
+  const tripById = id => S.trips.find(t => t.id === id);
+  // Le vie usano la stessa scala, scritta in minuscolo come nella scala francese (7a+); i blocchi restano Font (7A+).
+  const prjGrade = p => (p.grade ? (p.style === 'route' ? fmtG(p.grade).toLowerCase() : fmtG(p.grade)) : '');
+  /** "Mar 2027", "Mar – Apr 2027", "14 – 28 Mar 2027", "28 Feb – 3 Mar 2027"; senza date: "No dates yet". */
+  function fmtTrip(t) {
+    const part = v => { const [y, m, d] = v.split('-').map(Number); return { y, m: MONTHS[m - 1], d }; };
+    if (!t.from) return 'No dates yet';
+    const a = part(t.from), b = t.to ? part(t.to) : null;
+    const one = x => (x.d ? `${x.d} ${x.m} ${x.y}` : `${x.m} ${x.y}`);
+    if (!b || t.to === t.from) return one(a);
+    if (a.y === b.y && !!a.d === !!b.d) return a.d ? (a.m === b.m ? `${a.d} – ${b.d} ${b.m} ${b.y}` : `${a.d} ${a.m} – ${b.d} ${b.m} ${b.y}`) : `${a.m} – ${b.m} ${b.y}`;
+    return `${one(a)} – ${one(b)}`;
+  }
+  /** "in 118 days", "tomorrow", "now"; per le date al mese è approssimativo. */
+  function whenTrip(t) {
+    const n = C.daysTo(t, C.todayISO());
+    if (n == null) return '';
+    return n === 0 ? 'now' : (t.from.length === 7 ? '~' : '') + (n === 1 ? 'tomorrow' : `in ${n} days`);
+  }
+  const statusTag = t => h('span', { class: 'tag ts-' + t.status }, TRIP_ST[t.status]);
+  function progressBar(t) {
+    const p = C.tripProgress(t);
+    if (!p.total) return null;
+    return h('div', { class: 'tprog' }, h('div', { class: 'tbar' }, h('i', { style: `width:${Math.round(p.sent / p.total * 100)}%` })), h('span', {}, `${p.sent}/${p.total} sent`));
+  }
+  function tripCard(t, big) {
+    const when = whenTrip(t);
+    return h('div', { class: 'card tap trip' + (big ? ' next' : ''), onclick: () => go('trip-' + t.id) },
+      h('div', { class: 'row' }, h('div', { class: 'grow n' }, t.name), statusTag(t)),
+      h('div', { class: 'sub' }, [t.place, fmtTrip(t)].filter(Boolean).join(' · ') + (when ? ' · ' + when : '')),
+      progressBar(t));
+  }
+  function viewTrips() {
+    const g = C.groupTrips(S.trips, C.todayISO());
+    return [h('div', { class: 'row' }, h('h1', { class: 'grow' }, 'Trips'), btn('+ Trip', () => tripSheet(null), 'sm pri')),
+      !S.trips.length ? h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin:0' }, 'Climbing trips and the projects you want to do there. Add a trip, even just an idea, then its projects: tick them off as you send them.')) : null,
+      g.upcoming.length ? [h('h2', {}, 'Coming up'), g.upcoming.map(t => tripCard(t, true))] : null,
+      g.ideas.length ? [h('h2', {}, 'Ideas and maybes'), g.ideas.map(t => tripCard(t))] : null,
+      g.archive.length ? [h('h2', {}, 'Archive'), g.archive.map(t => tripCard(t))] : null];
+  }
+  /** Date approssimative: nessuna, solo il mese o i giorni esatti. */
+  function datesEditor(t) {
+    const prec = t && t.from ? (t.from.length === 7 ? 'month' : 'day') : 'none';
+    const sel = opts([['none', 'No dates yet'], ['month', 'Month'], ['day', 'Exact days']], prec);
+    const from = h('input', { class: 'inp' }), to = h('input', { class: 'inp' });
+    const cols = h('div', { class: 'cols' }, field('From', from), field('To (optional)', to));
+    const sync = keep => {
+      const k = sel.value;
+      cols.hidden = k === 'none';
+      for (const [el, v] of [[from, t ? t.from : ''], [to, t ? t.to : '']]) {
+        const cur = keep ? v : el.value;
+        el.type = k === 'month' ? 'month' : 'date';
+        el.value = !cur ? '' : k === 'month' ? cur.slice(0, 7) : cur.length === 7 ? cur + '-01' : cur;
+      }
+    };
+    sel.addEventListener('change', () => sync(false));
+    sync(true);
+    return { node: [field('Dates', sel), cols], read: () => (sel.value === 'none' ? { from: '', to: '' } : { from: C.tripDate(from.value), to: C.tripDate(to.value) }) };
+  }
+  function tripSheet(t) {
+    const name = h('input', { class: 'inp', value: t ? t.name : '', placeholder: 'e.g. Fontainebleau spring' });
+    const place = h('input', { class: 'inp', value: t ? t.place : '', placeholder: 'e.g. Fontainebleau, France' });
+    const st = opts(C.TRIP_STATUS, t ? t.status : 'idea'), dates = datesEditor(t);
+    const notes = h('textarea', { class: 'inp', placeholder: 'Accommodation, travel, conditions…' }); notes.value = t ? t.notes : '';
+    const ov = openSheet(t ? 'Edit trip' : 'New trip', [field('Name', name), field('Place', place), field('Status', st), dates.node, field('Notes', notes),
+      btn('Save', () => {
+        const n = name.value.trim();
+        if (!n) return toast('Give the trip a name.');
+        const d = dates.read();
+        if (d.from && d.to && C.tripLast(d.to) < C.tripFirst(d.from)) return toast('The end is before the start.');
+        const x = t || { id: C.uid(), projects: [], checklist: [] };
+        Object.assign(x, { name: n.slice(0, 80), place: place.value.trim().slice(0, 80), status: st.value, from: d.from, to: d.from ? d.to : '', notes: notes.value.trim().slice(0, 2000) });
+        if (!t) S.trips.push(x);
+        save(); ov.remove(); log('trips', t ? 'edited' : 'added', { name: x.name });
+        if (t) render(); else go('trip-' + x.id);
+      }, 'pri block'),
+      t ? btn('Delete trip', async () => {
+        if (!await confirmDlg(`Delete "${t.name}" with its ${t.projects.length} projects and checklist? This cannot be undone.`, 'Delete')) return;
+        S.trips = S.trips.filter(x => x !== t); save(); ov.remove(); log('trips', 'deleted', { name: t.name }); go('trips');
+      }, 'danger block') : null]);
+  }
+  function projectSheet(t, p) {
+    const name = h('input', { class: 'inp', value: p ? p.name : '', placeholder: 'e.g. Karma' });
+    const grade = opts(gradeOpts(), p ? p.grade : ''), style = opts(C.STYLES, p ? p.style : 'boulder');
+    const sector = h('input', { class: 'inp', value: p ? p.sector : '', placeholder: 'e.g. Franchard Cuisinière' });
+    const st = opts(C.PROJECT_STATUS, p ? p.status : 'todo');
+    const sent = h('input', { class: 'inp', type: 'date', value: p && p.sentOn ? p.sentOn : '' }), sentF = field('Sent on', sent);
+    const syncSent = () => { sentF.hidden = st.value !== 'sent'; if (st.value === 'sent' && !sent.value) sent.value = C.todayISO(); };
+    st.addEventListener('change', syncSent); syncSent();
+    const notes = h('textarea', { class: 'inp', placeholder: 'Beta, conditions, pads…' }); notes.value = p ? p.notes : '';
+    const ov = openSheet(p ? 'Edit project' : 'New project', [field('Name', name), h('div', { class: 'cols' }, field('Grade', grade), field('Style', style)),
+      field('Sector', sector), field('Status', st), sentF, field('Notes', notes),
+      btn('Save', () => {
+        const n = name.value.trim();
+        if (!n) return toast('Give the project a name.');
+        const x = p || { id: C.uid() };
+        Object.assign(x, { name: n.slice(0, 80), grade: grade.value, style: style.value, sector: sector.value.trim().slice(0, 80), status: st.value,
+          sentOn: st.value === 'sent' ? C.validISO(sent.value) || C.todayISO() : '', notes: notes.value.trim().slice(0, 2000) });
+        if (!p) t.projects.push(x);
+        save(); ov.remove(); render();
+      }, 'pri block'),
+      p ? btn('Delete project', async () => {
+        if (!await confirmDlg(`Delete "${p.name}"?`, 'Delete')) return;
+        t.projects = t.projects.filter(x => x !== p); save(); ov.remove(); render();
+      }, 'danger block') : null]);
+  }
+  /** Un tocco sul cerchio chiude il progetto (data di oggi); un altro tocco lo riapre. */
+  function toggleSent(t, p, el) {
+    if (p.status === 'sent') { p.status = 'todo'; p.sentOn = ''; save(); render(); return; }
+    p.status = 'sent'; p.sentOn = C.todayISO(); save();
+    log('trips', 'sent', { name: p.name });
+    try { if (navigator.vibrate) navigator.vibrate(30); } catch (e) { /* non supportato */ }
+    const pr = C.tripProgress(t);
+    toast(`${p.name} sent!` + (pr.total > 1 ? ` ${pr.sent}/${pr.total}` : ''));
+    // Prima l'animazione sul cerchio, poi il ridisegno
+    el.classList.add('pop');
+    setTimeout(render, 450);
+  }
+  function projectRow(t, p) {
+    const sub = [p.sector, C.STYLES.find(s => s[0] === p.style)[1], p.status === 'sent' && p.sentOn ? 'sent ' + fmtDate(p.sentOn) + ' ' + p.sentOn.slice(0, 4) : p.status === 'working' ? 'working' : ''].filter(Boolean).join(' · ');
+    const dot = h('button', { type: 'button', class: 'pdot ' + p.status, 'aria-label': p.status === 'sent' ? `${p.name}: sent, tap to reopen` : `Mark ${p.name} as sent`,
+      onclick: e => { e.stopPropagation(); toggleSent(t, p, dot); } });
+    // Elementi SVG: vanno creati nel loro namespace, altrimenti non si disegnano
+    const NS = 'http://www.w3.org/2000/svg', svg = document.createElementNS(NS, 'svg'), tick = document.createElementNS(NS, 'path');
+    svg.setAttribute('viewBox', '0 0 24 24'); tick.setAttribute('d', 'M6 12.5l4 4 8-9'); svg.append(tick); dot.append(svg);
+    return h('div', { class: 'blk prj ' + p.status, onclick: () => projectSheet(t, p), style: 'cursor:pointer' }, dot,
+      h('div', { class: 'grow' }, h('div', { class: 'n' }, p.name, p.grade ? h('span', { class: 'gr' }, prjGrade(p)) : null),
+        sub ? h('div', { class: 'p' }, sub) : null, p.notes ? h('div', { class: 'p note clamp' }, p.notes) : null));
+  }
+  /** Lista libera con spunta (cose da portare, prenotazioni): leggera e separabile, compare solo se usata. */
+  let checklistOpen = null;
+  function checklistCard(t) {
+    if (!t.checklist.length && checklistOpen !== t.id) return h('div', { class: 'btns' }, btn('+ Checklist', () => { checklistOpen = t.id; render(); }, 'sm'));
+    const inp = h('input', { class: 'inp', style: 'margin:0', placeholder: 'Add an item' });
+    const add = () => { const v = inp.value.trim().slice(0, 120); if (!v) return; t.checklist.push({ id: C.uid(), text: v, done: false }); save(); render(); setTimeout(() => { const i = document.querySelector('#view .chk-add input'); if (i) i.focus(); }, 0); };
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); add(); } });
+    const done = t.checklist.filter(c => c.done).length;
+    return [h('h2', {}, 'Checklist', t.checklist.length ? h('span', { class: 'cnt' }, ` ${done}/${t.checklist.length}`) : null), h('div', { class: 'card chk' },
+      t.checklist.map(c => h('div', { class: 'chk-i' + (c.done ? ' done' : '') },
+        h('label', { class: 'grow' }, h('input', { type: 'checkbox', checked: c.done, onchange: e => { c.done = e.target.checked; save(); render(); } }), ' ', c.text),
+        h('button', { type: 'button', class: 'x', 'aria-label': 'Remove ' + c.text, onclick: () => { t.checklist = t.checklist.filter(x => x !== c); save(); render(); } }, '×'))),
+      h('div', { class: 'row chk-add' }, h('div', { class: 'grow' }, inp), btn('Add', add, 'sm')))];
+  }
+  function viewTrip(args) {
+    const t = tripById(args.join('-'));
+    if (!t) return [h('h1', {}, 'Trip not found'), btn('‹ Trips', () => go('trips'), 'sm')];
+    const when = whenTrip(t), pr = C.tripProgress(t);
+    return [h('div', { class: 'row' }, btn('‹ Trips', () => go('trips'), 'sm'), btn('Edit', () => tripSheet(t), 'sm right')),
+      h('h1', { class: 'trip-h' }, t.name),
+      h('div', { class: 'row', style: 'gap:8px;flex-wrap:wrap' }, statusTag(t), h('span', { class: 'sub' }, [t.place, fmtTrip(t), when].filter(Boolean).join(' · '))),
+      t.notes ? h('p', { class: 'trip-notes' }, t.notes) : null,
+      h('h2', {}, 'Projects', pr.total ? h('span', { class: 'cnt' }, ` ${pr.sent}/${pr.total} sent`) : null),
+      h('div', { class: 'card' }, t.projects.length ? t.projects.map(p => projectRow(t, p)) : h('p', { class: 'sub', style: 'margin-top:0' }, 'The boulders and routes you want to do on this trip. Tap the circle when you send one.'),
+        h('div', { class: 'btns' }, btn('+ Project', () => projectSheet(t, null), 'sm pri'))),
+      checklistCard(t)];
   }
 
   /* ---------- Player ---------- */
@@ -2454,7 +2714,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
   }
 
   /* ---------- Router ---------- */
-  const VIEWS = { home: viewHome, calendar: viewCalendar, analytics: viewAnalytics, tests: viewProgress, more: viewMore, library: viewLibrary, notebook: viewNotes, diagnostics: viewDiag };
+  const VIEWS = { home: viewHome, calendar: viewCalendar, trips: viewTrips, trip: viewTrip, analytics: viewAnalytics, tests: viewProgress, more: viewMore, library: viewLibrary, notebook: viewNotes, diagnostics: viewDiag };
   function render() {
     const [name, ...args] = (location.hash.slice(1) || 'home').split('-');
     const fn = VIEWS[name] || viewHome;
@@ -2462,7 +2722,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
     try { nodes = fn(args); }
     catch (e) { console.error('[ui] error in view ' + name, e); nodes = [h('h1', {}, 'Something went wrong'), h('p', { class: 'sub' }, String(e.message || e)), btn('Back to Home', () => go('home'))]; }
     $('view').replaceChildren(...[nodes].flat(Infinity).filter(n => n != null && n !== false));
-    const tab = { library: 'more', notebook: 'more', diagnostics: 'more', tests: 'analytics' }[name] || (VIEWS[name] ? name : 'home');
+    const tab = { library: 'more', notebook: 'more', diagnostics: 'more', tests: 'analytics', trip: 'trips' }[name] || (VIEWS[name] ? name : 'home');
     for (const el of document.querySelectorAll('#tabs a')) el.classList.toggle('on', el.getAttribute('href') === '#' + tab);
   }
   let lastView = (location.hash.slice(1) || 'home').split('-')[0];
@@ -2474,7 +2734,6 @@ review|other|Attempt review|10|`.split('\n').map(line => {
     render();
   });
   wirePlayer();
-  $('tab-note').addEventListener('click', e => { e.preventDefault(); noteSheet(); });
   render();
   cloudRetry();
   checkUpdate();

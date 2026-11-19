@@ -43,6 +43,14 @@ Every exercise has a category, shown as a coloured bar next to its name; the sam
 | Mobility | Stretching and mobility |
 | Other | Mental work, activation sessions, your exercises without a category |
 
+## Trips
+Climbing trips and the projects you want to do there. It is a separate section: it plans nothing and does not touch days, programmes, tests or charts.
+- **+ Trip**: name, place, status (Idea, Possible, Confirmed, Done, Dropped), notes and dates. Dates can be exact days, just a month, or none yet.
+- The list shows confirmed trips coming up first, with the days left; then ideas and maybes; then the archive (Done, Dropped, and confirmed trips already over).
+- **Projects**: boulders and routes with grade (Font; routes are written in lower case, e.g. 7a+), sector, style, status and notes for beta and conditions. Tap the circle to mark a project as sent (today's date), tap again to reopen it. Tap the row to edit it.
+- **Checklist** (optional): things to bring, bookings. It appears only when you use it.
+- Trips are in the backup with everything else; a backup made before this section restores with no trips.
+
 ## Analytics
 Choose the metric (training time or training days) and the period (week, month, 3 months, year). Counts start from
 your first logged day, and the change against the previous period appears only once a whole previous period exists.
@@ -54,7 +62,7 @@ your first logged day, and the change against the previous period appears only o
 Tap a chart to see the values; the table is underneath. Tests are managed in *Tests and maxes*.
 
 ## During the trial
-- **Note** (bottom bar): jot down what is wrong. Notes go to More → Notebook, where they can be exported.
+- **Note** (top of More): jot down what is wrong. Notes go to More → Notebook, where they can be exported.
 - If "A newer version of the app is available." shows up, tap Update.
 
 ## Good to know

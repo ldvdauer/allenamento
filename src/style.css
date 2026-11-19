@@ -150,3 +150,32 @@ label.f input[type=checkbox]{display:inline-block;width:auto;margin:0 8px 0 0;ve
 .logged-x { padding: 8px 0; border-top: 1px solid var(--line); font-size: 14px; }
 .logged-x > div + div { margin-top: 6px; }
 .logged-day { padding-top: 8px; border-top: 1px solid var(--line); font-size: 14px; color: var(--tx); }
+/* Viaggi e progetti */
+.tag.ts-confirmed{background:#0f2e1b;color:var(--ac)}.tag.ts-possible{background:#3a3218;color:var(--warn)}.tag.ts-done{background:#16263a;color:#6da7ec}.tag.ts-dropped{opacity:.6}
+.trip .n{font-weight:600;font-size:17px}.trip .sub{margin-top:2px}
+.trip.next{border-color:rgba(61,242,124,.25)}.trip.next .n{font-size:20px}
+.tprog{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:13px;color:var(--mu)}
+.tbar{flex:1;height:6px;border-radius:3px;background:#252a30;overflow:hidden}.tbar i{display:block;height:100%;background:var(--ac);border-radius:3px}
+.trip-h{margin-bottom:6px}.trip-notes{color:var(--note);white-space:pre-wrap;font-size:15px}
+h2 .cnt{color:var(--mu);font-weight:400;font-size:.85em}
+.prj{align-items:flex-start}.prj .n .gr{margin-left:8px;color:var(--ac);font-weight:700}
+.prj.sent .n{color:var(--mu)}.prj.sent .n .gr{color:var(--mu)}
+.clamp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-wrap}
+/* Cerchio del progetto: vuoto = da fare, a metà = in lavorazione, pieno con spunta = chiuso. Area di tocco 44px. */
+.pdot{flex:none;width:44px;height:44px;margin:-6px 4px -6px -8px;padding:0;border:0;background:none;display:grid;place-items:center;cursor:pointer;-webkit-tap-highlight-color:transparent;position:relative}
+.pdot::before{content:"";position:absolute;width:26px;height:26px;border-radius:50%;border:2px solid #4a525b;box-sizing:border-box}
+.pdot.working::before{border-color:var(--warn);background:conic-gradient(var(--warn) 0 50%,transparent 50%);background-clip:padding-box}
+.pdot svg{position:relative;width:16px;height:16px;fill:none;stroke:#0e1012;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;opacity:0}
+.pdot.sent::before{background:var(--ac);border-color:var(--ac)}.pdot.sent svg{opacity:1}
+.pdot.pop::before{background:var(--ac);border-color:var(--ac);animation:pdot-pop .45s cubic-bezier(.3,1.6,.5,1)}
+.pdot.pop svg{opacity:1;animation:pdot-tick .45s ease-out}
+.pdot.pop::after{content:"";position:absolute;width:26px;height:26px;border-radius:50%;border:2px solid var(--ac);animation:pdot-ring .5s ease-out forwards}
+@keyframes pdot-pop{0%{transform:scale(.6)}60%{transform:scale(1.25)}100%{transform:scale(1)}}
+@keyframes pdot-tick{0%{opacity:0;transform:scale(.4)}100%{opacity:1;transform:scale(1)}}
+@keyframes pdot-ring{0%{transform:scale(1);opacity:.9}100%{transform:scale(2.1);opacity:0}}
+@media (prefers-reduced-motion:reduce){.pdot.pop::before,.pdot.pop svg,.pdot.pop::after{animation:none}}
+.chk-i{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--line)}.chk-i:first-child{border-top:0}
+.chk-i label{font-size:15px;display:flex;align-items:center;gap:8px;min-height:32px}.chk-i input{width:20px;height:20px;accent-color:var(--ac)}
+.chk-i.done label{color:var(--mu);text-decoration:line-through}
+.chk-i .x{background:none;border:0;color:var(--mu);font-size:22px;width:36px;height:36px;cursor:pointer}
+.chk-add{margin-top:8px}

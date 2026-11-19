@@ -38,7 +38,7 @@ await pg.goto(url);
 let home = await txt('#view');
 await shot('0-home-riposo'); ok(home.includes('Home') && home.includes('Rest day') && home.includes('+ Exercise') && !/session/i.test(home), 'Home al primo avvio: Rest day con + Exercise, nessun "crea sessione"');
 ok(!/programme|this week/i.test(home), 'Home: nessun riferimento al piano né riepiloghi');
-ok((await txt('#tabs')).replace(/\s+/g, ' ').trim() === 'Home Calendar Analytics More Note', 'navigazione: 4 schede + Nota, niente Piano né Diario');
+ok((await txt('#tabs')).replace(/\s+/g, ' ').trim() === 'Home Calendar Trips Analytics More', 'navigazione: Home, Calendar, Trips, Analytics, More (Nota in More)');
 
 // Import: si sceglie la data di inizio e il programma finisce nel calendario
 await go('more');
@@ -260,15 +260,57 @@ await sleep(100);
 ok((await txt('#view')).includes('days / week'), 'Analisi: metrica giorni di allenamento');
 await shot('10-analisi', true);
 
-// Taccuino: nota al volo dalla barra, con contesto; elenco esportabile
-await go('analytics'); await pg.click('#tab-note');
+// Viaggi e progetti: sezione a sé, nella barra
+await go('trips');
+ok((await txt('#view')).includes('Climbing trips and the projects'), 'Trips vuota: spiega a cosa serve');
+const sheetSet = (sel, i, v) => pg.evaluate((sel, i, v) => { const el = document.querySelectorAll('.sheet ' + sel)[i]; el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); }, sel, i, v);
+const dataBefore = await pg.evaluate(() => JSON.stringify({ p: __app.state.plans, l: __app.state.logs, t: __app.state.tests, e: __app.state.exercises }));
+await clickText('+ Trip', '#view');
+await sheetSet('input.inp', 0, 'Fontainebleau spring'); await sheetSet('input.inp', 1, 'Fontainebleau, France');
+await sheetSet('select', 0, 'confirmed'); await sheetSet('select', 1, 'day');
+ok(await pg.$eval('.sheet input[type=date]', e => !!e), 'date esatte: campi data');
+await sheetSet('input[type=date]', 0, '2027-03-14'); await sheetSet('input[type=date]', 1, '2027-03-28');
+await shot('15-trip-sheet');
+await clickText('Save', '.sheet'); await sleep(150);
+let tv = await txt('#view');
+ok(/^#trip-/.test(await pg.evaluate(() => location.hash)) && tv.includes('Fontainebleau spring') && tv.includes('14 – 28 Mar 2027') && tv.includes('in 109 days') && tv.includes('Confirmed'), 'nuovo viaggio: dettaglio con date e giorni alla partenza');
+for (const [name, grade, style] of [['Karma', '8A+', 'boulder'], ['Rainbow', '7A', 'route']]) {
+  await clickText('+ Project', '#view');
+  await sheetSet('input.inp', 0, name); await sheetSet('select', 0, grade); await sheetSet('select', 1, style); await sheetSet('input.inp', 1, 'Franchard');
+  await clickText('Save', '.sheet'); await sleep(100);
+}
+tv = await txt('#view');
+if (process.env.DBG) console.log(JSON.stringify(tv));
+ok(tv.includes('Karma8A+') && tv.includes('Rainbow7a') && tv.includes('0/2 sent'), 'progetti: grado Font per i blocchi, minuscolo per le vie');
+await pg.click('#view .pdot'); await sleep(80);
+ok((await pg.$eval('#toast', e => e.innerText)).includes('Karma sent! 1/2') && await pg.$eval('#view .pdot', e => e.classList.contains('pop')), 'un tocco sul cerchio: progetto chiuso, animazione e messaggio');
+await sleep(500);
+tv = await txt('#view');
+ok(tv.includes('1/2 sent') && tv.includes('sent 25 Nov 2026') && await pg.evaluate(() => __app.state.trips[0].projects[0].sentOn === '2026-11-25'), 'progetto chiuso con la data di oggi');
+await shot('16-viaggio', true);
+await clickText('+ Checklist', '#view');
+await pg.type('#view .chk-add input', 'Crash pads'); await pg.keyboard.press('Enter'); await sleep(100);
+await pg.click('#view .chk-i input'); await sleep(100);
+ok((await txt('#view')).includes('Checklist 1/1') && await pg.evaluate(() => __app.state.trips[0].checklist[0].done), 'checklist: voce aggiunta e spuntata');
+await shot('18-checklist', true);
+await go('trips');
+tv = await txt('#view');
+ok(tv.includes('Coming up') && tv.includes('Fontainebleau spring') && tv.includes('1/2 sent'), 'elenco: viaggio confermato in evidenza con avanzamento');
+ok(await pg.evaluate(() => document.querySelector('#tabs a.on').getAttribute('href') === '#trips'), 'barra: Trips attiva');
+ok(await pg.evaluate(b => JSON.stringify({ p: __app.state.plans, l: __app.state.logs, t: __app.state.tests, e: __app.state.exercises }) === b, dataBefore), 'i viaggi non toccano programmi, registrazioni, test ed esercizi');
+await pg.reload(); await sleep(400);
+ok(await pg.evaluate(() => __app.state.trips.length === 1 && __app.state.trips[0].projects.length === 2 && __app.state.v === 13), 'viaggi salvati sul dispositivo dopo il riavvio');
+await shot('17-trips');
+
+// Taccuino: la nota si scrive da More (la barra ora ha Trips), con contesto; elenco esportabile
+await go('more'); await pg.click('#more-note');
 await shot('12-nota'); ok(await pg.$eval('.sheet textarea', e => getComputedStyle(e).backgroundColor) === 'rgb(16, 19, 22)', 'Nota: campo di testo scuro, testo chiaro leggibile');
 await pg.type('.sheet textarea', 'Il grafico del volume è poco leggibile'); await clickText('Save note', '.sheet');
 await go('notebook');
 const nt = await txt('#view');
-ok(nt.includes('Il grafico del volume è poco leggibile') && nt.includes('· analytics · v'), 'taccuino: nota salvata con schermata e versione');
+ok(nt.includes('Il grafico del volume è poco leggibile') && nt.includes('· more · v'), 'taccuino: nota salvata con schermata e versione');
 await clickText('Export list', '#view');
-ok(/\[2026-11-25 \d\d:\d\d · analytics · v[\d.]+\] Il grafico/.test(await pg.$eval('.sheet textarea', e => e.value)), 'taccuino: elenco esportabile come testo');
+ok(/\[2026-11-25 \d\d:\d\d · more · v[\d.]+\] Il grafico/.test(await pg.$eval('.sheet textarea', e => e.value)), 'taccuino: elenco esportabile come testo');
 await pg.evaluate(() => document.querySelector('.overlay').remove());
 // Diagnostica: controlli eseguiti sul dispositivo, con esito e rapporto
 await go('diagnostics'); await clickText('Run the checks', '#view'); await sleep(600);
@@ -301,14 +343,14 @@ await pg.evaluate(async () => { window.__okFetch = window.fetch; window.fetch = 
   __app.state.logs.push({ id: 'off', date: '2026-11-25', title: 'Fatta offline', minutes: 30, type: 'wall' }); localStorage.setItem('allenamento.v1', JSON.stringify(__app.state)); await __app.cloudBackup(false); });
 ok(await pg.evaluate(() => __app.state.settings.gh.error === 'no network' && JSON.parse(localStorage.getItem('allenamento.v1')).logs.some(l => l.id === 'off')), 'offline: la registrazione è salvata sul dispositivo, il backup resta in sospeso');
 await pg.evaluate(() => { window.fetch = window.__okFetch; __gh.length = 0; window.dispatchEvent(new Event('online')); }); await sleep(3600);
-ok(await pg.evaluate(() => { const put = __gh.find(x => x.m === 'PUT'); if (!put) return false; const d = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(JSON.parse(put.body).content), c => c.charCodeAt(0)))); return d.logs.some(l => l.id === 'off') && __app.state.settings.gh.error === null; }), 'al ritorno della rete il backup parte da solo e include ciò che è stato fatto offline');
+ok(await pg.evaluate(() => { const put = __gh.find(x => x.m === 'PUT'); if (!put) return false; const d = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(JSON.parse(put.body).content), c => c.charCodeAt(0)))); return d.logs.some(l => l.id === 'off') && d.trips.length === 1 && d.trips[0].projects.length === 2 && __app.state.settings.gh.error === null; }), 'al ritorno della rete il backup parte da solo e include ciò che è stato fatto offline, viaggi compresi');
 await pg.evaluate(() => { __gh.length = 0; window.dispatchEvent(new Event('online')); }); await sleep(3600);
 ok(await pg.evaluate(() => __gh.length === 0), 'senza modifiche nuove non viene caricato nulla');
 await pg.evaluate(() => { __app.state.settings.gh = null; });
 
 // Persistenza e migrazione di un backup v2 con due sessioni nello stesso giorno
 await pg.reload();
-ok(await pg.evaluate(() => __app.state.logs.length === 2 && __app.state.extras.length === 1 && __app.state.v === 12), 'i dati sopravvivono al ricaricamento');
+ok(await pg.evaluate(() => __app.state.logs.length === 2 && __app.state.extras.length === 1 && __app.state.v === 13), 'i dati sopravvivono al ricaricamento');
 const mig = await pg.evaluate(async () => {
   const mk = (id, ex) => ({ id, type: 'wall', period: 'base', blocks: [{ id: id + 'b', exId: ex, minutes: 5 }] });
   const old = { v: 2, plans: [{ id: 'p', title: 'Vecchio', startDate: '2026-11-23', weeks: [[{ sessions: [mk('s1', 'e1'), mk('s2', 'e2')] }, ...Array.from({ length: 6 }, () => ({ sessions: [] }))]] }],
@@ -332,6 +374,7 @@ const REAL = new URL('../private/backup-2026-11-17.json', import.meta.url);
 if (fs.existsSync(REAL)) {
   await pg.evaluate(t => { localStorage.setItem('allenamento.v1', t); location.reload(); }, fs.readFileSync(REAL, 'utf8'));
   await sleep(500);
+  ok(await pg.evaluate(() => Array.isArray(__app.state.trips) && __app.state.trips.length === 0), 'backup reale precedente ai viaggi: si apre senza errori, nessun viaggio');
   await go('more'); await clickText('Karma - Fase 1', '#view', true);
   ok(await pg.$eval('.sheet input[type=date]', e => e.value) === '2026-11-17', 'backup reale: la data mostrata è quella della prima sessione (mar 17)');
   await setVal('.sheet input[type=date]', '2026-11-18'); await clickText('Save', '.sheet');
@@ -363,8 +406,8 @@ await pg.evaluate(() => {
   localStorage.setItem('allenamento.v1', JSON.stringify(old)); location.reload();
 });
 await sleep(500);
-const m7 = await pg.evaluate(() => { const s = __app.state; return { v: s.v, e1: s.exercises.e1.name, cues: s.exercises.e2.interval.cues.join(), e3: s.exercises.e3.name, defs: s.testDefs.map(d => d.name).join('|'), surf: s.surfaces.map(x => x.name).join('|'), sides: s.logs[0].blocks[0].kgs.map(k => k.side).join(), title: s.extras[0].title, note: s.extras[0].blocks[0].note, mins: s.extras[0].blocks.map(b => b.minutes).join(), nx: s.extras.length, lb: s.logs[0].blocks[1].name + '|' + s.logs[0].loads[0].name, nb: s.extras[0].blocks.length, e4: !!s.exercises.e4, secs: s.logs[0].blocks.map(b => b.sec).join(), e3s: s.exercises.e3.section }; });
-ok(m7.v === 12 && m7.e1 === 'Wrist curl' && m7.cues === 'L,R' && m7.defs === 'Body weight|Pinch block L|Pinch block R' && m7.surf === 'Indoor (gym)|Pannello di casa' && m7.sides === 'L,R', 'dati v6 in italiano: nomi predefiniti, superfici e lati SX/DX passano all\'inglese');
+const m7 = await pg.evaluate(() => { const s = __app.state; return { v: s.v, trips: s.trips.length, e1: s.exercises.e1.name, cues: s.exercises.e2.interval.cues.join(), e3: s.exercises.e3.name, defs: s.testDefs.map(d => d.name).join('|'), surf: s.surfaces.map(x => x.name).join('|'), sides: s.logs[0].blocks[0].kgs.map(k => k.side).join(), title: s.extras[0].title, note: s.extras[0].blocks[0].note, mins: s.extras[0].blocks.map(b => b.minutes).join(), nx: s.extras.length, lb: s.logs[0].blocks[1].name + '|' + s.logs[0].loads[0].name, nb: s.extras[0].blocks.length, e4: !!s.exercises.e4, secs: s.logs[0].blocks.map(b => b.sec).join(), e3s: s.exercises.e3.section }; });
+ok(m7.v === 13 && m7.trips === 0 && m7.e1 === 'Wrist curl' && m7.cues === 'L,R' && m7.defs === 'Body weight|Pinch block L|Pinch block R' && m7.surf === 'Indoor (gym)|Pannello di casa' && m7.sides === 'L,R', 'dati v6 in italiano: nomi predefiniti, superfici e lati SX/DX passano all\'inglese');
 ok(m7.lb === 'Wrist curl|Wrist curl', 'migrazione v10: le registrazioni passate prendono il nome della libreria');
 ok(m7.nb === 3 && !m7.e4, 'migrazione v11: il riscaldamento esce dalle giornate e dai dati');
 ok(m7.secs === 'fingers,conditioning,strength' && m7.e3s === 'conditioning', 'migrazione v11: registrazioni ed esercizi personali nelle nuove categorie');

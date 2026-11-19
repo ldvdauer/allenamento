@@ -15,7 +15,7 @@
 
   /* ---------- Stato e persistenza ---------- */
   // Primo avvio: nessun piano precaricato, ogni utente importa o crea i propri.
-  const fresh = () => migrate({ v: 12, plans: [], activePlan: null, exercises: {}, logs: [], tests: [] });
+  const fresh = () => migrate({ v: 13, plans: [], activePlan: null, exercises: {}, logs: [], tests: [] });
   /** I test da cui dipendono i kg degli esercizi (e il peso corporeo) devono esistere nella sezione Test. */
   function ensureTests(s) {
     const need = new Set(['bw'].concat(Object.values(s.exercises).filter(e => e.load).flatMap(e => C.refKeys(e.load.ref))));
@@ -143,7 +143,8 @@
       pruneEmpty(s); prune(s); // e gli esercizi rimasti senza giornata
     }
     if (fromV < 12) delete s.live; // v12: niente più sessione in corso: ogni esercizio si avvia dalla giornata
-    s.v = 12;
+    s.trips = C.cleanTrips(s.trips); // v13: viaggi e progetti (sezione a sé); un backup precedente non li ha
+    s.v = 13;
     return s;
   }
   let rescued = false;
@@ -1025,8 +1026,10 @@
     const prep = numInp(S.settings.prep), sound = h('input', { type: 'checkbox', checked: S.settings.sound, onchange: () => { S.settings.sound = sound.checked; save(); } });
     const sfNew = h('input', { class: 'inp', style: 'margin:0', placeholder: 'New surface' });
     return [h('h1', {}, 'More'),
+      // Strumento della prova d'uso (prima stava nella barra): sparirà nella versione definitiva
+      h('div', { class: 'card tap row', id: 'more-note', onclick: noteSheet }, h('div', { class: 'grow' }, h('div', { class: 'n', style: 'font-weight:600' }, 'Note'), h('div', { class: 'sub' }, 'Write down what is wrong while you use the app')), '+'),
       h('div', { class: 'card tap row', onclick: () => { location.hash = 'library'; } }, h('div', { class: 'grow' }, h('div', { class: 'n', style: 'font-weight:600' }, 'Exercise library'), h('div', { class: 'sub' }, (C.LIBRARY.length + S.custom.length) + ' exercises')), '›'),
-      h('div', { class: 'card tap row', onclick: () => go('notebook') }, h('div', { class: 'grow' }, h('div', { class: 'n', style: 'font-weight:600' }, 'Notebook'), h('div', { class: 'sub' }, S.notes.length ? `${S.notes.length} notes` : 'Note what is wrong while you use the app')), '›'),
+      h('div', { class: 'card tap row', onclick: () => go('notebook') }, h('div', { class: 'grow' }, h('div', { class: 'n', style: 'font-weight:600' }, 'Notebook'), h('div', { class: 'sub' }, S.notes.length ? `${S.notes.length} notes` : 'No notes yet')), '›'),
       h('div', { class: 'card tap row', onclick: () => go('diagnostics') }, h('div', { class: 'grow' }, h('div', { class: 'n', style: 'font-weight:600' }, 'Diagnostics'), h('div', { class: 'sub' }, 'Audio, screen on, offline and storage on this device · v' + VERSION)), '›'),
       h('h2', {}, 'Programmes'), h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin-top:0' }, 'A programme is a set of training days: import it, choose when it starts and find it in the calendar.'),
         S.plans.map(p => h('div', { class: 'blk', style: 'cursor:pointer', onclick: () => planSheet(p) }, h('div', { class: 'grow' }, h('div', { class: 'n' }, p.title),
@@ -1045,6 +1048,167 @@
       h('h2', {}, 'Data'), h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin-top:0' }, (cloudOn() ? 'Automatic backup to GitHub is active. ' : 'Data stays on this device only. "Save backup" opens the share sheet: choose "Save to Files" to put it in iCloud Drive.') + (S.settings.lastBackup ? ` Last backup: ${fmtDate(S.settings.lastBackup)}.` : ' No backup yet.')),
         h('div', { class: 'btns' }, btn(cloudOn() ? 'Back up now' : 'Save backup', doBackup, 'sm pri'), fileBtn('Restore / import file'),
           btn('Reset everything', async () => { if (await confirmDlg('Delete programmes, days, exercises, logs and tests? This cannot be undone: make a backup first.', 'Reset')) { S = fresh(); calSel = calMonth = null; save(); render(); } }, 'sm danger')))];
+  }
+
+
+  /* ---------- Viaggi e progetti ----------
+     Sezione a sé: non programma nulla e non tocca giornate, esercizi, test e analisi. Logica pura in core.js. */
+  const TRIP_ST = Object.fromEntries(C.TRIP_STATUS);
+  const tripById = id => S.trips.find(t => t.id === id);
+  // Le vie usano la stessa scala, scritta in minuscolo come nella scala francese (7a+); i blocchi restano Font (7A+).
+  const prjGrade = p => (p.grade ? (p.style === 'route' ? fmtG(p.grade).toLowerCase() : fmtG(p.grade)) : '');
+  /** "Mar 2027", "Mar – Apr 2027", "14 – 28 Mar 2027", "28 Feb – 3 Mar 2027"; senza date: "No dates yet". */
+  function fmtTrip(t) {
+    const part = v => { const [y, m, d] = v.split('-').map(Number); return { y, m: MONTHS[m - 1], d }; };
+    if (!t.from) return 'No dates yet';
+    const a = part(t.from), b = t.to ? part(t.to) : null;
+    const one = x => (x.d ? `${x.d} ${x.m} ${x.y}` : `${x.m} ${x.y}`);
+    if (!b || t.to === t.from) return one(a);
+    if (a.y === b.y && !!a.d === !!b.d) return a.d ? (a.m === b.m ? `${a.d} – ${b.d} ${b.m} ${b.y}` : `${a.d} ${a.m} – ${b.d} ${b.m} ${b.y}`) : `${a.m} – ${b.m} ${b.y}`;
+    return `${one(a)} – ${one(b)}`;
+  }
+  /** "in 118 days", "tomorrow", "now"; per le date al mese è approssimativo. */
+  function whenTrip(t) {
+    const n = C.daysTo(t, C.todayISO());
+    if (n == null) return '';
+    return n === 0 ? 'now' : (t.from.length === 7 ? '~' : '') + (n === 1 ? 'tomorrow' : `in ${n} days`);
+  }
+  const statusTag = t => h('span', { class: 'tag ts-' + t.status }, TRIP_ST[t.status]);
+  function progressBar(t) {
+    const p = C.tripProgress(t);
+    if (!p.total) return null;
+    return h('div', { class: 'tprog' }, h('div', { class: 'tbar' }, h('i', { style: `width:${Math.round(p.sent / p.total * 100)}%` })), h('span', {}, `${p.sent}/${p.total} sent`));
+  }
+  function tripCard(t, big) {
+    const when = whenTrip(t);
+    return h('div', { class: 'card tap trip' + (big ? ' next' : ''), onclick: () => go('trip-' + t.id) },
+      h('div', { class: 'row' }, h('div', { class: 'grow n' }, t.name), statusTag(t)),
+      h('div', { class: 'sub' }, [t.place, fmtTrip(t)].filter(Boolean).join(' · ') + (when ? ' · ' + when : '')),
+      progressBar(t));
+  }
+  function viewTrips() {
+    const g = C.groupTrips(S.trips, C.todayISO());
+    return [h('div', { class: 'row' }, h('h1', { class: 'grow' }, 'Trips'), btn('+ Trip', () => tripSheet(null), 'sm pri')),
+      !S.trips.length ? h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin:0' }, 'Climbing trips and the projects you want to do there. Add a trip, even just an idea, then its projects: tick them off as you send them.')) : null,
+      g.upcoming.length ? [h('h2', {}, 'Coming up'), g.upcoming.map(t => tripCard(t, true))] : null,
+      g.ideas.length ? [h('h2', {}, 'Ideas and maybes'), g.ideas.map(t => tripCard(t))] : null,
+      g.archive.length ? [h('h2', {}, 'Archive'), g.archive.map(t => tripCard(t))] : null];
+  }
+  /** Date approssimative: nessuna, solo il mese o i giorni esatti. */
+  function datesEditor(t) {
+    const prec = t && t.from ? (t.from.length === 7 ? 'month' : 'day') : 'none';
+    const sel = opts([['none', 'No dates yet'], ['month', 'Month'], ['day', 'Exact days']], prec);
+    const from = h('input', { class: 'inp' }), to = h('input', { class: 'inp' });
+    const cols = h('div', { class: 'cols' }, field('From', from), field('To (optional)', to));
+    const sync = keep => {
+      const k = sel.value;
+      cols.hidden = k === 'none';
+      for (const [el, v] of [[from, t ? t.from : ''], [to, t ? t.to : '']]) {
+        const cur = keep ? v : el.value;
+        el.type = k === 'month' ? 'month' : 'date';
+        el.value = !cur ? '' : k === 'month' ? cur.slice(0, 7) : cur.length === 7 ? cur + '-01' : cur;
+      }
+    };
+    sel.addEventListener('change', () => sync(false));
+    sync(true);
+    return { node: [field('Dates', sel), cols], read: () => (sel.value === 'none' ? { from: '', to: '' } : { from: C.tripDate(from.value), to: C.tripDate(to.value) }) };
+  }
+  function tripSheet(t) {
+    const name = h('input', { class: 'inp', value: t ? t.name : '', placeholder: 'e.g. Fontainebleau spring' });
+    const place = h('input', { class: 'inp', value: t ? t.place : '', placeholder: 'e.g. Fontainebleau, France' });
+    const st = opts(C.TRIP_STATUS, t ? t.status : 'idea'), dates = datesEditor(t);
+    const notes = h('textarea', { class: 'inp', placeholder: 'Accommodation, travel, conditions…' }); notes.value = t ? t.notes : '';
+    const ov = openSheet(t ? 'Edit trip' : 'New trip', [field('Name', name), field('Place', place), field('Status', st), dates.node, field('Notes', notes),
+      btn('Save', () => {
+        const n = name.value.trim();
+        if (!n) return toast('Give the trip a name.');
+        const d = dates.read();
+        if (d.from && d.to && C.tripLast(d.to) < C.tripFirst(d.from)) return toast('The end is before the start.');
+        const x = t || { id: C.uid(), projects: [], checklist: [] };
+        Object.assign(x, { name: n.slice(0, 80), place: place.value.trim().slice(0, 80), status: st.value, from: d.from, to: d.from ? d.to : '', notes: notes.value.trim().slice(0, 2000) });
+        if (!t) S.trips.push(x);
+        save(); ov.remove(); log('trips', t ? 'edited' : 'added', { name: x.name });
+        if (t) render(); else go('trip-' + x.id);
+      }, 'pri block'),
+      t ? btn('Delete trip', async () => {
+        if (!await confirmDlg(`Delete "${t.name}" with its ${t.projects.length} projects and checklist? This cannot be undone.`, 'Delete')) return;
+        S.trips = S.trips.filter(x => x !== t); save(); ov.remove(); log('trips', 'deleted', { name: t.name }); go('trips');
+      }, 'danger block') : null]);
+  }
+  function projectSheet(t, p) {
+    const name = h('input', { class: 'inp', value: p ? p.name : '', placeholder: 'e.g. Karma' });
+    const grade = opts(gradeOpts(), p ? p.grade : ''), style = opts(C.STYLES, p ? p.style : 'boulder');
+    const sector = h('input', { class: 'inp', value: p ? p.sector : '', placeholder: 'e.g. Franchard Cuisinière' });
+    const st = opts(C.PROJECT_STATUS, p ? p.status : 'todo');
+    const sent = h('input', { class: 'inp', type: 'date', value: p && p.sentOn ? p.sentOn : '' }), sentF = field('Sent on', sent);
+    const syncSent = () => { sentF.hidden = st.value !== 'sent'; if (st.value === 'sent' && !sent.value) sent.value = C.todayISO(); };
+    st.addEventListener('change', syncSent); syncSent();
+    const notes = h('textarea', { class: 'inp', placeholder: 'Beta, conditions, pads…' }); notes.value = p ? p.notes : '';
+    const ov = openSheet(p ? 'Edit project' : 'New project', [field('Name', name), h('div', { class: 'cols' }, field('Grade', grade), field('Style', style)),
+      field('Sector', sector), field('Status', st), sentF, field('Notes', notes),
+      btn('Save', () => {
+        const n = name.value.trim();
+        if (!n) return toast('Give the project a name.');
+        const x = p || { id: C.uid() };
+        Object.assign(x, { name: n.slice(0, 80), grade: grade.value, style: style.value, sector: sector.value.trim().slice(0, 80), status: st.value,
+          sentOn: st.value === 'sent' ? C.validISO(sent.value) || C.todayISO() : '', notes: notes.value.trim().slice(0, 2000) });
+        if (!p) t.projects.push(x);
+        save(); ov.remove(); render();
+      }, 'pri block'),
+      p ? btn('Delete project', async () => {
+        if (!await confirmDlg(`Delete "${p.name}"?`, 'Delete')) return;
+        t.projects = t.projects.filter(x => x !== p); save(); ov.remove(); render();
+      }, 'danger block') : null]);
+  }
+  /** Un tocco sul cerchio chiude il progetto (data di oggi); un altro tocco lo riapre. */
+  function toggleSent(t, p, el) {
+    if (p.status === 'sent') { p.status = 'todo'; p.sentOn = ''; save(); render(); return; }
+    p.status = 'sent'; p.sentOn = C.todayISO(); save();
+    log('trips', 'sent', { name: p.name });
+    try { if (navigator.vibrate) navigator.vibrate(30); } catch (e) { /* non supportato */ }
+    const pr = C.tripProgress(t);
+    toast(`${p.name} sent!` + (pr.total > 1 ? ` ${pr.sent}/${pr.total}` : ''));
+    // Prima l'animazione sul cerchio, poi il ridisegno
+    el.classList.add('pop');
+    setTimeout(render, 450);
+  }
+  function projectRow(t, p) {
+    const sub = [p.sector, C.STYLES.find(s => s[0] === p.style)[1], p.status === 'sent' && p.sentOn ? 'sent ' + fmtDate(p.sentOn) + ' ' + p.sentOn.slice(0, 4) : p.status === 'working' ? 'working' : ''].filter(Boolean).join(' · ');
+    const dot = h('button', { type: 'button', class: 'pdot ' + p.status, 'aria-label': p.status === 'sent' ? `${p.name}: sent, tap to reopen` : `Mark ${p.name} as sent`,
+      onclick: e => { e.stopPropagation(); toggleSent(t, p, dot); } });
+    // Elementi SVG: vanno creati nel loro namespace, altrimenti non si disegnano
+    const NS = 'http://www.w3.org/2000/svg', svg = document.createElementNS(NS, 'svg'), tick = document.createElementNS(NS, 'path');
+    svg.setAttribute('viewBox', '0 0 24 24'); tick.setAttribute('d', 'M6 12.5l4 4 8-9'); svg.append(tick); dot.append(svg);
+    return h('div', { class: 'blk prj ' + p.status, onclick: () => projectSheet(t, p), style: 'cursor:pointer' }, dot,
+      h('div', { class: 'grow' }, h('div', { class: 'n' }, p.name, p.grade ? h('span', { class: 'gr' }, prjGrade(p)) : null),
+        sub ? h('div', { class: 'p' }, sub) : null, p.notes ? h('div', { class: 'p note clamp' }, p.notes) : null));
+  }
+  /** Lista libera con spunta (cose da portare, prenotazioni): leggera e separabile, compare solo se usata. */
+  let checklistOpen = null;
+  function checklistCard(t) {
+    if (!t.checklist.length && checklistOpen !== t.id) return h('div', { class: 'btns' }, btn('+ Checklist', () => { checklistOpen = t.id; render(); }, 'sm'));
+    const inp = h('input', { class: 'inp', style: 'margin:0', placeholder: 'Add an item' });
+    const add = () => { const v = inp.value.trim().slice(0, 120); if (!v) return; t.checklist.push({ id: C.uid(), text: v, done: false }); save(); render(); setTimeout(() => { const i = document.querySelector('#view .chk-add input'); if (i) i.focus(); }, 0); };
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); add(); } });
+    const done = t.checklist.filter(c => c.done).length;
+    return [h('h2', {}, 'Checklist', t.checklist.length ? h('span', { class: 'cnt' }, ` ${done}/${t.checklist.length}`) : null), h('div', { class: 'card chk' },
+      t.checklist.map(c => h('div', { class: 'chk-i' + (c.done ? ' done' : '') },
+        h('label', { class: 'grow' }, h('input', { type: 'checkbox', checked: c.done, onchange: e => { c.done = e.target.checked; save(); render(); } }), ' ', c.text),
+        h('button', { type: 'button', class: 'x', 'aria-label': 'Remove ' + c.text, onclick: () => { t.checklist = t.checklist.filter(x => x !== c); save(); render(); } }, '×'))),
+      h('div', { class: 'row chk-add' }, h('div', { class: 'grow' }, inp), btn('Add', add, 'sm')))];
+  }
+  function viewTrip(args) {
+    const t = tripById(args.join('-'));
+    if (!t) return [h('h1', {}, 'Trip not found'), btn('‹ Trips', () => go('trips'), 'sm')];
+    const when = whenTrip(t), pr = C.tripProgress(t);
+    return [h('div', { class: 'row' }, btn('‹ Trips', () => go('trips'), 'sm'), btn('Edit', () => tripSheet(t), 'sm right')),
+      h('h1', { class: 'trip-h' }, t.name),
+      h('div', { class: 'row', style: 'gap:8px;flex-wrap:wrap' }, statusTag(t), h('span', { class: 'sub' }, [t.place, fmtTrip(t), when].filter(Boolean).join(' · '))),
+      t.notes ? h('p', { class: 'trip-notes' }, t.notes) : null,
+      h('h2', {}, 'Projects', pr.total ? h('span', { class: 'cnt' }, ` ${pr.sent}/${pr.total} sent`) : null),
+      h('div', { class: 'card' }, t.projects.length ? t.projects.map(p => projectRow(t, p)) : h('p', { class: 'sub', style: 'margin-top:0' }, 'The boulders and routes you want to do on this trip. Tap the circle when you send one.'),
+        h('div', { class: 'btns' }, btn('+ Project', () => projectSheet(t, null), 'sm pri'))),
+      checklistCard(t)];
   }
 
   /* ---------- Player ---------- */
@@ -1216,7 +1380,7 @@
   }
 
   /* ---------- Router ---------- */
-  const VIEWS = { home: viewHome, calendar: viewCalendar, analytics: viewAnalytics, tests: viewProgress, more: viewMore, library: viewLibrary, notebook: viewNotes, diagnostics: viewDiag };
+  const VIEWS = { home: viewHome, calendar: viewCalendar, trips: viewTrips, trip: viewTrip, analytics: viewAnalytics, tests: viewProgress, more: viewMore, library: viewLibrary, notebook: viewNotes, diagnostics: viewDiag };
   function render() {
     const [name, ...args] = (location.hash.slice(1) || 'home').split('-');
     const fn = VIEWS[name] || viewHome;
@@ -1224,7 +1388,7 @@
     try { nodes = fn(args); }
     catch (e) { console.error('[ui] error in view ' + name, e); nodes = [h('h1', {}, 'Something went wrong'), h('p', { class: 'sub' }, String(e.message || e)), btn('Back to Home', () => go('home'))]; }
     $('view').replaceChildren(...[nodes].flat(Infinity).filter(n => n != null && n !== false));
-    const tab = { library: 'more', notebook: 'more', diagnostics: 'more', tests: 'analytics' }[name] || (VIEWS[name] ? name : 'home');
+    const tab = { library: 'more', notebook: 'more', diagnostics: 'more', tests: 'analytics', trip: 'trips' }[name] || (VIEWS[name] ? name : 'home');
     for (const el of document.querySelectorAll('#tabs a')) el.classList.toggle('on', el.getAttribute('href') === '#' + tab);
   }
   let lastView = (location.hash.slice(1) || 'home').split('-')[0];
@@ -1236,7 +1400,6 @@
     render();
   });
   wirePlayer();
-  $('tab-note').addEventListener('click', e => { e.preventDefault(); noteSheet(); });
   render();
   cloudRetry();
   checkUpdate();

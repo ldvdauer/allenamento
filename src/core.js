@@ -760,11 +760,78 @@ review|other|Attempt review|10|`.split('\n').map(line => {
     return { weeks, series };
   }
 
+  /* ---- Viaggi e progetti ----
+     Sezione a sé: non tocca giornate, programmi né analisi. Le date possono essere approssimative:
+     "2027-03" (solo il mese), "2027-03-14" (il giorno) oppure assenti (un'idea). */
+  const TRIP_STATUS = [['idea', 'Idea'], ['possible', 'Possible'], ['confirmed', 'Confirmed'], ['done', 'Done'], ['dropped', 'Dropped']];
+  const PROJECT_STATUS = [['todo', 'To do'], ['working', 'Working'], ['sent', 'Sent']];
+  const STYLES = [['boulder', 'Boulder'], ['route', 'Route']];
+  const has = (list, k) => list.some(x => x[0] === k);
+  /** Data di un viaggio: 'YYYY-MM' o 'YYYY-MM-DD' validi, altrimenti ''. */
+  const tripDate = v => { const t = String(v == null ? '' : v).trim(); return /^\d{4}-\d{2}$/.test(t) && +t.slice(5) >= 1 && +t.slice(5) <= 12 ? t : validISO(t) || ''; };
+  /** Primo e ultimo giorno coperti da una data approssimativa: un mese vale dal primo all'ultimo giorno. */
+  const tripFirst = v => (v.length === 7 ? v + '-01' : v || null);
+  const tripLast = v => { if (v.length !== 7) return v || null; const [y, m] = v.split('-').map(Number); return toISO(new Date(y, m, 0)); };
+  const clip = (v, n) => String(v == null ? '' : v).slice(0, n);
+  /** Pulisce i viaggi di un backup o del salvataggio: campi sconosciuti o rotti spariscono, niente fa fallire il ripristino. */
+  function cleanTrips(raw) {
+    if (!Array.isArray(raw)) return [];
+    return raw.filter(t => t && typeof t === 'object').map(t => {
+      const from = tripDate(t.from); let to = tripDate(t.to);
+      if (from && to && tripLast(to) < tripFirst(from)) to = ''; // fine prima dell'inizio: si tiene solo l'inizio
+      return {
+        id: typeof t.id === 'string' && t.id ? t.id : uid(), name: clip(t.name, 80) || 'Trip', place: clip(t.place, 80), from, to,
+        status: has(TRIP_STATUS, t.status) ? t.status : 'idea', notes: clip(t.notes, 2000),
+        projects: (Array.isArray(t.projects) ? t.projects : []).filter(p => p && typeof p === 'object').map(p => ({
+          id: typeof p.id === 'string' && p.id ? p.id : uid(), name: clip(p.name, 80) || 'Project', grade: GRADES.includes(p.grade) ? p.grade : '',
+          sector: clip(p.sector, 80), style: has(STYLES, p.style) ? p.style : 'boulder', status: has(PROJECT_STATUS, p.status) ? p.status : 'todo',
+          sentOn: p.status === 'sent' ? validISO(p.sentOn) || '' : '', notes: clip(p.notes, 2000),
+        })),
+        checklist: (Array.isArray(t.checklist) ? t.checklist : []).filter(c => c && typeof c === 'object' && String(c.text || '').trim())
+          .map(c => ({ id: typeof c.id === 'string' && c.id ? c.id : uid(), text: clip(c.text, 120).trim(), done: !!c.done })),
+      };
+    });
+  }
+  /** Progetti chiusi su totali. */
+  const tripProgress = t => ({ sent: t.projects.filter(p => p.status === 'sent').length, total: t.projects.length });
+  /** Fase del viaggio rispetto a oggi: 'future', 'now' (in corso), 'past', oppure null senza date. */
+  function tripPhase(t, today) {
+    const a = tripFirst(t.from); if (!a) return null;
+    const b = tripLast(t.to || t.from);
+    return today < a ? 'future' : today > b ? 'past' : 'now';
+  }
+  /** Giorni alla partenza (0 = oggi o già in corso); null senza data o a viaggio finito. */
+  function daysTo(t, today) {
+    const ph = tripPhase(t, today);
+    return ph === 'future' ? diffDays(tripFirst(t.from), today) : ph === 'now' ? 0 : null;
+  }
+  /** Prossimo viaggio confermato non ancora finito: quello in corso o il più vicino. */
+  function nextTrip(trips, today) {
+    return trips.filter(t => t.status === 'confirmed' && ['future', 'now'].includes(tripPhase(t, today)))
+      .sort((a, b) => tripFirst(a.from).localeCompare(tripFirst(b.from)))[0] || null;
+  }
+  /** Gruppi della sezione: confermati in arrivo (per data), idee e possibili (datati prima, per data), archivio (dal più recente).
+      Un confermato già finito va in archivio anche se non è stato segnato Done. */
+  function groupTrips(trips, today) {
+    const key = t => tripFirst(t.from) || '9999';
+    const upcoming = [], ideas = [], archive = [];
+    for (const t of trips) {
+      if (t.status === 'done' || t.status === 'dropped' || (t.status === 'confirmed' && tripPhase(t, today) === 'past')) archive.push(t);
+      else if (t.status === 'confirmed') upcoming.push(t);
+      else ideas.push(t);
+    }
+    upcoming.sort((a, b) => key(a).localeCompare(key(b)));
+    ideas.sort((a, b) => key(a).localeCompare(key(b)) || a.name.localeCompare(b.name));
+    archive.sort((a, b) => (tripFirst(b.from) || '').localeCompare(tripFirst(a.from) || ''));
+    return { upcoming, ideas, archive };
+  }
+
   return {
     CLIMBING, LEGACY_SECTION, slotOf, blockSection, timeBySection, weeklyGroups, describe, leftoverNote, splitCues, fmtRest, PAIRS, refKeys, LEGACY_NAMES, normSide, firstOffset, firstSessionDate, startForFirst, recordsOf, lastRecord, nextLoad, TEST_TEMPLATES, testLabel, SECTIONS, LIBRARY, STD, stdVariant, matchStd, exName, GRIPS, gripKey, gripText,
     DAY_TYPES, PERIODS, SLOTS, GRADES, GRADE_SCALES, gradeIdx, fmtGrade, DEFAULT_SURFACES, inferSurface, validISO, uid, toISO, fromISO, todayISO, addDays, diffDays, mondayOf,
     inferLoad, loadKey, loadKg, latestMaxes, fmtKg, cycle, cueAt, intervalMinutes, buildSteps, normInterval,
     importYaml, exportYaml, parseDuration, parseWeeks, fmtWeeks, testExercise, YAML_REFS, locate, dateOf, sessionMinutes, cloneSession, validState,
     niceRange, scheduled, weeklyStats, summary, parseLoads, loadSeries, surfaceStats, weeklyTopGrades, dailyGroups, setsCompletion, testProgress, gradeProgress,
+    TRIP_STATUS, PROJECT_STATUS, STYLES, tripDate, tripFirst, tripLast, cleanTrips, tripProgress, tripPhase, daysTo, nextTrip, groupTrips,
   };
 });
