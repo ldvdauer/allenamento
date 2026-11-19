@@ -15,7 +15,7 @@
 
   /* ---------- Stato e persistenza ---------- */
   // Primo avvio: nessun piano precaricato, ogni utente importa o crea i propri.
-  const fresh = () => migrate({ v: 13, plans: [], activePlan: null, exercises: {}, logs: [], tests: [] });
+  const fresh = () => migrate({ v: 14, plans: [], activePlan: null, exercises: {}, logs: [], tests: [] });
   /** I test da cui dipendono i kg degli esercizi (e il peso corporeo) devono esistere nella sezione Test. */
   function ensureTests(s) {
     const need = new Set(['bw'].concat(Object.values(s.exercises).filter(e => e.load).flatMap(e => C.refKeys(e.load.ref))));
@@ -144,7 +144,14 @@
     }
     if (fromV < 12) delete s.live; // v12: niente più sessione in corso: ogni esercizio si avvia dalla giornata
     s.trips = C.cleanTrips(s.trips, C.todayISO()); // v13: viaggi e progetti (sezione a sé); un backup precedente non li ha
-    s.v = 13;
+    // v14: esercizi registrati con 0 minuti (nota di Leo del 19 nov: Analytics a 0 min) prendono i minuti previsti dalla giornata
+    if (fromV < 14) {
+      const planned = new Map();
+      for (const p of s.plans) for (const w of p.weeks) for (const d of w) for (const x of d.sessions) for (const b of x.blocks) planned.set(b.id, b.minutes);
+      for (const x of s.extras || []) for (const b of x.blocks) planned.set(b.id, b.minutes);
+      for (const l of s.logs) if ((l.blocks || []).length && fillMinutes(l, planned)) l.minutes = l.blocks.reduce((t, x) => t + (x.minutes || 0), 0);
+    }
+    s.v = 14;
     return s;
   }
   let rescued = false;
@@ -771,6 +778,18 @@
       read: () => items.filter(i => i.sf.value).map(i => ({ name: i.c.name || '', surface: i.sf.value, top: i.gr.value || null,
         sends: val(i.sends) == null ? null : Math.max(0, Math.round(val(i.sends))), minutes: Math.max(0, Math.round(val(i.min) || 0)) })) };
   }
+  /** Minuti previsti in proporzione alle serie fatte (tutti se le serie non si contano); almeno 1 se qualcosa è stato fatto. */
+  function plannedShare(min, sets) {
+    if (!(min > 0)) return 0;
+    if (!sets || !sets.of) return min;
+    return sets.done > 0 ? Math.max(1, Math.round(min * sets.done / sets.of)) : 0;
+  }
+  /** Minuti mancanti (0 o assenti) degli esercizi registrati: si usano quelli previsti. true se ha cambiato qualcosa. */
+  function fillMinutes(l, planned) {
+    let changed = false;
+    for (const x of l.blocks) if (!(x.minutes > 0) && x.bid && plannedShare(planned.get(x.bid), x.sets) > 0) { x.minutes = plannedShare(planned.get(x.bid), x.sets); if (x.climb) x.climb.minutes = x.minutes; changed = true; }
+    return changed;
+  }
   /** Valutazione di una giornata registrata: RPE, sensazione e note. Gli esercizi si registrano uno per uno. */
   function logSheet(l) {
     const legacy = !(l.blocks || []).length; // registrazioni delle versioni precedenti, fatte a mano: minuti e arrampicata modificabili
@@ -1344,13 +1363,14 @@
       rec.testIds = (rec.tests || []).map(t => { const id = C.uid(); S.tests.push({ id, key: t.key, date: l.date, value: t.value }); return id; });
       delete rec.tests;
       rec.bid = b.id;
+      if (!(rec.minutes > 0)) { rec.minutes = plannedShare(b.minutes, rec.sets); if (rec.climb) rec.climb.minutes = rec.minutes; } // 0 minuti non ha senso per un esercizio fatto: si usano i previsti
       for (const k of Object.keys(rec)) if (rec[k] == null || rec[k] === '' || (Array.isArray(rec[k]) && !rec[k].length)) delete rec[k];
       if (prev) l.blocks[i] = rec; else l.blocks.push(rec);
       l.minutes = Math.max(0, (l.minutes || 0) + (rec.minutes || 0) - (prev && prev.minutes || 0));
       l.loads = l.blocks.filter(x => x.load).map(x => ({ name: x.name, kg: x.load }));
       l.climbs = l.blocks.map(x => x.climb).filter(Boolean);
       save(); ov.remove(); render();
-      log('exercise', 'logged', { name: rec.name });
+      log('exercise', 'logged', { name: rec.name, minutes: rec.minutes || 0, measured: Math.round(ms / 1000) });
     };
     const of = sets ? sets.of : 0;
     const ov = openSheet(C.exName(ex), [h('p', { class: 'sub' }, 'Exercise complete: log how it went.'),

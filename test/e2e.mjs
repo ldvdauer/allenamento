@@ -249,7 +249,7 @@ ok(await pg.evaluate(n => __app.state.plans.length === n, nPlans), 'import con e
 await pg.evaluate(() => document.querySelectorAll('.overlay').forEach(o => o.remove()));
 await go('analytics');
 const an = await txt('#view'); if (process.env.DBG) console.log(an.slice(0, 1400));
-ok(an.includes('Training time') && an.includes('43min') && an.includes('84%\nclimbing') && !an.includes('session type') && !/on the wall/i.test(an), 'Analisi: totale ore, ciambella con % arrampicata, niente "tipo di sessione"');
+ok(an.includes('Training time') && an.includes('46min') && an.includes('78%\nclimbing') && !an.includes('session type') && !/on the wall/i.test(an), 'Analisi: totale ore, ciambella con % arrampicata, niente "tipo di sessione"');
 ok(an.includes('Progress') && an.includes('Consistency') && an.includes('Planned days trained') && an.includes('Sets completed'), 'Analisi: sezioni Progress e Consistency');
 ok(!an.includes('most time') && !an.includes('Weekly volume'), 'Analisi: niente vecchi grafici');
 ok(await pg.evaluate(() => { const b = document.querySelector('#view .viz-donut-li .c-strength'); return !!b && getComputedStyle(b).backgroundColor === 'rgb(213, 81, 129)'; }), 'Analisi: legenda della ciambella con il colore della categoria (Strength = magenta)');
@@ -311,7 +311,17 @@ await pg.$eval('#view .cd', e => e.click()); await sleep(100);
 ok(/^#trip-/.test(await pg.evaluate(() => location.hash)), 'tocco sul countdown: apre il viaggio');
 await go('trips');
 await pg.reload(); await sleep(400);
-ok(await pg.evaluate(() => __app.state.trips.length === 1 && __app.state.trips[0].projects.length === 2 && __app.state.v === 13), 'viaggi salvati sul dispositivo dopo il riavvio');
+ok(await pg.evaluate(() => __app.state.trips.length === 1 && __app.state.trips[0].projects.length === 2 && __app.state.v === 14), 'viaggi salvati sul dispositivo dopo il riavvio');
+// v14: esercizi registrati con 0 minuti (Analytics a 0) prendono i minuti previsti dalla giornata
+const zero = await pg.evaluate(() => { const st = JSON.parse(localStorage.getItem('allenamento.v1')), l = st.logs.find(x => x.date === '2026-11-25');
+  const planned = new Map(); for (const p of st.plans) for (const w of p.weeks) for (const d of w) for (const x of d.sessions) for (const b of x.blocks) planned.set(b.id, b.minutes);
+  for (const x of st.extras) for (const b of x.blocks) planned.set(b.id, b.minutes);
+  const share = (m, st) => (!st || !st.of ? m : st.done > 0 ? Math.max(1, Math.round(m * st.done / st.of)) : 0);
+  const exp = l.blocks.map(x => share(planned.get(x.bid), x.sets)); l.blocks.forEach(x => { x.minutes = 0; }); l.minutes = 0; st.v = 13;
+  localStorage.setItem('allenamento.v1', JSON.stringify(st)); return exp; });
+await pg.reload(); await sleep(400);
+ok(await pg.evaluate(exp => { const l = __app.state.logs.find(x => x.date === '2026-11-25'); return JSON.stringify(l.blocks.map(x => x.minutes)) === JSON.stringify(exp) && l.minutes === exp.reduce((a, b) => a + b, 0) && l.minutes > 0; }, zero),
+  'migrazione v14: registrazioni a 0 minuti riprendono i minuti previsti (in proporzione alle serie fatte), totale del giorno ricalcolato');
 await shot('17-trips');
 
 // Taccuino: la nota si scrive da More (la barra ora ha Trips), con contesto; elenco esportabile
@@ -362,7 +372,7 @@ await pg.evaluate(() => { __app.state.settings.gh = null; });
 
 // Persistenza e migrazione di un backup v2 con due sessioni nello stesso giorno
 await pg.reload();
-ok(await pg.evaluate(() => __app.state.logs.length === 2 && __app.state.extras.length === 1 && __app.state.v === 13), 'i dati sopravvivono al ricaricamento');
+ok(await pg.evaluate(() => __app.state.logs.length === 2 && __app.state.extras.length === 1 && __app.state.v === 14), 'i dati sopravvivono al ricaricamento');
 const mig = await pg.evaluate(async () => {
   const mk = (id, ex) => ({ id, type: 'wall', period: 'base', blocks: [{ id: id + 'b', exId: ex, minutes: 5 }] });
   const old = { v: 2, plans: [{ id: 'p', title: 'Vecchio', startDate: '2026-11-23', weeks: [[{ sessions: [mk('s1', 'e1'), mk('s2', 'e2')] }, ...Array.from({ length: 6 }, () => ({ sessions: [] }))]] }],
@@ -419,7 +429,7 @@ await pg.evaluate(() => {
 });
 await sleep(500);
 const m7 = await pg.evaluate(() => { const s = __app.state; return { v: s.v, trips: s.trips.length, e1: s.exercises.e1.name, cues: s.exercises.e2.interval.cues.join(), e3: s.exercises.e3.name, defs: s.testDefs.map(d => d.name).join('|'), surf: s.surfaces.map(x => x.name).join('|'), sides: s.logs[0].blocks[0].kgs.map(k => k.side).join(), title: s.extras[0].title, note: s.extras[0].blocks[0].note, mins: s.extras[0].blocks.map(b => b.minutes).join(), nx: s.extras.length, lb: s.logs[0].blocks[1].name + '|' + s.logs[0].loads[0].name, nb: s.extras[0].blocks.length, e4: !!s.exercises.e4, secs: s.logs[0].blocks.map(b => b.sec).join(), e3s: s.exercises.e3.section }; });
-ok(m7.v === 13 && m7.trips === 0 && m7.e1 === 'Wrist curl' && m7.cues === 'L,R' && m7.defs === 'Body weight|Pinch block L|Pinch block R' && m7.surf === 'Indoor (gym)|Pannello di casa' && m7.sides === 'L,R', 'dati v6 in italiano: nomi predefiniti, superfici e lati SX/DX passano all\'inglese');
+ok(m7.v === 14 && m7.trips === 0 && m7.e1 === 'Wrist curl' && m7.cues === 'L,R' && m7.defs === 'Body weight|Pinch block L|Pinch block R' && m7.surf === 'Indoor (gym)|Pannello di casa' && m7.sides === 'L,R', 'dati v6 in italiano: nomi predefiniti, superfici e lati SX/DX passano all\'inglese');
 ok(m7.lb === 'Wrist curl|Wrist curl', 'migrazione v10: le registrazioni passate prendono il nome della libreria');
 ok(m7.nb === 3 && !m7.e4, 'migrazione v11: il riscaldamento esce dalle giornate e dai dati');
 ok(m7.secs === 'fingers,conditioning,strength' && m7.e3s === 'conditioning', 'migrazione v11: registrazioni ed esercizi personali nelle nuove categorie');
