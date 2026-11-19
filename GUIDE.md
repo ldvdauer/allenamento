@@ -48,6 +48,7 @@ Climbing trips and the projects you want to do there. It is a separate section: 
 - **+ Trip**: name, place, status (Idea, Possible, Confirmed, Done, Dropped), notes and dates. Dates can be exact days, just a month, or none yet.
 - The list shows confirmed trips coming up first, with the days left; then ideas and maybes; then the archive (Done, Dropped, and confirmed trips already over).
 - **Projects**: boulders and routes with grade (Font; routes are written in lower case, e.g. 7a+), sector, style, status and notes for beta and conditions. Tap the circle to mark a project as sent (today's date), tap again to reopen it. Tap the row to edit it.
+- **Countdown**: Home shows the next confirmed trip below today's training. The number is the days to go ("~" when only the month is set; "Day 3 of 14" during the trip); the ring fills up from the day you confirmed the trip to the departure. Tap it to open the trip.
 - **Checklist** (optional): things to bring, bookings. It appears only when you use it.
 - Trips are in the backup with everything else; a backup made before this section restores with no trips.
 

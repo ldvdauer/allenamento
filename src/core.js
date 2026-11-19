@@ -774,14 +774,16 @@ review|other|Attempt review|10|`.split('\n').map(line => {
   const tripLast = v => { if (v.length !== 7) return v || null; const [y, m] = v.split('-').map(Number); return toISO(new Date(y, m, 0)); };
   const clip = (v, n) => String(v == null ? '' : v).slice(0, n);
   /** Pulisce i viaggi di un backup o del salvataggio: campi sconosciuti o rotti spariscono, niente fa fallire il ripristino. */
-  function cleanTrips(raw) {
+  function cleanTrips(raw, today) {
     if (!Array.isArray(raw)) return [];
+    const now = today || todayISO();
     return raw.filter(t => t && typeof t === 'object').map(t => {
       const from = tripDate(t.from); let to = tripDate(t.to);
       if (from && to && tripLast(to) < tripFirst(from)) to = ''; // fine prima dell'inizio: si tiene solo l'inizio
       return {
         id: typeof t.id === 'string' && t.id ? t.id : uid(), name: clip(t.name, 80) || 'Trip', place: clip(t.place, 80), from, to,
         status: has(TRIP_STATUS, t.status) ? t.status : 'idea', notes: clip(t.notes, 2000),
+        since: validISO(t.since) || now, // da quando il viaggio è confermato (o almeno da quando l'app lo conosce): inizio dell'anello del countdown
         projects: (Array.isArray(t.projects) ? t.projects : []).filter(p => p && typeof p === 'object').map(p => ({
           id: typeof p.id === 'string' && p.id ? p.id : uid(), name: clip(p.name, 80) || 'Project', grade: GRADES.includes(p.grade) ? p.grade : '',
           sector: clip(p.sector, 80), style: has(STYLES, p.style) ? p.style : 'boulder', status: has(PROJECT_STATUS, p.status) ? p.status : 'todo',
@@ -804,6 +806,19 @@ review|other|Attempt review|10|`.split('\n').map(line => {
   function daysTo(t, today) {
     const ph = tripPhase(t, today);
     return ph === 'future' ? diffDays(tripFirst(t.from), today) : ph === 'now' ? 0 : null;
+  }
+  /** Countdown: giorni alla partenza e quanto è pieno l'anello (0-1), che si riempie da `since` alla partenza.
+      Durante il viaggio: giorno corrente su durata. null senza data o a viaggio finito. */
+  function tripCountdown(t, today) {
+    const ph = tripPhase(t, today);
+    if (!ph || ph === 'past') return null;
+    const first = tripFirst(t.from), approx = t.from.length === 7;
+    if (ph === 'now') {
+      const len = diffDays(tripLast(t.to || t.from), first) + 1, day = diffDays(today, first) + 1;
+      return { now: true, day, length: len, fill: Math.min(1, day / len), approx };
+    }
+    const days = diffDays(first, today), span = diffDays(first, t.since && t.since < first ? t.since : today);
+    return { now: false, days, fill: span > 0 ? Math.max(0, Math.min(1, 1 - days / span)) : 0, approx };
   }
   /** Prossimo viaggio confermato non ancora finito: quello in corso o il più vicino. */
   function nextTrip(trips, today) {
@@ -832,6 +847,6 @@ review|other|Attempt review|10|`.split('\n').map(line => {
     inferLoad, loadKey, loadKg, latestMaxes, fmtKg, cycle, cueAt, intervalMinutes, buildSteps, normInterval,
     importYaml, exportYaml, parseDuration, parseWeeks, fmtWeeks, testExercise, YAML_REFS, locate, dateOf, sessionMinutes, cloneSession, validState,
     niceRange, scheduled, weeklyStats, summary, parseLoads, loadSeries, surfaceStats, weeklyTopGrades, dailyGroups, setsCompletion, testProgress, gradeProgress,
-    TRIP_STATUS, PROJECT_STATUS, STYLES, tripDate, tripFirst, tripLast, cleanTrips, tripProgress, tripPhase, daysTo, nextTrip, groupTrips,
+    TRIP_STATUS, PROJECT_STATUS, STYLES, tripDate, tripFirst, tripLast, cleanTrips, tripProgress, tripPhase, daysTo, tripCountdown, nextTrip, groupTrips,
   };
 });

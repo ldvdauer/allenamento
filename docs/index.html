@@ -190,6 +190,21 @@ h2 .cnt{color:var(--mu);font-weight:400;font-size:.85em}
 .chk-i.done label{color:var(--mu);text-decoration:line-through}
 .chk-i .x{background:none;border:0;color:var(--mu);font-size:22px;width:36px;height:36px;cursor:pointer}
 .chk-add{margin-top:8px}
+/* Countdown in Home: compatto, sotto la giornata di oggi */
+.cd{display:flex;align-items:center;gap:16px}
+.cd-dial{position:relative;flex:none;width:84px;height:84px}
+.cd-ring{width:84px;height:84px}
+.cd-track{fill:none;stroke:#252a30;stroke-width:6}
+.cd-arc{fill:none;stroke:var(--ac);stroke-width:6;stroke-linecap:round;animation:cd-fill .9s cubic-bezier(.2,.8,.2,1)}
+@keyframes cd-fill{from{stroke-dashoffset:var(--cd-len)}}
+@media (prefers-reduced-motion:reduce){.cd-arc{animation:none}}
+.cd-c{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
+.cd-c b{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.02em}.cd-c.now b{font-size:17px}
+.cd-c span{font-size:11px;color:var(--mu);margin-top:3px}
+.cd-k{font-size:12px;color:var(--mu);text-transform:uppercase;letter-spacing:.06em}
+.cd-n{font-weight:700;font-size:18px;margin:1px 0 2px}
+.cd-p{margin-top:4px;font-size:13px;color:var(--ac);font-weight:600}
+.cd .m{color:var(--mu);font-size:20px}
 </style>
 </head>
 <body>
@@ -1002,14 +1017,16 @@ review|other|Attempt review|10|`.split('\n').map(line => {
   const tripLast = v => { if (v.length !== 7) return v || null; const [y, m] = v.split('-').map(Number); return toISO(new Date(y, m, 0)); };
   const clip = (v, n) => String(v == null ? '' : v).slice(0, n);
   /** Pulisce i viaggi di un backup o del salvataggio: campi sconosciuti o rotti spariscono, niente fa fallire il ripristino. */
-  function cleanTrips(raw) {
+  function cleanTrips(raw, today) {
     if (!Array.isArray(raw)) return [];
+    const now = today || todayISO();
     return raw.filter(t => t && typeof t === 'object').map(t => {
       const from = tripDate(t.from); let to = tripDate(t.to);
       if (from && to && tripLast(to) < tripFirst(from)) to = ''; // fine prima dell'inizio: si tiene solo l'inizio
       return {
         id: typeof t.id === 'string' && t.id ? t.id : uid(), name: clip(t.name, 80) || 'Trip', place: clip(t.place, 80), from, to,
         status: has(TRIP_STATUS, t.status) ? t.status : 'idea', notes: clip(t.notes, 2000),
+        since: validISO(t.since) || now, // da quando il viaggio è confermato (o almeno da quando l'app lo conosce): inizio dell'anello del countdown
         projects: (Array.isArray(t.projects) ? t.projects : []).filter(p => p && typeof p === 'object').map(p => ({
           id: typeof p.id === 'string' && p.id ? p.id : uid(), name: clip(p.name, 80) || 'Project', grade: GRADES.includes(p.grade) ? p.grade : '',
           sector: clip(p.sector, 80), style: has(STYLES, p.style) ? p.style : 'boulder', status: has(PROJECT_STATUS, p.status) ? p.status : 'todo',
@@ -1032,6 +1049,19 @@ review|other|Attempt review|10|`.split('\n').map(line => {
   function daysTo(t, today) {
     const ph = tripPhase(t, today);
     return ph === 'future' ? diffDays(tripFirst(t.from), today) : ph === 'now' ? 0 : null;
+  }
+  /** Countdown: giorni alla partenza e quanto è pieno l'anello (0-1), che si riempie da `since` alla partenza.
+      Durante il viaggio: giorno corrente su durata. null senza data o a viaggio finito. */
+  function tripCountdown(t, today) {
+    const ph = tripPhase(t, today);
+    if (!ph || ph === 'past') return null;
+    const first = tripFirst(t.from), approx = t.from.length === 7;
+    if (ph === 'now') {
+      const len = diffDays(tripLast(t.to || t.from), first) + 1, day = diffDays(today, first) + 1;
+      return { now: true, day, length: len, fill: Math.min(1, day / len), approx };
+    }
+    const days = diffDays(first, today), span = diffDays(first, t.since && t.since < first ? t.since : today);
+    return { now: false, days, fill: span > 0 ? Math.max(0, Math.min(1, 1 - days / span)) : 0, approx };
   }
   /** Prossimo viaggio confermato non ancora finito: quello in corso o il più vicino. */
   function nextTrip(trips, today) {
@@ -1060,7 +1090,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
     inferLoad, loadKey, loadKg, latestMaxes, fmtKg, cycle, cueAt, intervalMinutes, buildSteps, normInterval,
     importYaml, exportYaml, parseDuration, parseWeeks, fmtWeeks, testExercise, YAML_REFS, locate, dateOf, sessionMinutes, cloneSession, validState,
     niceRange, scheduled, weeklyStats, summary, parseLoads, loadSeries, surfaceStats, weeklyTopGrades, dailyGroups, setsCompletion, testProgress, gradeProgress,
-    TRIP_STATUS, PROJECT_STATUS, STYLES, tripDate, tripFirst, tripLast, cleanTrips, tripProgress, tripPhase, daysTo, nextTrip, groupTrips,
+    TRIP_STATUS, PROJECT_STATUS, STYLES, tripDate, tripFirst, tripLast, cleanTrips, tripProgress, tripPhase, daysTo, tripCountdown, nextTrip, groupTrips,
   };
 });
 </script>
@@ -1477,7 +1507,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
       pruneEmpty(s); prune(s); // e gli esercizi rimasti senza giornata
     }
     if (fromV < 12) delete s.live; // v12: niente più sessione in corso: ogni esercizio si avvia dalla giornata
-    s.trips = C.cleanTrips(s.trips); // v13: viaggi e progetti (sezione a sé); un backup precedente non li ha
+    s.trips = C.cleanTrips(s.trips, C.todayISO()); // v13: viaggi e progetti (sezione a sé); un backup precedente non li ha
     s.v = 13;
     return s;
   }
@@ -1845,7 +1875,26 @@ review|other|Attempt review|10|`.split('\n').map(line => {
       out.push(h('div', { class: 'card row' }, h('div', { class: 'grow sub' }, since == null ? 'Your data has no backup yet.' : `Last backup ${since} days ago.`), btn('Save backup', doBackup, 'sm')));
     refs.forEach(r => out.push(sessionCard(r, true)));
     if (!refs.length) out.push(restCard(t, false));
+    const next = C.nextTrip(S.trips, t);
+    if (next) out.push(countdownCard(next, t)); // dopo la giornata di oggi, che resta il contenuto principale
     return out;
+  }
+
+  /** Countdown del prossimo viaggio confermato: anello che si riempie verso la partenza, come la ciambella di Analytics. */
+  function countdownCard(trip, today) {
+    const cd = C.tripCountdown(trip, today), pr = C.tripProgress(trip);
+    const NS = 'http://www.w3.org/2000/svg', R = 34, L = 2 * Math.PI * R;
+    const el = (tag, a) => { const e = document.createElementNS(NS, tag); for (const k in a) e.setAttribute(k, a[k]); return e; };
+    const svg = el('svg', { viewBox: '0 0 80 80', class: 'cd-ring', 'aria-hidden': 'true' });
+    svg.append(el('circle', { cx: 40, cy: 40, r: R, class: 'cd-track' }),
+      el('circle', { cx: 40, cy: 40, r: R, class: 'cd-arc', transform: 'rotate(-90 40 40)', 'stroke-dasharray': L.toFixed(1), 'stroke-dashoffset': (L * (1 - cd.fill)).toFixed(1), style: `--cd-len:${L.toFixed(1)}` }));
+    const big = cd.now ? 'Day ' + cd.day : (cd.approx ? '~' : '') + cd.days, small = cd.now ? `of ${cd.length}` : cd.days === 1 ? 'day' : 'days';
+    const label = cd.now ? `${trip.name}: day ${cd.day} of ${cd.length}` : `${trip.name}: ${cd.approx ? 'about ' : ''}${cd.days} days to go`;
+    return h('div', { class: 'card tap cd', role: 'link', 'aria-label': label, onclick: () => go('trip-' + trip.id) },
+      h('div', { class: 'cd-dial' }, svg, h('div', { class: 'cd-c' + (cd.now ? ' now' : '') }, h('b', {}, big), h('span', {}, small))),
+      h('div', { class: 'grow' }, h('div', { class: 'cd-k' }, cd.now ? 'On trip' : 'Next trip'), h('div', { class: 'cd-n' }, trip.name),
+        h('div', { class: 'sub' }, [trip.place, fmtTrip(trip)].filter(Boolean).join(' · ')),
+        pr.total ? h('div', { class: 'cd-p' }, `${pr.sent}/${pr.total} sent`) : null), h('div', { class: 'm' }, '›'));
   }
 
   /* ---------- Sessioni extra e calendario ---------- */
@@ -2281,7 +2330,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
         cloudOn() ? [btn('Restore from GitHub', cloudRestore, 'sm'), btn('Disconnect', async () => { if (await confirmDlg('Disconnect GitHub? The token is deleted from this device; backups already uploaded stay in the repository.', 'Disconnect')) { S.settings.gh = null; clearTimeout(cloudTimer); save(); render(); } }, 'sm danger')] : null));
   }
   /* ---------- Taccuino: note al volo durante la prova dell'app, con il contesto per poterle riprodurre ---------- */
-  const VERSION = '20261119.0913';
+  const VERSION = '20261119.0918';
   function noteSheet() {
     const text = h('textarea', { class: 'inp', placeholder: 'What is wrong, or what would you like to be different?' });
     const where = P ? 'timer: ' + P.steps[P.idx].name : (location.hash.slice(1) || 'home');
@@ -2458,7 +2507,9 @@ review|other|Attempt review|10|`.split('\n').map(line => {
         if (!n) return toast('Give the trip a name.');
         const d = dates.read();
         if (d.from && d.to && C.tripLast(d.to) < C.tripFirst(d.from)) return toast('The end is before the start.');
-        const x = t || { id: C.uid(), projects: [], checklist: [] };
+        const x = t || { id: C.uid(), projects: [], checklist: [], since: C.todayISO() };
+        // L'anello del countdown parte dal giorno in cui il viaggio diventa confermato
+        if (st.value === 'confirmed' && (!t || t.status !== 'confirmed')) x.since = C.todayISO();
         Object.assign(x, { name: n.slice(0, 80), place: place.value.trim().slice(0, 80), status: st.value, from: d.from, to: d.from ? d.to : '', notes: notes.value.trim().slice(0, 2000) });
         if (!t) S.trips.push(x);
         save(); ov.remove(); log('trips', t ? 'edited' : 'added', { name: x.name });

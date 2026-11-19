@@ -546,3 +546,17 @@ test('viaggi: pulizia di dati rotti, date approssimative, fasi e gruppi', () => 
   assert.deepEqual(g.archive.map(x => x.name), ['Old', 'Done'], 'confermato già finito in archivio, dal più recente');
   assert.deepEqual(C.tripProgress(C.cleanTrips([{ projects: [{ status: 'sent', sentOn: '2027-03-20' }, {}] }])[0]), { sent: 1, total: 2 });
 });
+
+test('countdown: anello che si riempie da quando il viaggio è confermato, giorno corrente durante il viaggio', () => {
+  const mk = (from, to, since) => C.cleanTrips([{ status: 'confirmed', from, to, since }], '2026-11-25')[0];
+  const f = C.tripCountdown(mk('2027-03-14', '2027-03-28', '2026-09-25'), '2026-11-25');
+  assert.equal(f.days, 109); assert.equal(f.now, false); assert.ok(Math.abs(f.fill - (1 - 109 / 170)) < 1e-9);
+  assert.equal(C.tripCountdown(mk('2027-03-14', '', ''), '2026-11-25').fill, 0, 'confermato oggi: anello vuoto');
+  assert.equal(mk('2027-03-14', '', '').since, '2026-11-25', 'senza data di conferma vale da oggi');
+  const m = C.tripCountdown(mk('2027-03', '', '2026-11-25'), '2026-11-25');
+  assert.equal(m.approx, true); assert.equal(m.days, 96, 'solo il mese: si conta dal primo del mese');
+  const n = C.tripCountdown(mk('2026-11-20', '2026-11-29', '2026-10-01'), '2026-11-25');
+  assert.deepEqual([n.now, n.day, n.length, n.fill], [true, 6, 10, 0.6]);
+  assert.equal(C.tripCountdown(mk('2026-10-01', '2026-10-05', ''), '2026-11-25'), null, 'viaggio finito');
+  assert.equal(C.tripCountdown(C.cleanTrips([{ status: 'idea' }])[0], '2026-11-25'), null, 'senza date');
+});

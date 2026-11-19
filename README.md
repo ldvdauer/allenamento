@@ -25,7 +25,7 @@ The interface is in English only. Code comments and test descriptions are still 
 - **Training day** (internally still a "session" object): the exercises of one date, from an imported programme or added by hand. The day is the unit: a day with no exercises is a rest day and is removed from the data (`pruneEmpty` on every save). Copying or moving onto a day that already has exercises appends to it.
 - **Block**: an exercise *on that day*, with its own parameters (rounds, seconds or reps, rests, L/R, grip, reference test and %, surface, note). Nothing is shared between days.
 - **Test**: definitions with their own parameters; the latest result is the max used to compute kg.
-- **Trip** (`S.trips`, v13): name, place, approximate dates (`YYYY-MM` or `YYYY-MM-DD`), status, notes, projects (grade, sector, style, status, sent date, notes) and a free checklist. Separate from training data; cleaned by `Core.cleanTrips` on load and restore.
+- **Trip** (`S.trips`, v13): name, place, approximate dates (`YYYY-MM` or `YYYY-MM-DD`), status, notes, `since` (day it was confirmed, start of the countdown ring), projects (grade, sector, style, status, sent date, notes) and a free checklist. Separate from training data; cleaned by `Core.cleanTrips` on load and restore.
 - **Day log** (`S.logs`): one per training day, filled exercise by exercise (`bid` = block id): minutes, sets done, missed reps, load, RPE, surface/grade, note. RPE, feeling and notes of the day are optional ("Rate the day").
 - The state has a version (`v`) and `migrate()` in `app.js` brings old data forward on every launch.
   Version 7 moved the interface from Italian to English: default names (standard exercises, test templates, default

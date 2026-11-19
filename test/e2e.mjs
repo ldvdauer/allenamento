@@ -298,6 +298,17 @@ tv = await txt('#view');
 ok(tv.includes('Coming up') && tv.includes('Fontainebleau spring') && tv.includes('1/2 sent'), 'elenco: viaggio confermato in evidenza con avanzamento');
 ok(await pg.evaluate(() => document.querySelector('#tabs a.on').getAttribute('href') === '#trips'), 'barra: Trips attiva');
 ok(await pg.evaluate(b => JSON.stringify({ p: __app.state.plans, l: __app.state.logs, t: __app.state.tests, e: __app.state.exercises }) === b, dataBefore), 'i viaggi non toccano programmi, registrazioni, test ed esercizi');
+// Countdown in Home: sotto la giornata di oggi, anello pieno in proporzione da quando il viaggio è confermato
+await pg.evaluate(() => { __app.state.trips[0].since = '2026-09-25'; });
+await go('home'); await sleep(150);
+const cd = await pg.evaluate(() => { const c = document.querySelector('#view .cd'); if (!c) return null; const cards = [...document.querySelectorAll('#view > .card')]; const arc = c.querySelector('.cd-arc');
+  return { t: c.innerText, last: cards[cards.length - 1] === c, afterDay: cards.indexOf(c) > cards.findIndex(x => x.innerText.includes('done')), fill: 1 - arc.getAttribute('stroke-dashoffset') / arc.getAttribute('stroke-dasharray') }; });
+ok(cd && cd.t.includes('109') && cd.t.includes('NEXT TRIP') && cd.t.includes('Fontainebleau spring') && cd.t.includes('1/2 sent') && cd.last && cd.afterDay, 'Home: countdown del prossimo viaggio confermato, dopo la giornata di oggi');
+ok(Math.abs(cd.fill - (1 - 109 / 170)) < 0.01, 'countdown: anello pieno per i giorni già passati dalla conferma');
+if (process.env.SHOTS) { await pg.evaluate(() => { document.getElementById('tabs').style.visibility = 'hidden'; }); await (await pg.$('#view .cd')).screenshot({ path: process.env.SHOTS + '/19-countdown.png' }); await pg.evaluate(() => { document.getElementById('tabs').style.visibility = ''; }); }
+await pg.$eval('#view .cd', e => e.click()); await sleep(100);
+ok(/^#trip-/.test(await pg.evaluate(() => location.hash)), 'tocco sul countdown: apre il viaggio');
+await go('trips');
 await pg.reload(); await sleep(400);
 ok(await pg.evaluate(() => __app.state.trips.length === 1 && __app.state.trips[0].projects.length === 2 && __app.state.v === 13), 'viaggi salvati sul dispositivo dopo il riavvio');
 await shot('17-trips');
