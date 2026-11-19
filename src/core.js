@@ -783,7 +783,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
       return {
         id: typeof t.id === 'string' && t.id ? t.id : uid(), name: clip(t.name, 80) || 'Trip', place: clip(t.place, 80), from, to,
         status: has(TRIP_STATUS, t.status) ? t.status : 'idea', notes: clip(t.notes, 2000),
-        since: validISO(t.since) || now, // da quando il viaggio è confermato (o almeno da quando l'app lo conosce): inizio dell'anello del countdown
+        since: validISO(t.since) || now, // da quando il viaggio è possibile o confermato (o almeno da quando l'app lo conosce): inizio dell'anello del countdown
         projects: (Array.isArray(t.projects) ? t.projects : []).filter(p => p && typeof p === 'object').map(p => ({
           id: typeof p.id === 'string' && p.id ? p.id : uid(), name: clip(p.name, 80) || 'Project', grade: GRADES.includes(p.grade) ? p.grade : '',
           sector: clip(p.sector, 80), style: has(STYLES, p.style) ? p.style : 'boulder', status: has(PROJECT_STATUS, p.status) ? p.status : 'todo',
@@ -820,10 +820,11 @@ review|other|Attempt review|10|`.split('\n').map(line => {
     const days = diffDays(first, today), span = diffDays(first, t.since && t.since < first ? t.since : today);
     return { now: false, days, fill: span > 0 ? Math.max(0, Math.min(1, 1 - days / span)) : 0, approx };
   }
-  /** Prossimo viaggio confermato non ancora finito: quello in corso o il più vicino. */
+  /** Prossimo viaggio per la Home: confermato o possibile, non ancora finito; il più vicino (quello in corso prima),
+      a parità di data il confermato. */
   function nextTrip(trips, today) {
-    return trips.filter(t => t.status === 'confirmed' && ['future', 'now'].includes(tripPhase(t, today)))
-      .sort((a, b) => tripFirst(a.from).localeCompare(tripFirst(b.from)))[0] || null;
+    return trips.filter(t => (t.status === 'confirmed' || t.status === 'possible') && ['future', 'now'].includes(tripPhase(t, today)))
+      .sort((a, b) => tripFirst(a.from).localeCompare(tripFirst(b.from)) || (b.status === 'confirmed') - (a.status === 'confirmed'))[0] || null;
   }
   /** Gruppi della sezione: confermati in arrivo (per data), idee e possibili (datati prima, per data), archivio (dal più recente).
       Un confermato già finito va in archivio anche se non è stato segnato Done. */

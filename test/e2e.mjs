@@ -303,9 +303,14 @@ await pg.evaluate(() => { __app.state.trips[0].since = '2026-09-25'; });
 await go('home'); await sleep(150);
 const cd = await pg.evaluate(() => { const c = document.querySelector('#view .cd'); if (!c) return null; const cards = [...document.querySelectorAll('#view > .card')]; const arc = c.querySelector('.cd-arc');
   return { t: c.innerText, last: cards[cards.length - 1] === c, afterDay: cards.indexOf(c) > cards.findIndex(x => x.innerText.includes('done')), fill: 1 - arc.getAttribute('stroke-dashoffset') / arc.getAttribute('stroke-dasharray') }; });
-ok(cd && cd.t.includes('109') && cd.t.includes('NEXT TRIP') && cd.t.includes('Fontainebleau spring') && cd.t.includes('1/2 sent') && cd.last && cd.afterDay, 'Home: countdown del prossimo viaggio confermato, dopo la giornata di oggi');
+ok(cd && cd.t.includes('109') && cd.t.includes('NEXT TRIP · CONFIRMED') && cd.t.includes('Fontainebleau spring') && cd.t.includes('1/2 sent') && cd.last && cd.afterDay, 'Home: countdown del prossimo viaggio confermato, dopo la giornata di oggi');
 ok(Math.abs(cd.fill - (1 - 109 / 170)) < 0.01, 'countdown: anello pieno per i giorni già passati dalla conferma');
 if (process.env.SHOTS) { await pg.evaluate(() => { document.getElementById('tabs').style.visibility = 'hidden'; }); await (await pg.$('#view .cd')).screenshot({ path: process.env.SHOTS + '/19-countdown.png' }); await pg.evaluate(() => { document.getElementById('tabs').style.visibility = ''; }); }
+// Un viaggio Possible più vicino prende il posto del confermato, con il pallino giallo; ne resta uno solo
+await pg.evaluate(() => { __app.state.trips.push({ id: 'pz', name: 'Albarracin', place: '', from: '2027-01', to: '', status: 'possible', notes: '', since: '2026-11-25', projects: [], checklist: [] }); __app.render(); });
+const cd2 = await pg.evaluate(() => { const c = document.querySelectorAll('#view .cd'); return { n: c.length, t: c[0].innerText, dot: getComputedStyle(c[0].querySelector('.cd-dot')).backgroundColor }; });
+ok(cd2.n === 1 && cd2.t.includes('Albarracin') && cd2.t.includes('NEXT TRIP · POSSIBLE') && cd2.t.includes('~37') && cd2.dot === 'rgb(242, 204, 96)', 'Home: un solo viaggio, il più vicino anche se Possible, con pallino giallo e giorni approssimativi');
+await pg.evaluate(() => { __app.state.trips = __app.state.trips.filter(t => t.id !== 'pz'); __app.render(); });
 await pg.$eval('#view .cd', e => e.click()); await sleep(100);
 ok(/^#trip-/.test(await pg.evaluate(() => location.hash)), 'tocco sul countdown: apre il viaggio');
 await go('trips');

@@ -538,8 +538,12 @@ test('viaggi: pulizia di dati rotti, date approssimative, fasi e gruppi', () => 
   assert.equal(C.daysTo(font, today), 109); assert.equal(C.daysTo(now, today), 0, 'mese in corso: il viaggio è in corso');
   assert.equal(C.daysTo(old, today), null); assert.equal(C.daysTo(idea, today), null);
   assert.equal(C.nextTrip([font, now, old, maybe], today).name, 'Now', 'prossimo: quello in corso prima di quelli futuri');
-  assert.equal(C.nextTrip([font, maybe], today).name, 'Font', 'solo confermati');
-  assert.equal(C.nextTrip([maybe, idea], today), null);
+  assert.equal(C.nextTrip([font, maybe], today).name, 'Font', 'il più vicino');
+  assert.equal(C.nextTrip([maybe, idea, done], today).name, 'Maybe', 'anche i possibili; mai idee o conclusi');
+  const soon = mk('Soon', 'possible', '2027-01-10', ''), same = mk('Same', 'possible', '2027-03-14', '');
+  assert.equal(C.nextTrip([font, soon], today).name, 'Soon', 'un possibile più vicino passa davanti al confermato');
+  assert.equal(C.nextTrip([same, font], today).name, 'Font', 'a parità di data, il confermato');
+  assert.equal(C.nextTrip([idea, old], today), null);
   const g = C.groupTrips([idea, done, font, old, maybe, now], today);
   assert.deepEqual(g.upcoming.map(x => x.name), ['Now', 'Font']);
   assert.deepEqual(g.ideas.map(x => x.name), ['Maybe', 'Idea'], 'idee datate prima, senza date in fondo');

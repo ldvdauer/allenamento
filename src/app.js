@@ -512,11 +512,11 @@
     refs.forEach(r => out.push(sessionCard(r, true)));
     if (!refs.length) out.push(restCard(t, false));
     const next = C.nextTrip(S.trips, t);
-    if (next) out.push(countdownCard(next, t)); // dopo la giornata di oggi, che resta il contenuto principale
+    if (next) out.push(countdownCard(next, t)); // uno solo, il più vicino; dopo la giornata di oggi, che resta il contenuto principale
     return out;
   }
 
-  /** Countdown del prossimo viaggio confermato: anello che si riempie verso la partenza, come la ciambella di Analytics. */
+  /** Countdown del prossimo viaggio (confermato o possibile, pallino verde o giallo): anello che si riempie verso la partenza, come la ciambella di Analytics. */
   function countdownCard(trip, today) {
     const cd = C.tripCountdown(trip, today), pr = C.tripProgress(trip);
     const NS = 'http://www.w3.org/2000/svg', R = 34, L = 2 * Math.PI * R;
@@ -525,10 +525,10 @@
     svg.append(el('circle', { cx: 40, cy: 40, r: R, class: 'cd-track' }),
       el('circle', { cx: 40, cy: 40, r: R, class: 'cd-arc', transform: 'rotate(-90 40 40)', 'stroke-dasharray': L.toFixed(1), 'stroke-dashoffset': (L * (1 - cd.fill)).toFixed(1), style: `--cd-len:${L.toFixed(1)}` }));
     const big = cd.now ? 'Day ' + cd.day : (cd.approx ? '~' : '') + cd.days, small = cd.now ? `of ${cd.length}` : cd.days === 1 ? 'day' : 'days';
-    const label = cd.now ? `${trip.name}: day ${cd.day} of ${cd.length}` : `${trip.name}: ${cd.approx ? 'about ' : ''}${cd.days} days to go`;
+    const label = `${TRIP_ST[trip.status]} trip ` + (cd.now ? `${trip.name}: day ${cd.day} of ${cd.length}` : `${trip.name}: ${cd.approx ? 'about ' : ''}${cd.days} days to go`);
     return h('div', { class: 'card tap cd', role: 'link', 'aria-label': label, onclick: () => go('trip-' + trip.id) },
       h('div', { class: 'cd-dial' }, svg, h('div', { class: 'cd-c' + (cd.now ? ' now' : '') }, h('b', {}, big), h('span', {}, small))),
-      h('div', { class: 'grow' }, h('div', { class: 'cd-k' }, cd.now ? 'On trip' : 'Next trip'), h('div', { class: 'cd-n' }, trip.name),
+      h('div', { class: 'grow' }, h('div', { class: 'cd-k' }, h('i', { class: 'cd-dot ' + trip.status, 'aria-hidden': 'true' }), (cd.now ? 'On trip' : 'Next trip') + ' · ' + TRIP_ST[trip.status]), h('div', { class: 'cd-n' }, trip.name),
         h('div', { class: 'sub' }, [trip.place, fmtTrip(trip)].filter(Boolean).join(' · ')),
         pr.total ? h('div', { class: 'cd-p' }, `${pr.sent}/${pr.total} sent`) : null), h('div', { class: 'm' }, '›'));
   }
@@ -1144,8 +1144,9 @@
         const d = dates.read();
         if (d.from && d.to && C.tripLast(d.to) < C.tripFirst(d.from)) return toast('The end is before the start.');
         const x = t || { id: C.uid(), projects: [], checklist: [], since: C.todayISO() };
-        // L'anello del countdown parte dal giorno in cui il viaggio diventa confermato
-        if (st.value === 'confirmed' && (!t || t.status !== 'confirmed')) x.since = C.todayISO();
+        // L'anello del countdown parte dal giorno in cui il viaggio entra in Home (Possible o Confirmed); passare da Possible a Confirmed non lo azzera
+        const inHome = k => k === 'possible' || k === 'confirmed';
+        if (inHome(st.value) && (!t || !inHome(t.status))) x.since = C.todayISO();
         Object.assign(x, { name: n.slice(0, 80), place: place.value.trim().slice(0, 80), status: st.value, from: d.from, to: d.from ? d.to : '', notes: notes.value.trim().slice(0, 2000) });
         if (!t) S.trips.push(x);
         save(); ov.remove(); log('trips', t ? 'edited' : 'added', { name: x.name });
