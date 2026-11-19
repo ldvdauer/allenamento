@@ -1143,17 +1143,17 @@
         if (!n) return toast('Give the trip a name.');
         const d = dates.read();
         if (d.from && d.to && C.tripLast(d.to) < C.tripFirst(d.from)) return toast('The end is before the start.');
-        const x = t || { id: C.uid(), projects: [], checklist: [], since: C.todayISO() };
+        const x = t || { id: C.uid(), projects: [], since: C.todayISO() };
         // L'anello del countdown parte dal giorno in cui il viaggio entra in Home (Idea o Confirmed); confermare un'idea non lo azzera
         const inHome = k => k === 'idea' || k === 'confirmed';
         if (inHome(st.value) && (!t || !inHome(t.status))) x.since = C.todayISO();
-        Object.assign(x, { name: n.slice(0, 80), place: place.value.trim().slice(0, 80), status: st.value, from: d.from, to: d.from ? d.to : '', notes: notes.value.trim().slice(0, 2000) });
+        Object.assign(x, { name: n.slice(0, 80), place: place.value.trim().slice(0, 80), status: st.value, from: d.from, to: d.from ? d.to : '', notes: notes.value.trim().slice(0, 4000) });
         if (!t) S.trips.push(x);
         save(); ov.remove(); log('trips', t ? 'edited' : 'added', { name: x.name });
         if (t) render(); else go('trip-' + x.id);
       }, 'pri block'),
       t ? btn('Delete trip', async () => {
-        if (!await confirmDlg(`Delete "${t.name}" with its ${t.projects.length} projects and checklist? This cannot be undone.`, 'Delete')) return;
+        if (!await confirmDlg(`Delete "${t.name}" with its ${t.projects.length} projects? This cannot be undone.`, 'Delete')) return;
         S.trips = S.trips.filter(x => x !== t); save(); ov.remove(); log('trips', 'deleted', { name: t.name }); go('trips');
       }, 'danger block') : null]);
   }
@@ -1205,20 +1205,6 @@
       h('div', { class: 'grow' }, h('div', { class: 'n' }, p.name, p.grade ? h('span', { class: 'gr' }, prjGrade(p)) : null),
         sub ? h('div', { class: 'p' }, sub) : null, p.notes ? h('div', { class: 'p note clamp' }, p.notes) : null));
   }
-  /** Lista libera con spunta (cose da portare, prenotazioni): leggera e separabile, compare solo se usata. */
-  let checklistOpen = null;
-  function checklistCard(t) {
-    if (!t.checklist.length && checklistOpen !== t.id) return h('div', { class: 'btns' }, btn('+ Checklist', () => { checklistOpen = t.id; render(); }, 'sm'));
-    const inp = h('input', { class: 'inp', style: 'margin:0', placeholder: 'Add an item' });
-    const add = () => { const v = inp.value.trim().slice(0, 120); if (!v) return; t.checklist.push({ id: C.uid(), text: v, done: false }); save(); render(); setTimeout(() => { const i = document.querySelector('#view .chk-add input'); if (i) i.focus(); }, 0); };
-    inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); add(); } });
-    const done = t.checklist.filter(c => c.done).length;
-    return [h('h2', {}, 'Checklist', t.checklist.length ? h('span', { class: 'cnt' }, ` ${done}/${t.checklist.length}`) : null), h('div', { class: 'card chk' },
-      t.checklist.map(c => h('div', { class: 'chk-i' + (c.done ? ' done' : '') },
-        h('label', { class: 'grow' }, h('input', { type: 'checkbox', checked: c.done, onchange: e => { c.done = e.target.checked; save(); render(); } }), ' ', c.text),
-        h('button', { type: 'button', class: 'x', 'aria-label': 'Remove ' + c.text, onclick: () => { t.checklist = t.checklist.filter(x => x !== c); save(); render(); } }, '×'))),
-      h('div', { class: 'row chk-add' }, h('div', { class: 'grow' }, inp), btn('Add', add, 'sm')))];
-  }
   function viewTrip(args) {
     const t = tripById(args.join('-'));
     if (!t) return [h('h1', {}, 'Trip not found'), btn('‹ Trips', () => go('trips'), 'sm')];
@@ -1229,8 +1215,7 @@
       t.notes ? h('p', { class: 'trip-notes' }, t.notes) : null,
       h('h2', {}, 'Projects', pr.total ? h('span', { class: 'cnt' }, ` ${pr.sent}/${pr.total} sent`) : null),
       h('div', { class: 'card' }, t.projects.length ? t.projects.map(p => projectRow(t, p)) : h('p', { class: 'sub', style: 'margin-top:0' }, 'The boulders and routes you want to do on this trip. Tap the circle when you send one.'),
-        h('div', { class: 'btns' }, btn('+ Project', () => projectSheet(t, null), 'sm pri'))),
-      checklistCard(t)];
+        h('div', { class: 'btns' }, btn('+ Project', () => projectSheet(t, null), 'sm pri')))];
   }
 
   /* ---------- Player ---------- */

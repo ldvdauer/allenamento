@@ -527,7 +527,9 @@ test('viaggi: pulizia di dati rotti, date approssimative, fasi e gruppi', () => 
   assert.equal(t.length, 1, 'voci non oggetto scartate');
   assert.deepEqual([t[0].name, t[0].from, t[0].to, t[0].status], ['Trip', '', '', 'idea'], 'data inesistente e stato sconosciuto ripuliti');
   assert.deepEqual([t[0].projects.length, t[0].projects[0].grade, t[0].projects[0].style, t[0].projects[0].sentOn], [1, '', 'boulder', ''], 'progetto con grado e data non validi');
-  assert.deepEqual(t[0].checklist.map(c => [c.text, c.done]), [['Pads', true]], 'voci vuote della checklist scartate');
+  assert.equal(t[0].notes, 'Checklist:\n[x] Pads', 'checklist tolta: le voci passano nelle note, vuote scartate');
+  assert.equal(C.cleanTrips([{ notes: 'Gîte', checklist: [{ text: 'Pads' }] }])[0].notes, 'Gîte\n\nChecklist:\n[ ] Pads', 'in fondo alle note esistenti');
+  assert.equal('checklist' in t[0], false);
   assert.deepEqual(C.cleanTrips([{ status: 'possible' }, { status: 'dropped' }, { status: 'confirmed' }]).map(x => x.status), ['idea', 'idea', 'confirmed'], 'stati tolti: Possible e Dropped diventano Idea');
   assert.equal(C.cleanTrips([{ from: '2027-03', to: '2027-02' }])[0].to, '', 'fine prima dell\'inizio: resta solo l\'inizio');
   assert.deepEqual(C.cleanTrips(undefined), [], 'backup precedente ai viaggi');

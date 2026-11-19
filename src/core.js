@@ -782,17 +782,19 @@ review|other|Attempt review|10|`.split('\n').map(line => {
     return raw.filter(t => t && typeof t === 'object').map(t => {
       const from = tripDate(t.from); let to = tripDate(t.to);
       if (from && to && tripLast(to) < tripFirst(from)) to = ''; // fine prima dell'inizio: si tiene solo l'inizio
+      // La checklist è stata tolta il 2026-11-19 (scelta di Leo): le voci già scritte passano in fondo alle note, con la spunta
+      const items = (Array.isArray(t.checklist) ? t.checklist : []).filter(c => c && typeof c === 'object' && String(c.text || '').trim())
+        .map(c => `${c.done ? '[x]' : '[ ]'} ${clip(c.text, 120).trim()}`);
+      const notes = [String(t.notes == null ? '' : t.notes).trim(), items.length ? 'Checklist:\n' + items.join('\n') : ''].filter(Boolean).join('\n\n');
       return {
         id: typeof t.id === 'string' && t.id ? t.id : uid(), name: clip(t.name, 80) || 'Trip', place: clip(t.place, 80), from, to,
-        status: has(TRIP_STATUS, t.status) ? t.status : OLD_TRIP_STATUS[t.status] || 'idea', notes: clip(t.notes, 2000),
+        status: has(TRIP_STATUS, t.status) ? t.status : OLD_TRIP_STATUS[t.status] || 'idea', notes: clip(notes, 4000),
         since: validISO(t.since) || now, // da quando il viaggio esiste (o almeno da quando l'app lo conosce): inizio dell'anello del countdown
         projects: (Array.isArray(t.projects) ? t.projects : []).filter(p => p && typeof p === 'object').map(p => ({
           id: typeof p.id === 'string' && p.id ? p.id : uid(), name: clip(p.name, 80) || 'Project', grade: GRADES.includes(p.grade) ? p.grade : '',
           sector: clip(p.sector, 80), style: has(STYLES, p.style) ? p.style : 'boulder', status: has(PROJECT_STATUS, p.status) ? p.status : 'todo',
           sentOn: p.status === 'sent' ? validISO(p.sentOn) || '' : '', notes: clip(p.notes, 2000),
         })),
-        checklist: (Array.isArray(t.checklist) ? t.checklist : []).filter(c => c && typeof c === 'object' && String(c.text || '').trim())
-          .map(c => ({ id: typeof c.id === 'string' && c.id ? c.id : uid(), text: clip(c.text, 120).trim(), done: !!c.done })),
       };
     });
   }

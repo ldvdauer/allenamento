@@ -185,11 +185,6 @@ h2 .cnt{color:var(--mu);font-weight:400;font-size:.85em}
 @keyframes pdot-tick{0%{opacity:0;transform:scale(.4)}100%{opacity:1;transform:scale(1)}}
 @keyframes pdot-ring{0%{transform:scale(1);opacity:.9}100%{transform:scale(2.1);opacity:0}}
 @media (prefers-reduced-motion:reduce){.pdot.pop::before,.pdot.pop svg,.pdot.pop::after{animation:none}}
-.chk-i{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--line)}.chk-i:first-child{border-top:0}
-.chk-i label{font-size:15px;display:flex;align-items:center;gap:8px;min-height:32px}.chk-i input{width:20px;height:20px;accent-color:var(--ac)}
-.chk-i.done label{color:var(--mu);text-decoration:line-through}
-.chk-i .x{background:none;border:0;color:var(--mu);font-size:22px;width:36px;height:36px;cursor:pointer}
-.chk-add{margin-top:8px}
 /* Countdown in Home: compatto, sotto la giornata di oggi */
 .cd{display:flex;align-items:center;gap:16px}
 .cd-dial{position:relative;flex:none;width:84px;height:84px}
@@ -1026,17 +1021,19 @@ review|other|Attempt review|10|`.split('\n').map(line => {
     return raw.filter(t => t && typeof t === 'object').map(t => {
       const from = tripDate(t.from); let to = tripDate(t.to);
       if (from && to && tripLast(to) < tripFirst(from)) to = ''; // fine prima dell'inizio: si tiene solo l'inizio
+      // La checklist è stata tolta il 2026-11-19 (scelta di Leo): le voci già scritte passano in fondo alle note, con la spunta
+      const items = (Array.isArray(t.checklist) ? t.checklist : []).filter(c => c && typeof c === 'object' && String(c.text || '').trim())
+        .map(c => `${c.done ? '[x]' : '[ ]'} ${clip(c.text, 120).trim()}`);
+      const notes = [String(t.notes == null ? '' : t.notes).trim(), items.length ? 'Checklist:\n' + items.join('\n') : ''].filter(Boolean).join('\n\n');
       return {
         id: typeof t.id === 'string' && t.id ? t.id : uid(), name: clip(t.name, 80) || 'Trip', place: clip(t.place, 80), from, to,
-        status: has(TRIP_STATUS, t.status) ? t.status : OLD_TRIP_STATUS[t.status] || 'idea', notes: clip(t.notes, 2000),
+        status: has(TRIP_STATUS, t.status) ? t.status : OLD_TRIP_STATUS[t.status] || 'idea', notes: clip(notes, 4000),
         since: validISO(t.since) || now, // da quando il viaggio esiste (o almeno da quando l'app lo conosce): inizio dell'anello del countdown
         projects: (Array.isArray(t.projects) ? t.projects : []).filter(p => p && typeof p === 'object').map(p => ({
           id: typeof p.id === 'string' && p.id ? p.id : uid(), name: clip(p.name, 80) || 'Project', grade: GRADES.includes(p.grade) ? p.grade : '',
           sector: clip(p.sector, 80), style: has(STYLES, p.style) ? p.style : 'boulder', status: has(PROJECT_STATUS, p.status) ? p.status : 'todo',
           sentOn: p.status === 'sent' ? validISO(p.sentOn) || '' : '', notes: clip(p.notes, 2000),
         })),
-        checklist: (Array.isArray(t.checklist) ? t.checklist : []).filter(c => c && typeof c === 'object' && String(c.text || '').trim())
-          .map(c => ({ id: typeof c.id === 'string' && c.id ? c.id : uid(), text: clip(c.text, 120).trim(), done: !!c.done })),
       };
     });
   }
@@ -2334,7 +2331,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
         cloudOn() ? [btn('Restore from GitHub', cloudRestore, 'sm'), btn('Disconnect', async () => { if (await confirmDlg('Disconnect GitHub? The token is deleted from this device; backups already uploaded stay in the repository.', 'Disconnect')) { S.settings.gh = null; clearTimeout(cloudTimer); save(); render(); } }, 'sm danger')] : null));
   }
   /* ---------- Taccuino: note al volo durante la prova dell'app, con il contesto per poterle riprodurre ---------- */
-  const VERSION = '20261119.0938';
+  const VERSION = '20261119.0943';
   function noteSheet() {
     const text = h('textarea', { class: 'inp', placeholder: 'What is wrong, or what would you like to be different?' });
     const where = P ? 'timer: ' + P.steps[P.idx].name : (location.hash.slice(1) || 'home');
@@ -2511,17 +2508,17 @@ review|other|Attempt review|10|`.split('\n').map(line => {
         if (!n) return toast('Give the trip a name.');
         const d = dates.read();
         if (d.from && d.to && C.tripLast(d.to) < C.tripFirst(d.from)) return toast('The end is before the start.');
-        const x = t || { id: C.uid(), projects: [], checklist: [], since: C.todayISO() };
+        const x = t || { id: C.uid(), projects: [], since: C.todayISO() };
         // L'anello del countdown parte dal giorno in cui il viaggio entra in Home (Idea o Confirmed); confermare un'idea non lo azzera
         const inHome = k => k === 'idea' || k === 'confirmed';
         if (inHome(st.value) && (!t || !inHome(t.status))) x.since = C.todayISO();
-        Object.assign(x, { name: n.slice(0, 80), place: place.value.trim().slice(0, 80), status: st.value, from: d.from, to: d.from ? d.to : '', notes: notes.value.trim().slice(0, 2000) });
+        Object.assign(x, { name: n.slice(0, 80), place: place.value.trim().slice(0, 80), status: st.value, from: d.from, to: d.from ? d.to : '', notes: notes.value.trim().slice(0, 4000) });
         if (!t) S.trips.push(x);
         save(); ov.remove(); log('trips', t ? 'edited' : 'added', { name: x.name });
         if (t) render(); else go('trip-' + x.id);
       }, 'pri block'),
       t ? btn('Delete trip', async () => {
-        if (!await confirmDlg(`Delete "${t.name}" with its ${t.projects.length} projects and checklist? This cannot be undone.`, 'Delete')) return;
+        if (!await confirmDlg(`Delete "${t.name}" with its ${t.projects.length} projects? This cannot be undone.`, 'Delete')) return;
         S.trips = S.trips.filter(x => x !== t); save(); ov.remove(); log('trips', 'deleted', { name: t.name }); go('trips');
       }, 'danger block') : null]);
   }
@@ -2573,20 +2570,6 @@ review|other|Attempt review|10|`.split('\n').map(line => {
       h('div', { class: 'grow' }, h('div', { class: 'n' }, p.name, p.grade ? h('span', { class: 'gr' }, prjGrade(p)) : null),
         sub ? h('div', { class: 'p' }, sub) : null, p.notes ? h('div', { class: 'p note clamp' }, p.notes) : null));
   }
-  /** Lista libera con spunta (cose da portare, prenotazioni): leggera e separabile, compare solo se usata. */
-  let checklistOpen = null;
-  function checklistCard(t) {
-    if (!t.checklist.length && checklistOpen !== t.id) return h('div', { class: 'btns' }, btn('+ Checklist', () => { checklistOpen = t.id; render(); }, 'sm'));
-    const inp = h('input', { class: 'inp', style: 'margin:0', placeholder: 'Add an item' });
-    const add = () => { const v = inp.value.trim().slice(0, 120); if (!v) return; t.checklist.push({ id: C.uid(), text: v, done: false }); save(); render(); setTimeout(() => { const i = document.querySelector('#view .chk-add input'); if (i) i.focus(); }, 0); };
-    inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); add(); } });
-    const done = t.checklist.filter(c => c.done).length;
-    return [h('h2', {}, 'Checklist', t.checklist.length ? h('span', { class: 'cnt' }, ` ${done}/${t.checklist.length}`) : null), h('div', { class: 'card chk' },
-      t.checklist.map(c => h('div', { class: 'chk-i' + (c.done ? ' done' : '') },
-        h('label', { class: 'grow' }, h('input', { type: 'checkbox', checked: c.done, onchange: e => { c.done = e.target.checked; save(); render(); } }), ' ', c.text),
-        h('button', { type: 'button', class: 'x', 'aria-label': 'Remove ' + c.text, onclick: () => { t.checklist = t.checklist.filter(x => x !== c); save(); render(); } }, '×'))),
-      h('div', { class: 'row chk-add' }, h('div', { class: 'grow' }, inp), btn('Add', add, 'sm')))];
-  }
   function viewTrip(args) {
     const t = tripById(args.join('-'));
     if (!t) return [h('h1', {}, 'Trip not found'), btn('‹ Trips', () => go('trips'), 'sm')];
@@ -2597,8 +2580,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
       t.notes ? h('p', { class: 'trip-notes' }, t.notes) : null,
       h('h2', {}, 'Projects', pr.total ? h('span', { class: 'cnt' }, ` ${pr.sent}/${pr.total} sent`) : null),
       h('div', { class: 'card' }, t.projects.length ? t.projects.map(p => projectRow(t, p)) : h('p', { class: 'sub', style: 'margin-top:0' }, 'The boulders and routes you want to do on this trip. Tap the circle when you send one.'),
-        h('div', { class: 'btns' }, btn('+ Project', () => projectSheet(t, null), 'sm pri'))),
-      checklistCard(t)];
+        h('div', { class: 'btns' }, btn('+ Project', () => projectSheet(t, null), 'sm pri')))];
   }
 
   /* ---------- Player ---------- */

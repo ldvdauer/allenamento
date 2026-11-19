@@ -288,11 +288,7 @@ await sleep(500);
 tv = await txt('#view');
 ok(tv.includes('1/2 sent') && tv.includes('sent 25 Nov 2026') && await pg.evaluate(() => __app.state.trips[0].projects[0].sentOn === '2026-11-25'), 'progetto chiuso con la data di oggi');
 await shot('16-viaggio', true);
-await clickText('+ Checklist', '#view');
-await pg.type('#view .chk-add input', 'Crash pads'); await pg.keyboard.press('Enter'); await sleep(100);
-await pg.click('#view .chk-i input'); await sleep(100);
-ok((await txt('#view')).includes('Checklist 1/1') && await pg.evaluate(() => __app.state.trips[0].checklist[0].done), 'checklist: voce aggiunta e spuntata');
-await shot('18-checklist', true);
+ok(!(await txt('#view')).includes('Checklist'), 'viaggio: niente checklist');
 await go('trips');
 tv = await txt('#view');
 ok(tv.includes('Coming up') && tv.includes('Fontainebleau spring') && tv.includes('1/2 sent'), 'elenco: viaggio confermato in evidenza con avanzamento');
@@ -307,7 +303,7 @@ ok(cd && cd.t.includes('109') && cd.t.includes('NEXT TRIP · CONFIRMED') && cd.t
 ok(Math.abs(cd.fill - (1 - 109 / 170)) < 0.01, 'countdown: anello pieno per i giorni già passati dalla conferma');
 if (process.env.SHOTS) { await pg.evaluate(() => { document.getElementById('tabs').style.visibility = 'hidden'; }); await (await pg.$('#view .cd')).screenshot({ path: process.env.SHOTS + '/19-countdown.png' }); await pg.evaluate(() => { document.getElementById('tabs').style.visibility = ''; }); }
 // Un'idea con date più vicina (dal vecchio stato Possible, che diventa Idea) prende il posto del confermato, con il pallino giallo; ne resta uno solo
-await pg.evaluate(() => { __app.state.trips.push(Core.cleanTrips([{ id: 'pz', name: 'Albarracin', place: '', from: '2027-01', to: '', status: 'possible', notes: '', since: '2026-11-25', projects: [], checklist: [] }])[0]); __app.render(); });
+await pg.evaluate(() => { __app.state.trips.push(Core.cleanTrips([{ id: 'pz', name: 'Albarracin', place: '', from: '2027-01', to: '', status: 'possible', notes: '', since: '2026-11-25', projects: [], }])[0]); __app.render(); });
 const cd2 = await pg.evaluate(() => { const c = document.querySelectorAll('#view .cd'); return { n: c.length, t: c[0].innerText, dot: getComputedStyle(c[0].querySelector('.cd-dot')).backgroundColor }; });
 ok(cd2.n === 1 && cd2.t.includes('Albarracin') && cd2.t.includes('NEXT TRIP · IDEA') && cd2.t.includes('~37') && cd2.dot === 'rgb(242, 204, 96)', 'Home: un solo viaggio, il più vicino anche se è un\'idea, con pallino giallo e giorni approssimativi');
 await pg.evaluate(() => { __app.state.trips = __app.state.trips.filter(t => t.id !== 'pz'); __app.render(); });
