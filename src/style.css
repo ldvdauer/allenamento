@@ -190,3 +190,4 @@ h2 .cnt{color:var(--mu);font-weight:400;font-size:.85em}
 .cd-p{margin-top:4px;font-size:13px;color:var(--ac);font-weight:600}
 .cd .m{color:var(--mu);font-size:20px}
 .cd-k{display:flex;align-items:center;gap:6px}.cd-dot{width:8px;height:8px;border-radius:50%;flex:none;background:var(--ac)}.cd-dot.idea{background:var(--warn)}
+.logged.tap{cursor:pointer;-webkit-tap-highlight-color:transparent}.logged .ed{color:var(--mu)}

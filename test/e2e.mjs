@@ -140,13 +140,31 @@ await pg.evaluate(() => [...document.querySelectorAll('#view .blk')].find(r => r
 await clickText('Remove', '.sheet');
 ok((await pg.$$('#view .blk')).length === nBlocks && !(await txt('#view')).includes('Ab wheel'), 'esercizio tolto a metà allenamento');
 
-// Valutazione della giornata, facoltativa
-await clickText('Rate the day', '#view');
-await pg.type('.sheet textarea', 'Prova automatica');
-await clickText('Save', '.sheet');
+// Niente "Rate the day": quanto registrato si modifica toccando la riga ✓ sotto l'esercizio
+ok(!(await txt('#view')).includes('Rate the day'), 'niente Rate the day');
 await go('calendar-2026-11-25');
+const logRow = name => pg.evaluate(n => { const rows = [...document.querySelectorAll('#view .blk')].filter(b => b.querySelector('.n').innerText.includes(n) && b.querySelector('.logged')); rows[rows.length - 1].querySelector('.logged').click(); }, name);
+await logRow('Limit bouldering'); await sleep(80);
+const ed = await pg.evaluate(() => ({ t: document.querySelector('.sheet').innerText, sf: document.querySelector('.sheet .cols label:nth-child(1) select').value, gr: document.querySelector('.sheet .cols label:nth-child(2) select').value,
+  note: document.querySelector('.sheet label:last-of-type input').value, min: document.querySelector('.sheet label input').value }));
+ok(ed.t.includes('Edit what you logged on 25 Nov') && ed.sf === 'moonboard' && ed.gr === '7A+' && ed.note === 'buone sensazioni' && ed.min === '6' && ed.t.includes('Delete this log') && !ed.t.includes('Done, without logging'), 'modifica: scheda precompilata con quanto registrato');
+await pg.evaluate(() => { const i = document.querySelector('.sheet label:last-of-type input'); i.value = 'Prova automatica'; });
+await pg.select('.sheet .cols label:nth-child(2) select', '7B');
+const nLogs = await pg.evaluate(() => __app.state.logs.length);
+await clickText('Save', '.sheet'); await sleep(80);
+ok(await pg.evaluate(n => { const l = __app.state.logs.find(x => x.date === '2026-11-25'), x = l.blocks.filter(b => b.name === 'Limit bouldering').pop();
+  return __app.state.logs.length === n && x.note === 'Prova automatica' && x.climb.top === '7B' && l.blocks.filter(b => b.name === 'Limit bouldering').length === 2 && l.climbs.some(c => c.top === '7B'); }, nLogs), 'modifica salvata al posto della registrazione, senza duplicati');
+await logRow('Limit bouldering'); await sleep(80);
+await pg.select('.sheet .cols label:nth-child(2) select', '7A+'); await pg.evaluate(() => { document.querySelector('.sheet label:last-of-type input').value = 'buone sensazioni'; });
+await clickText('Save', '.sheet'); await sleep(80);
 let diary = await txt('#view');
-ok(diary.includes('Prova automatica') && diary.includes('MoonBoard 7A+ · 3 sends') && diary.includes('buone sensazioni'), 'registrazione nel calendario: superficie, grado, note');
+ok(diary.includes('MoonBoard 7A+ · 3 sends') && diary.includes('buone sensazioni') && diary.includes('6 min'), 'registrazione nel calendario: minuti, superficie, grado, note');
+// Eliminare un esercizio registrato: sparisce con il suo tempo
+await go('calendar-2026-11-25');
+const before2 = await pg.evaluate(() => { const l = __app.state.logs.find(x => x.date === '2026-11-25'); return { n: l.blocks.length, m: l.minutes }; });
+await logRow('Limit bouldering'); await sleep(80);
+await clickText('Delete this log', '.sheet'); await sleep(50); await clickText('Delete', '.sheet:last-of-type'); await sleep(80);
+ok(await pg.evaluate(b => { const l = __app.state.logs.find(x => x.date === '2026-11-25'); return l.blocks.length === b.n - 1 && l.minutes === b.m - 6 && !l.climbs.length; }, before2), 'registrazione eliminata: esercizio, minuti e arrampicata tolti dalla giornata');
 const sloperLog = await pg.evaluate(() => { const row = [...document.querySelectorAll('#view .blk')].find(b => b.querySelector('.n').innerText.includes('Sloper hang')); const x = row && row.querySelector('.logged'); return x ? { t: x.innerText, short: x.classList.contains('short') } : null; });
 ok(sloperLog && sloperLog.t.includes('+4.5 kg') && sloperLog.t.includes('1/4 sets') && sloperLog.short, 'registrazione sotto il suo esercizio: carico e serie saltate evidenziate');
 ok(!diary.includes('Logged exercises') && !diary.includes('Without a planned day'), 'calendario: niente elenco separato delle registrazioni');
@@ -249,7 +267,7 @@ ok(await pg.evaluate(n => __app.state.plans.length === n, nPlans), 'import con e
 await pg.evaluate(() => document.querySelectorAll('.overlay').forEach(o => o.remove()));
 await go('analytics');
 const an = await txt('#view'); if (process.env.DBG) console.log(an.slice(0, 1400));
-ok(an.includes('Training time') && an.includes('46min') && an.includes('78%\nclimbing') && !an.includes('session type') && !/on the wall/i.test(an), 'Analisi: totale ore, ciambella con % arrampicata, niente "tipo di sessione"');
+ok(an.includes('Training time') && an.includes('40min') && an.includes('75%\nclimbing') && !an.includes('session type') && !/on the wall/i.test(an), 'Analisi: totale ore, ciambella con % arrampicata, niente "tipo di sessione"');
 ok(an.includes('Progress') && an.includes('Consistency') && an.includes('Planned days trained') && an.includes('Sets completed'), 'Analisi: sezioni Progress e Consistency');
 ok(!an.includes('most time') && !an.includes('Weekly volume'), 'Analisi: niente vecchi grafici');
 ok(await pg.evaluate(() => { const b = document.querySelector('#view .viz-donut-li .c-strength'); return !!b && getComputedStyle(b).backgroundColor === 'rgb(213, 81, 129)'; }), 'Analisi: legenda della ciambella con il colore della categoria (Strength = magenta)');
@@ -258,6 +276,7 @@ ok(/in total/.test(await pg.evaluate(() => document.querySelectorAll('#view .viz
 await pg.evaluate(() => { const s = document.querySelector('#view .an-sel select'); s.value = 'days'; s.dispatchEvent(new Event('change', { bubbles: true })); });
 await sleep(100);
 ok((await txt('#view')).includes('days / week'), 'Analisi: metrica giorni di allenamento');
+ok((await txt('#view')).includes('Average exercise RPE') && !(await txt('#view')).includes('feeling'), 'Analisi: RPE medio degli esercizi, niente sensazione del giorno');
 await shot('10-analisi', true);
 
 // Viaggi e progetti: sezione a sé, nella barra

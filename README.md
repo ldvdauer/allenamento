@@ -26,7 +26,7 @@ The interface is in English only. Code comments and test descriptions are still 
 - **Block**: an exercise *on that day*, with its own parameters (rounds, seconds or reps, rests, L/R, grip, reference test and %, surface, note). Nothing is shared between days.
 - **Test**: definitions with their own parameters; the latest result is the max used to compute kg.
 - **Trip** (`S.trips`, v13): name, place, approximate dates (`YYYY-MM` or `YYYY-MM-DD`), status, notes, status Idea/Confirmed/Done (old Possible and Dropped become Idea), `since` (day it was added, start of the countdown ring), projects (grade, sector, style, status, sent date, notes). Separate from training data; cleaned by `Core.cleanTrips` on load and restore.
-- **Day log** (`S.logs`): one per training day, filled exercise by exercise (`bid` = block id): minutes, sets done, missed reps, load, RPE, surface/grade, note. RPE, feeling and notes of the day are optional ("Rate the day").
+- **Day log** (`S.logs`): one per training day, filled exercise by exercise (`bid` = block id): minutes, sets done, missed reps, load, RPE, surface/grade, note. Each logged exercise can be edited or deleted later (tap the ✓ line). The day-level `rpe`, `feel`, `notes` fields of older logs are kept but no longer shown or edited.
 - The state has a version (`v`) and `migrate()` in `app.js` brings old data forward on every launch.
   Version 7 moved the interface from Italian to English: default names (standard exercises, test templates, default
   surfaces) and the SX/DX side labels are renamed (`LEGACY_NAMES`, `normSide`); anything the user typed is left alone.

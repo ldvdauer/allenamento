@@ -201,6 +201,7 @@ h2 .cnt{color:var(--mu);font-weight:400;font-size:.85em}
 .cd-p{margin-top:4px;font-size:13px;color:var(--ac);font-weight:600}
 .cd .m{color:var(--mu);font-size:20px}
 .cd-k{display:flex;align-items:center;gap:6px}.cd-dot{width:8px;height:8px;border-radius:50%;flex:none;background:var(--ac)}.cd-dot.idea{background:var(--warn)}
+.logged.tap{cursor:pointer;-webkit-tap-highlight-color:transparent}.logged .ed{color:var(--mu)}
 </style>
 </head>
 <body>
@@ -1371,7 +1372,6 @@ review|other|Attempt review|10|`.split('\n').map(line => {
   const WD_FULL = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const MONTHS_FULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-  const FEEL = [['', '—'], ['1', '1 · Wrecked'], ['2', '2 · Tired'], ['3', '3 · So-so'], ['4', '4 · Good'], ['5', '5 · Great']];
   const wdIdx = iso => (C.fromISO(iso).getDay() + 6) % 7;
   const fmtDate = iso => { const d = C.fromISO(iso); return `${d.getDate()} ${MONTHS[d.getMonth()]}`; };
   const wdOf = iso => WD[wdIdx(iso)];
@@ -1829,37 +1829,50 @@ review|other|Attempt review|10|`.split('\n').map(line => {
       onclick: e => { e.stopPropagation(); startBlock(r, b); } }, doneIds.has(b.id) ? '✓' : '▶') : null) : null;
     // Quello che è stato registrato sta sotto il suo esercizio; gli esercizi registrati e poi tolti dalla giornata restano in fondo
     const logged = new Map(l ? l.blocks.filter(x => x.bid).map(x => [x.bid, x]) : []), ids = new Set(s.blocks.map(b => b.id));
-    const list = h('div', {}, s.blocks.map((b, bi) => blockRow(b, edit ? () => blockSheet(r, bi) : null, edit, run, logged.has(b.id) ? loggedLine(logged.get(b.id)) : null)));
+    const list = h('div', {}, s.blocks.map((b, bi) => blockRow(b, edit ? () => blockSheet(r, bi) : null, edit, run, logged.has(b.id) ? loggedLine(logged.get(b.id), () => editRecord(r, b, logged.get(b.id))) : null)));
     const gone = l ? l.blocks.filter(x => !x.bid || !ids.has(x.bid)) : [];
     if (edit) enableDrag(list, s);
     return h('div', { class: 'card' },
       h('div', { class: 'row' }, h('div', { class: 'grow big', style: 'font-size:17px' }, s.title || 'Training'),
         done ? h('span', { class: 'tag ok' }, today && doneIds.size < s.blocks.length ? `${doneIds.size} of ${s.blocks.length} done` : 'Done') : null, h('span', { class: 'tag' }, C.sessionMinutes(s) + ' min')),
       list,
-      gone.length ? h('div', { class: 'logged-x' }, gone.map(x => h('div', {}, h('b', {}, x.name), loggedLine(x)))) : null,
-      l ? dayLine(l) : null,
+      gone.length ? h('div', { class: 'logged-x' }, gone.map(x => h('div', {}, h('b', {}, x.name), loggedLine(x, () => deleteRecord(l, x))))) : null,
       h('div', { class: 'btns' },
         edit ? [btn('+ Exercise', () => pickExercise(tpl => { addBlock(s, tpl); save(); render(); }), 'sm'), btn('+ Test', () => pickTest(tpl => { addBlock(s, tpl); save(); render(); }), 'sm'),
-          btn('Day…', () => daySheet(r), 'sm')] : null,
-        l ? btn('Rate the day', () => logSheet(l), 'sm') : null));
+          btn('Day…', () => daySheet(r), 'sm')] : null));
   }
-  /** Riga di ciò che è stato registrato per un esercizio: carico, RPE, serie, arrampicata, risultati dei test, nota. */
-  function loggedLine(x) {
+  /** Riga di ciò che è stato registrato per un esercizio: minuti, carico, RPE, serie, arrampicata, risultati dei test, nota.
+      Si tocca per modificare quanto registrato. */
+  function loggedLine(x, onEdit) {
     const res = (x.testIds || []).map(id => S.tests.find(t => t.id === id)).filter(Boolean).map(t => { const d = S.testDefs.find(k => k.key === t.key); return `${d ? d.name : t.key} ${dec(t.value)}`; });
-    const parts = [x.load, x.rpe ? 'RPE ' + dec(x.rpe) : '', x.sets ? `${x.sets.done}/${x.sets.of} sets` : '', x.repsMissed ? `${x.repsMissed} reps missed` : '',
+    const parts = [x.minutes ? x.minutes + ' min' : '', x.load, x.rpe ? 'RPE ' + dec(x.rpe) : '', x.sets ? `${x.sets.done}/${x.sets.of} sets` : '', x.repsMissed ? `${x.repsMissed} reps missed` : '',
       x.climb ? climbText(x.climb) : '', ...res].filter(Boolean);
     const short = (x.sets && x.sets.done < x.sets.of) || x.repsMissed;
-    if (!parts.length && !x.note) return null;
-    return h('div', { class: 'logged' + (short ? ' short' : '') }, parts.length ? h('div', {}, '✓ ' + parts.join(' · ')) : null, x.note ? h('div', { class: 'p' }, x.note) : null);
+    return h('div', { class: 'logged' + (short ? ' short' : '') + (onEdit ? ' tap' : ''), role: onEdit ? 'button' : null, 'aria-label': onEdit ? 'Edit what was logged for ' + x.name : null,
+      onclick: onEdit ? e => { e.stopPropagation(); onEdit(); } : null },
+      h('div', {}, '✓ ' + (parts.join(' · ') || 'logged'), onEdit ? h('span', { class: 'ed' }, ' ✎') : null), x.note ? h('div', { class: 'p' }, x.note) : null);
   }
-  /** RPE, sensazione e note della giornata, se dati. */
-  function dayLine(l) {
-    const p = [l.rpe ? 'RPE ' + dec(l.rpe) : '', l.feel ? `feeling ${l.feel}/5` : ''].filter(Boolean);
-    if (!p.length && !l.notes) return null;
-    return h('div', { class: 'logged-day' }, p.length ? h('div', {}, 'Day: ' + p.join(' · ')) : null, l.notes ? h('div', { class: 'p' }, l.notes) : null);
+  /** Modifica di un esercizio già registrato: stessa scheda della registrazione, precompilata. */
+  function editRecord(r, b, rec) {
+    const ex = S.exercises[b.exId];
+    if (!ex) return deleteRecord(dayLog(r), rec);
+    recordSheet(r, b, (rec.minutes || 0) * 60000, rec.sets || (ex.interval && ex.interval.rounds ? { done: ex.interval.rounds, of: ex.interval.rounds } : null), rec);
+  }
+  /** Toglie un esercizio registrato (e i risultati di test che aveva creato); la giornata senza esercizi registrati sparisce. */
+  async function deleteRecord(l, rec, ov) {
+    if (!l || !await confirmDlg(`Delete what was logged for ${rec.name}?` + ((rec.testIds || []).length ? ' Its test results are deleted too.' : ''), 'Delete')) return;
+    if (rec.testIds) S.tests = S.tests.filter(t => !rec.testIds.includes(t.id));
+    l.blocks = l.blocks.filter(x => x !== rec);
+    if (!l.blocks.length) S.logs = S.logs.filter(x => x !== l);
+    else {
+      l.minutes = l.blocks.reduce((t, x) => t + (x.minutes || 0), 0);
+      l.loads = l.blocks.filter(x => x.load).map(x => ({ name: x.name, kg: x.load }));
+      l.climbs = l.blocks.map(x => x.climb).filter(Boolean);
+    }
+    save(); if (ov) ov.remove(); render(); log('exercise', 'log deleted', { name: rec.name });
   }
   const climbText = c => surfName(c.surface) + (c.top ? ' ' + fmtG(c.top) : '') + (c.sends != null ? ` · ${c.sends} ${c.sends === 1 ? 'send' : 'sends'}` : '');
-  const logCard = l => h('div', { class: 'card tap', onclick: () => logSheet(l) },
+  const logCard = l => h('div', { class: 'card tap', onclick: async () => { if (await confirmDlg(`Delete what was logged on ${fmtDate(l.date)} (${l.title})?`, 'Delete')) { const ids = (l.blocks || []).flatMap(x => x.testIds || []); S.tests = S.tests.filter(t => !ids.includes(t.id)); S.logs = S.logs.filter(x => x !== l); save(); render(); } } },
     h('div', { class: 'row' }, h('div', { class: 'grow n', style: 'font-weight:600' }, l.title), h('span', { class: 'tag' }, (l.minutes || 0) + ' min')),
     h('div', { class: 'sub' }, `${wdOf(l.date)} ${fmtDate(l.date)}${l.rpe ? ' · RPE ' + dec(l.rpe) : ''}${l.feel ? ' · feeling ' + l.feel + '/5' : ''}`),
     (l.climbs || []).length ? h('div', { class: 'sub', style: 'color:var(--tx)' }, l.climbs.map(climbText).join('  |  ')) : null,
@@ -1936,7 +1949,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
         'aria-label': `${WD_FULL[wdIdx(iso)]} ${d.getDate()} ${MONTHS_FULL[d.getMonth()]}${refs.length ? ', training' : ''}`, 'aria-pressed': iso === calSel ? 'true' : 'false',
         onclick: () => go('calendar-' + iso) }, d.getDate(), h('span', { class: 'dots' }, dots));
     };
-    // Le registrazioni si vedono già nella giornata sopra (✓ e "Rate the day"): qui solo quelle senza giornata, es. di un programma eliminato
+    // Le registrazioni si vedono già nella giornata sopra (✓ sotto ogni esercizio): qui solo quelle senza giornata, es. di un programma eliminato
     const refs = refsOn(calSel), shown = new Set(refs.map(r => sessOf(r).id)), logs = S.logs.filter(l => l.date === calSel && !shown.has(l.sid));
     return [h('h1', {}, 'Calendar'),
       h('div', { class: 'week' }, btn('‹', () => shift(-1), 'sm'), h('div', { class: 't big', style: 'font-size:17px;text-transform:capitalize' }, `${MONTHS_FULL[first.getMonth()]} ${first.getFullYear()}`),
@@ -1945,7 +1958,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
       h('div', { class: 'cal-key sub' }, h('span', {}, h('i', {}), 'planned'), h('span', {}, h('i', { class: 'ok' }), 'done')),
       h('h2', { style: 'margin-top:18px;text-transform:capitalize' }, `${WD_FULL[wdIdx(calSel)]} ${fmtDate(calSel)}`),
       refs.length ? refs.map(r => sessionCard(r, true)) : restCard(calSel, true),
-      logs.length ? [h('h2', {}, 'Without a planned day'), h('div', { class: 'sub' }, 'Logged on this day, but its day is no longer in the calendar. Tap to rate it or delete it.'), logs.map(logCard)] : null];
+      logs.length ? [h('h2', {}, 'Without a planned day'), h('div', { class: 'sub' }, 'Logged on this day, but its day is no longer in the calendar. Tap to delete it.'), logs.map(logCard)] : null];
   }
 
   /* ---------- Programmi: insiemi di sessioni importati, visibili solo nel calendario ---------- */
@@ -2155,23 +2168,6 @@ review|other|Attempt review|10|`.split('\n').map(line => {
     for (const x of l.blocks) if (!(x.minutes > 0) && x.bid && plannedShare(planned.get(x.bid), x.sets) > 0) { x.minutes = plannedShare(planned.get(x.bid), x.sets); if (x.climb) x.climb.minutes = x.minutes; changed = true; }
     return changed;
   }
-  /** Valutazione di una giornata registrata: RPE, sensazione e note. Gli esercizi si registrano uno per uno. */
-  function logSheet(l) {
-    const legacy = !(l.blocks || []).length; // registrazioni delle versioni precedenti, fatte a mano: minuti e arrampicata modificabili
-    const min = numInp(l.minutes), rpe = numInp(l.rpe), feel = opts(FEEL, l.feel ? String(l.feel) : '');
-    const notes = h('textarea', {}); notes.value = l.notes || '';
-    const climbs = legacy ? climbEditor(l.climbs || [], () => val(min)) : null;
-    const ov = openSheet('Rate the day', [h('p', { class: 'sub' }, `${wdOf(l.date)} ${fmtDate(l.date)} · ${(l.blocks || []).length} exercises logged · ${l.minutes || 0} min`),
-      legacy ? field('Minutes', min) : null,
-      h('div', { class: 'cols' }, field('RPE of the day (1-10)', rpe), field('How you felt', feel)),
-      legacy ? [h('h2', {}, 'Climbing'), climbs.node] : null, field('Notes', notes),
-      btn('Save', () => {
-        Object.assign(l, { rpe: val(rpe), feel: feel.value ? +feel.value : null, notes: notes.value.trim() });
-        if (legacy) Object.assign(l, { minutes: Math.max(0, Math.round(val(min) || 0)), climbs: climbs.read() });
-        save(); ov.remove(); render();
-      }, 'pri block'),
-      btn('Delete what was logged this day', async () => { if (await confirmDlg('Delete the exercises logged on this day, with RPE and notes? Test results stay.', 'Delete')) { S.logs = S.logs.filter(x => x !== l); save(); ov.remove(); render(); } }, 'danger block')]);
-  }
   /* ---------- Analisi ---------- */
   const anHead = cur => [h('h1', {}, 'Analytics'), seg([['analytics', 'Charts'], ['tests', 'Tests and maxes']], cur, k => { location.hash = k; })];
   const chartCard = (title, sub, ...nodes) => h('div', { class: 'card' }, h('div', { class: 'ct' }, title), sub ? h('div', { class: 'sub' }, sub) : null, nodes);
@@ -2255,11 +2251,13 @@ review|other|Attempt review|10|`.split('\n').map(line => {
       prog.length ? prog : h('p', { class: 'sub' }, 'Add test results (Tests and maxes) or log grades on climbing exercises to see them here.')));
 
     // Costanza: giornate fatte su previste, serie completate, sforzo e sensazione medi
+    const rpes = S.logs.filter(l => l.date >= from && l.date <= t).flatMap(l => (l.blocks || []).map(x => x.rpe)).filter(v => v > 0);
+    const exRpe = rpes.length ? rpes.reduce((a, b) => a + b, 0) / rpes.length : null;
     const sets = C.setsCompletion(S.logs, from, t), row = (l, v) => h('div', { class: 'prog-r', style: 'cursor:default' }, h('div', { class: 'grow' }, l), h('div', { class: 'v' }, v));
     out.push(h('div', { class: 'card' }, h('div', { class: 'ct' }, 'Consistency'),
       row('Planned days trained', sum.due ? `${sum.dueDone} / ${sum.due}` : '—'),
       row('Sets completed', sets.of ? `${Math.round(sets.share * 100)}%` : '—'),
-      row('Average RPE · feeling', `${sum.rpe == null ? '—' : dec(sum.rpe.toFixed(1))} · ${sum.feel == null ? '—' : dec(sum.feel.toFixed(1)) + '/5'}`)));
+      row('Average exercise RPE', exRpe == null ? '—' : dec(exRpe.toFixed(1)))));
     return out;
   }
 
@@ -2350,7 +2348,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
         cloudOn() ? [btn('Restore from GitHub', cloudRestore, 'sm'), btn('Disconnect', async () => { if (await confirmDlg('Disconnect GitHub? The token is deleted from this device; backups already uploaded stay in the repository.', 'Disconnect')) { S.settings.gh = null; clearTimeout(cloudTimer); save(); render(); } }, 'sm danger')] : null));
   }
   /* ---------- Taccuino: note al volo durante la prova dell'app, con il contesto per poterle riprodurre ---------- */
-  const VERSION = '20261119.1414';
+  const VERSION = '20261120.1058';
   function noteSheet() {
     const text = h('textarea', { class: 'inp', placeholder: 'What is wrong, or what would you like to be different?' });
     const where = P ? 'timer: ' + P.steps[P.idx].name : (location.hash.slice(1) || 'home');
@@ -2710,18 +2708,20 @@ review|other|Attempt review|10|`.split('\n').map(line => {
     try { if (wl) wl.release(); } catch (e) { /* già rilasciato */ } wl = null;
     recordSheet(r, b, ms, works ? { done: completed, of: works } : null);
   }
-  function recordSheet(r, b, ms, sets) {
+  function recordSheet(r, b, ms, sets, prev) {
     const ex = S.exercises[b.exId], m = maxes(), isClimb = ex.slot === 'wall' || !!ex.surface;
-    const min = numInp(Math.round(ms / 60000)), note = h('input', { placeholder: 'Optional' });
+    const min = numInp(Math.round(ms / 60000)), note = h('input', { placeholder: 'Optional', value: prev && prev.note || '' });
     const isTest = !!(ex.load && ex.load.test), prop = proposal(ex), planned = loadHint(ex).replace('kg: maxes missing', '');
     // Carico e RPE per ogni esercizio di forza: sono lo storico da cui nasce la proposta della volta dopo.
-    const load = !isTest && (ex.load || ex.slot === 'strength') ? h('input', { value: planned || (prop ? prop.text : ''), placeholder: 'e.g. 20 kg or L 18 kg · R 20 kg' }) : null;
-    const rpe = load ? numInp(null, { placeholder: '1-10' }) : null;
+    const load = !isTest && (ex.load || ex.slot === 'strength') ? h('input', { value: prev ? prev.load || '' : planned || (prop ? prop.text : ''), placeholder: 'e.g. 20 kg or L 18 kg · R 20 kg' }) : null;
+    const rpe = load ? numInp(prev ? prev.rpe : null, { placeholder: '1-10' }) : null;
+    const prevTest = k => { const t = prev && (prev.testIds || []).map(id => S.tests.find(x => x.id === id)).find(x => x && x.key === k); return t ? t.value : null; };
     const tests = ex.load && ex.load.test ? C.refKeys(ex.load.ref).map(k => S.testDefs.find(t => t.key === k)).filter(Boolean)
-      .map(def => ({ def, inp: numInp(null, { placeholder: m[def.key] == null ? '' : 'previous: ' + dec(m[def.key]) }) })) : [];
-    const sf = isClimb ? opts(surfOpts(), ex.surface || '') : null, gr = isClimb ? opts(gradeOpts(), '') : null, sends = isClimb ? numInp(null) : null;
+      .map(def => ({ def, inp: numInp(prevTest(def.key), { placeholder: m[def.key] == null ? '' : 'previous: ' + dec(m[def.key]) }) })) : [];
+    const pc = prev && prev.climb;
+    const sf = isClimb ? opts(surfOpts(), pc ? pc.surface : ex.surface || '') : null, gr = isClimb ? opts(gradeOpts(), pc && pc.top || '') : null, sends = isClimb ? numInp(pc ? pc.sends : null) : null;
     // Serie fatte: precompilate da quelle arrivate in fondo nel timer (le saltate non contano); ripetizioni mancanti a mano.
-    const setsDone = sets ? numInp(sets.done) : null, repsMissed = ex.interval && ex.interval.selfPaced && ex.interval.reps ? numInp(null, { placeholder: '0' }) : null;
+    const setsDone = sets ? numInp(sets.done) : null, repsMissed = ex.interval && ex.interval.selfPaced && ex.interval.reps ? numInp(prev ? prev.repsMissed : null, { placeholder: '0' }) : null;
     const put = rec => {
       const l = dayLog(r, true), i = l.blocks.findIndex(x => x.bid === b.id), prev = i >= 0 ? l.blocks[i] : null;
       if (prev && prev.testIds) S.tests = S.tests.filter(t => !prev.testIds.includes(t.id)); // rifatto: il nuovo risultato sostituisce il precedente
@@ -2735,10 +2735,10 @@ review|other|Attempt review|10|`.split('\n').map(line => {
       l.loads = l.blocks.filter(x => x.load).map(x => ({ name: x.name, kg: x.load }));
       l.climbs = l.blocks.map(x => x.climb).filter(Boolean);
       save(); ov.remove(); render();
-      log('exercise', 'logged', { name: rec.name, minutes: rec.minutes || 0, measured: Math.round(ms / 1000) });
+      log('exercise', prev ? 'log edited' : 'logged', { name: rec.name, minutes: rec.minutes || 0, measured: Math.round(ms / 1000) });
     };
     const of = sets ? sets.of : 0;
-    const ov = openSheet(C.exName(ex), [h('p', { class: 'sub' }, 'Exercise complete: log how it went.'),
+    const ov = openSheet(C.exName(ex), [h('p', { class: 'sub' }, prev ? `Edit what you logged on ${fmtDate(dayOf(r))}.` : 'Exercise complete: log how it went.'),
       sets ? h('div', { class: 'cols' }, field(`Sets done (of ${of})`, setsDone), repsMissed ? field('Reps missed (total)', repsMissed) : field('Minutes', min)) : field('Minutes', min),
       sets && repsMissed ? field('Minutes', min) : null,
       tests.length ? [tests.map(x => field(`Result: ${x.def.name} (${x.def.unit})`, x.inp)), h('p', { class: 'sub' }, 'On save, the result immediately updates the max in the Tests section.')] : null,
@@ -2756,8 +2756,8 @@ review|other|Attempt review|10|`.split('\n').map(line => {
           tests: tests.map(x => ({ key: x.def.key, value: val(x.inp) })).filter(x => x.value != null),
           climb: isClimb && sf.value ? { name: C.exName(ex), surface: sf.value, top: gr.value || null, sends: val(sends) == null ? null : Math.max(0, Math.round(val(sends))), minutes: Math.max(0, Math.round(val(min) || 0)) } : null });
       }, 'pri block'),
-      btn('Done, without logging', () => put({ name: C.exName(ex), minutes: Math.round(ms / 60000), sec: exSection(ex), key: exKey(ex), label: exLabel(ex) }), 'block'),
-      btn('Not done', () => ov.remove(), 'block')]);
+      prev ? btn('Delete this log', () => deleteRecord(dayLog(r), prev, ov), 'danger block') : btn('Done, without logging', () => put({ name: C.exName(ex), minutes: Math.round(ms / 60000), sec: exSection(ex), key: exKey(ex), label: exLabel(ex) }), 'block'),
+      btn(prev ? 'Cancel' : 'Not done', () => ov.remove(), 'block')]);
   }
   function wirePlayer() {
     $('p-done').onclick = () => { const st = P.steps[P.idx]; if (st.kind === 'work' && st.selfPaced) { P.completed++; if (P.idx + 1 < P.steps.length) SOUND.setEnd(); } next(); };

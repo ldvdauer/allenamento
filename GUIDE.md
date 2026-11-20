@@ -9,7 +9,7 @@
 ## Every day
 - **Home** shows today's training, or "Rest day" with **+ Exercise** to train anyway. You log exercises, not sessions: an exercise done without the app's timer is logged from its sheet with **Log without timer** (also on past days).
 - Every exercise of today has its **▶**: it starts that exercise's timer. When it ends you log how it went (sets done, missed reps, minutes, load, RPE, surface and grade, note) and you are back on the day; done exercises show ✓ (tap it to redo).
-- There is nothing to start or finish: you can add, remove and reorder exercises at any time, also halfway through. **Rate the day** (optional) adds overall RPE, feeling and notes.
+- There is nothing to start or finish: you can add, remove and reorder exercises at any time, also halfway through. What you logged appears under the exercise with a ✓: tap it to edit it (minutes, sets, load, RPE, grade, test result, note) or to delete it, also on past days.
 - Timer sounds: short beeps in the last 3 seconds, a long tone at the end of each set, two long tones at the end of the exercise. On iPhone they play even with the silent switch on (iOS 17 or later); the volume still counts.
 - In exercises with reps the timer shows how many to do ("6 reps") instead of the time. Skipped sets are counted for you in "Sets done".
 - If you leave halfway, Home offers "Resume".
@@ -58,7 +58,7 @@ your first logged day, and the change against the previous period appears only o
 - **Bars**: time per day (week, month) or per week (3 months, year) split by category; with *Training days*, days
   per week against the planned ones.
 - **Progress**: latest value of each test and its change in the period, top grade per surface. Tap a row for the trend.
-- **Consistency**: planned days trained, sets completed, average RPE and feeling.
+- **Consistency**: planned days trained, sets completed, average exercise RPE.
 Tap a chart to see the values; the table is underneath. Tests are managed in *Tests and maxes*.
 
 ## During the trial
