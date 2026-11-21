@@ -316,7 +316,7 @@ flash|powerEndurance|Flash set|60|r:18/0/120+3/300
 volume|powerEndurance|Volume|40|
 four-by-four|powerEndurance|4x4|25|r:16/1/30+4/240
 circuit|endurance|Endurance circuits|30|
-outdoor-routes|endurance|Outdoor routes|180|
+outdoor-routes|endurance|Lead climbing|120|
 technique|technique|Technique: isolated move|8|r:6/1/60=L~R
 hips|mobility|Hip mobility|10|
 shoulders|mobility|Shoulder mobility|8|
@@ -358,7 +358,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
     [/pallof/i, 'pallof'], [/push.?up|\bdip/i, 'pushup'], [/plank/i, 'plank'], [/front lever/i, 'front-lever'], [/mobilit.* anche|hip mobility/i, 'hips'], [/mobilit.* spall|shoulder mobility/i, 'shoulders'], [/butterfly|farfalla/i, 'butterfly'], [/side.?split|spaccata laterale|straddle/i, 'side-split'], [/\bfrog\b|\brana\b/i, 'frog'], [/(biceps|bicipit).*(stretch|allungament)|(stretch|allungament).*(biceps|bicipit)/i, 'biceps-stretch'], [/mobilit|stretch/i, 'stretch'],
     [/board|benchmark/i, 'board'], [/volume/i, 'volume'], [/4 ?x ?4/i, 'four-by-four'], [/circuit/i, 'circuit']];
   /* Nomi italiani delle versioni precedenti → nome attuale: servono per aggiornare i dati salvati e per riconoscere i programmi scritti in italiano. */
-  const LEGACY_NAMES = {"Peso corporeo": "Body weight", "Pinch block SX": "Pinch block L", "Pinch block DX": "Pinch block R", "Max lift SX": "Max lift L", "Max lift DX": "Max lift R", "Trazione zavorrata": "Weighted pull-up", "Indoor (palestra)": "Indoor (gym)", "Outdoor (roccia)": "Outdoor (rock)", "Riscaldamento generale": "General warm-up", "Riscaldamento sul muro": "Wall warm-up", "Attivazione dita": "Finger activation", "Attivazione spalle con elastico": "Shoulder activation with band", "Tacca minima": "Minimum edge", "Sospensione a un braccio": "One-arm hang", "Sospensione su sloper": "Sloper hang", "Sospensioni lunghe": "Long hangs", "Flessione polso": "Wrist curl", "Estensori delle dita": "Finger extensors", "Trazioni zavorrate": "Weighted pull-ups", "Trazioni": "Pull-ups", "Trazione a un braccio (progressione)": "One-arm pull-up (progression)", "Bloccaggi": "Lock-offs", "Rematore": "Rows", "Push-up o dip": "Push-ups or dips", "Press sopra la testa": "Overhead press", "Extrarotazioni": "External rotations", "Croci (compressione)": "Flys (compression)", "Croci isometriche": "Isometric flys", "Stacco": "Deadlift", "Squat o pistol": "Squat or pistol", "Leg raise alla sbarra": "Hanging leg raise", "Front lever (progressione)": "Front lever (progression)", "Progetto": "Project", "Set al flash": "Flash set", "Tecnica: movimento isolato": "Technique: isolated move", "Circuiti di resistenza": "Endurance circuits", "Roccia": "Rock", "Sessione di attivazione": "Activation session", "Mobilità anche": "Hip mobility", "Mobilità spalle": "Shoulder mobility", "Stretching generale": "General stretching", "Defaticamento": "Cool-down", "Visualizzazione del progetto": "Project visualisation", "Analisi dei tentativi": "Attempt review"};
+  const LEGACY_NAMES = {"Peso corporeo": "Body weight", "Pinch block SX": "Pinch block L", "Pinch block DX": "Pinch block R", "Max lift SX": "Max lift L", "Max lift DX": "Max lift R", "Trazione zavorrata": "Weighted pull-up", "Indoor (palestra)": "Indoor (gym)", "Outdoor (roccia)": "Outdoor (rock)", "Riscaldamento generale": "General warm-up", "Riscaldamento sul muro": "Wall warm-up", "Attivazione dita": "Finger activation", "Attivazione spalle con elastico": "Shoulder activation with band", "Tacca minima": "Minimum edge", "Sospensione a un braccio": "One-arm hang", "Sospensione su sloper": "Sloper hang", "Sospensioni lunghe": "Long hangs", "Flessione polso": "Wrist curl", "Estensori delle dita": "Finger extensors", "Trazioni zavorrate": "Weighted pull-ups", "Trazioni": "Pull-ups", "Trazione a un braccio (progressione)": "One-arm pull-up (progression)", "Bloccaggi": "Lock-offs", "Rematore": "Rows", "Push-up o dip": "Push-ups or dips", "Press sopra la testa": "Overhead press", "Extrarotazioni": "External rotations", "Croci (compressione)": "Flys (compression)", "Croci isometriche": "Isometric flys", "Stacco": "Deadlift", "Squat o pistol": "Squat or pistol", "Leg raise alla sbarra": "Hanging leg raise", "Front lever (progressione)": "Front lever (progression)", "Progetto": "Project", "Set al flash": "Flash set", "Tecnica: movimento isolato": "Technique: isolated move", "Circuiti di resistenza": "Endurance circuits", "Roccia": "Rock", "Sessione di attivazione": "Activation session", "Mobilità anche": "Hip mobility", "Mobilità spalle": "Shoulder mobility", "Stretching generale": "General stretching", "Defaticamento": "Cool-down", "Visualizzazione del progetto": "Project visualisation", "Analisi dei tentativi": "Attempt review", "Outdoor routes": "Lead climbing"};
   const EXACT = Object.fromEntries(LIBRARY.map(x => [x.name.toLowerCase(), x.key]));
   for (const [old, now] of Object.entries(LEGACY_NAMES)) if (EXACT[now.toLowerCase()]) EXACT[old.toLowerCase()] = EXACT[now.toLowerCase()];
   /** Prima il nome esatto di un esercizio standard (anche nella vecchia versione italiana), poi le regole. */
@@ -379,12 +379,18 @@ review|other|Attempt review|10|`.split('\n').map(line => {
   // Scala dei gradi boulder. I dati salvano l'etichetta Font; `fmtGrade` è l'unico punto in cui si sceglie la scala mostrata.
   const GRADES = ['4', '4+', '5', '5+', '6A', '6A+', '6B', '6B+', '6C', '6C+', '7A', '7A+', '7B', '7B+', '7C', '7C+', '8A', '8A+', '8B', '8B+', '8C', '8C+', '9A'];
   const GRADE_SCALES = { font: 'Font' };
-  const gradeIdx = g => (g == null ? -1 : GRADES.indexOf(g));
+  // Scala francese per le vie (lead): sempre minuscola, quindi non si confonde con le etichette Font dei blocchi.
+  const ROUTE_GRADES = ['4a', '4b', '4c', '5a', '5b', '5c', '6a', '6a+', '6b', '6b+', '6c', '6c+', '7a', '7a+', '7b', '7b+', '7c', '7c+', '8a', '8a+', '8b', '8b+', '8c', '8c+', '9a', '9a+', '9b', '9b+', '9c'];
+  /** Posizione del grado nella sua scala (Font per i blocchi, francese per le vie): si confronta solo dentro la stessa superficie. */
+  const gradeIdx = g => (g == null ? -1 : GRADES.includes(g) ? GRADES.indexOf(g) : ROUTE_GRADES.indexOf(g));
+  /** Scala di una superficie: le superfici "route" (lead) usano la francese. */
+  const gradeList = route => (route ? ROUTE_GRADES : GRADES);
   const fmtGrade = (g, scale) => (g == null ? '' : scale && scale !== 'font' ? g : g); // altre scale: da aggiungere qui
   // Superfici di arrampicata predefinite; l'utente può aggiungerne altre.
   const DEFAULT_SURFACES = [
     { key: 'moonboard', name: 'MoonBoard' }, { key: 'kilter', name: 'Kilter Board' }, { key: 'tension', name: 'Tension Board' },
     { key: 'gym', name: 'Indoor (gym)' }, { key: 'outdoor', name: 'Outdoor (rock)' },
+    { key: 'lead-gym', name: 'Lead (gym)', kind: 'route' }, { key: 'lead-rock', name: 'Lead (rock)', kind: 'route' },
   ];
   /** Superficie deducibile dal nome dell'esercizio (solo i casi ovvi), altrimenti stringa vuota. */
   function inferSurface(name) {
@@ -930,13 +936,14 @@ review|other|Attempt review|10|`.split('\n').map(line => {
       const seen = new Set();
       for (const c of l.climbs || []) {
         if (!c.surface) continue;
-        const o = m.get(c.surface) || { surface: c.surface, minutes: 0, sessions: 0, sends: 0, top: -1 };
-        o.minutes += c.minutes || 0; o.sends += c.sends || 0; o.top = Math.max(o.top, gradeIdx(c.top));
+        const o = m.get(c.surface) || { surface: c.surface, minutes: 0, sessions: 0, sends: 0, top: -1, topG: null };
+        o.minutes += c.minutes || 0; o.sends += c.sends || 0;
+        if (gradeIdx(c.top) > o.top) { o.top = gradeIdx(c.top); o.topG = c.top; }
         if (!seen.has(c.surface)) { seen.add(c.surface); o.sessions++; }
         m.set(c.surface, o);
       }
     }
-    return [...m.values()].map(o => ({ ...o, top: o.top >= 0 ? GRADES[o.top] : null })).sort((a, b) => b.minutes - a.minutes || a.surface.localeCompare(b.surface));
+    return [...m.values()].map(({ topG, ...o }) => ({ ...o, top: topG })).sort((a, b) => b.minutes - a.minutes || a.surface.localeCompare(b.surface));
   }
   /** Grado massimo chiuso per settimana: { weeks, series: { superficie: [indice nella scala | null] } }. */
   /** Minuti per categoria giorno per giorno (per i periodi brevi), come weeklyGroups ma senza raggruppare. */
@@ -1031,7 +1038,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
         status: has(TRIP_STATUS, t.status) ? t.status : OLD_TRIP_STATUS[t.status] || 'idea', notes: clip(notes, 4000),
         since: validISO(t.since) || now, // da quando il viaggio esiste (o almeno da quando l'app lo conosce): inizio dell'anello del countdown
         projects: (Array.isArray(t.projects) ? t.projects : []).filter(p => p && typeof p === 'object').map(p => ({
-          id: typeof p.id === 'string' && p.id ? p.id : uid(), name: clip(p.name, 80) || 'Project', grade: GRADES.includes(p.grade) ? p.grade : '',
+          id: typeof p.id === 'string' && p.id ? p.id : uid(), name: clip(p.name, 80) || 'Project', grade: GRADES.includes(p.grade) || ROUTE_GRADES.includes(p.grade) ? p.grade : '',
           sector: clip(p.sector, 80), style: has(STYLES, p.style) ? p.style : 'boulder', status: has(PROJECT_STATUS, p.status) ? p.status : 'todo',
           sentOn: p.status === 'sent' ? validISO(p.sentOn) || '' : '', notes: clip(p.notes, 2000),
         })),
@@ -1088,7 +1095,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
 
   return {
     CLIMBING, LEGACY_SECTION, slotOf, blockSection, timeBySection, weeklyGroups, describe, leftoverNote, splitCues, fmtRest, PAIRS, refKeys, LEGACY_NAMES, normSide, firstOffset, firstSessionDate, startForFirst, recordsOf, lastRecord, nextLoad, TEST_TEMPLATES, testLabel, SECTIONS, LIBRARY, STD, stdVariant, matchStd, exName, GRIPS, gripKey, gripText,
-    DAY_TYPES, PERIODS, SLOTS, GRADES, GRADE_SCALES, gradeIdx, fmtGrade, DEFAULT_SURFACES, inferSurface, validISO, uid, toISO, fromISO, todayISO, addDays, diffDays, mondayOf,
+    DAY_TYPES, PERIODS, SLOTS, GRADES, ROUTE_GRADES, gradeList, GRADE_SCALES, gradeIdx, fmtGrade, DEFAULT_SURFACES, inferSurface, validISO, uid, toISO, fromISO, todayISO, addDays, diffDays, mondayOf,
     inferLoad, loadKey, loadKg, latestMaxes, fmtKg, cycle, cueAt, intervalMinutes, buildSteps, normInterval,
     importYaml, exportYaml, parseDuration, parseWeeks, fmtWeeks, testExercise, YAML_REFS, locate, dateOf, sessionMinutes, cloneSession, validState,
     niceRange, scheduled, weeklyStats, summary, parseLoads, loadSeries, surfaceStats, weeklyTopGrades, dailyGroups, setsCompletion, testProgress, gradeProgress,
@@ -1380,7 +1387,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
 
   /* ---------- Stato e persistenza ---------- */
   // Primo avvio: nessun piano precaricato, ogni utente importa o crea i propri.
-  const fresh = () => migrate({ v: 14, plans: [], activePlan: null, exercises: {}, logs: [], tests: [] });
+  const fresh = () => migrate({ v: 15, plans: [], activePlan: null, exercises: {}, logs: [], tests: [] });
   /** I test da cui dipendono i kg degli esercizi (e il peso corporeo) devono esistere nella sezione Test. */
   function ensureTests(s) {
     const need = new Set(['bw'].concat(Object.values(s.exercises).filter(e => e.load).flatMap(e => C.refKeys(e.load.ref))));
@@ -1516,7 +1523,12 @@ review|other|Attempt review|10|`.split('\n').map(line => {
       for (const x of s.extras || []) for (const b of x.blocks) planned.set(b.id, b.minutes);
       for (const l of s.logs) if ((l.blocks || []).length && fillMinutes(l, planned)) l.minutes = l.blocks.reduce((t, x) => t + (x.minutes || 0), 0);
     }
-    s.v = 14;
+    // v15: superfici per la lead (scala francese); "Outdoor routes" diventa "Lead climbing" (nome dalla libreria)
+    if (fromV < 15) for (const d of C.DEFAULT_SURFACES.filter(x => x.kind)) {
+      const x = s.surfaces.find(y => y.key === d.key);
+      if (!x) s.surfaces.push({ ...d }); else if (d.kind) x.kind = d.kind;
+    }
+    s.v = 15;
     return s;
   }
   let rescued = false;
@@ -1617,11 +1629,24 @@ review|other|Attempt review|10|`.split('\n').map(line => {
   const surfName = k => (S.surfaces.find(x => x.key === k) || { name: k }).name;
   const surfOpts = () => [['', '—']].concat(S.surfaces.map(x => [x.key, x.name]));
   const fmtG = g => C.fmtGrade(g, S.settings.gradeScale);
-  const gradeOpts = () => [['', '—']].concat(C.GRADES.map(g => [g, fmtG(g)]));
+  /** Superficie di vie (lead): gradi in scala francese. */
+  const isRoute = k => !!(S.surfaces.find(x => x.key === k) || {}).kind;
+  const gradeOpts = route => [['', '—']].concat(C.gradeList(route).map(g => [g, fmtG(g)]));
+  /** Il select del grado segue la superficie scelta: scala francese per la lead, Font per i blocchi. Restituisce l'etichetta dei "sent". */
+  function linkGrade(sf, gr, sentField) {
+    const sync = () => {
+      const route = isRoute(sf.value), keep = gr.value;
+      gr.replaceChildren(...gradeOpts(route).map(([v, t]) => h('option', { value: v }, t)));
+      gr.value = C.gradeList(route).includes(keep) ? keep : '';
+      if (sentField) sentField.firstChild.textContent = route ? 'Routes sent' : 'Problems sent';
+    };
+    sf.addEventListener('change', sync); sync();
+  }
   function addSurface(name) {
     const hit = S.surfaces.find(x => x.name.toLowerCase() === name.toLowerCase());
     if (hit) return hit.key;
     const x = { key: 's-' + C.uid().slice(0, 8), name };
+    if (/\blead\b|\broutes?\b|\bvie\b|falesia|sport climb/i.test(name)) x.kind = 'route'; // vie: scala francese
     S.surfaces.push(x);
     return x.key;
   }
@@ -1871,7 +1896,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
     }
     save(); if (ov) ov.remove(); render(); log('exercise', 'log deleted', { name: rec.name });
   }
-  const climbText = c => surfName(c.surface) + (c.top ? ' ' + fmtG(c.top) : '') + (c.sends != null ? ` · ${c.sends} ${c.sends === 1 ? 'send' : 'sends'}` : '');
+  const climbText = c => surfName(c.surface) + (c.top ? ' ' + fmtG(c.top) : '') + (c.sends != null ? ` · ${c.sends} ${isRoute(c.surface) ? (c.sends === 1 ? 'route' : 'routes') : c.sends === 1 ? 'send' : 'sends'}` : '');
   const logCard = l => h('div', { class: 'card tap', onclick: async () => { if (await confirmDlg(`Delete what was logged on ${fmtDate(l.date)} (${l.title})?`, 'Delete')) { const ids = (l.blocks || []).flatMap(x => x.testIds || []); S.tests = S.tests.filter(t => !ids.includes(t.id)); S.logs = S.logs.filter(x => x !== l); save(); render(); } } },
     h('div', { class: 'row' }, h('div', { class: 'grow n', style: 'font-weight:600' }, l.title), h('span', { class: 'tag' }, (l.minutes || 0) + ' min')),
     h('div', { class: 'sub' }, `${wdOf(l.date)} ${fmtDate(l.date)}${l.rpe ? ' · RPE ' + dec(l.rpe) : ''}${l.feel ? ' · feeling ' + l.feel + '/5' : ''}`),
@@ -2146,10 +2171,11 @@ review|other|Attempt review|10|`.split('\n').map(line => {
   function climbEditor(rows, defaultMinutes) {
     const box = h('div', {}), items = [];
     const add = c => {
-      const sf = opts(surfOpts(), c.surface || ''), gr = opts(gradeOpts(), c.top || ''), sends = numInp(c.sends), min = numInp(c.minutes);
+      const sf = opts(surfOpts(), c.surface || ''), gr = opts(gradeOpts(isRoute(c.surface)), c.top || ''), sends = numInp(c.sends), min = numInp(c.minutes), sentF = field('Problems sent', sends);
+      linkGrade(sf, gr, sentF);
       items.push({ c, sf, gr, sends, min });
       box.append(h('div', { class: 'climb' }, c.name ? h('div', { class: 'n' }, c.name) : null,
-        h('div', { class: 'cols' }, field('Surface', sf), field('Top grade sent', gr)), h('div', { class: 'cols' }, field('Problems sent', sends), field('Minutes', min))));
+        h('div', { class: 'cols' }, field('Surface', sf), field('Top grade sent', gr)), h('div', { class: 'cols' }, sentF, field('Minutes', min))));
     };
     rows.forEach(add);
     return { node: h('div', {}, box, btn('+ Surface', () => add({ minutes: items.length ? null : defaultMinutes() }), 'sm')),
@@ -2239,13 +2265,14 @@ review|other|Attempt review|10|`.split('\n').map(line => {
     }
     const grades = C.gradeProgress(S.logs, from, t, prevFrom);
     for (const g of grades) {
+      const route = isRoute(g.surface), list = C.gradeList(route); // ogni superficie nella sua scala: lead in francese, separata dal boulder
       const chFrom = C.addDays(t, -7 * 11), tg = C.weeklyTopGrades(S.logs, P > 77 ? from : chFrom, t), vals = tg.series[g.surface] || [];
-      const all = vals.filter(v => v != null), lo = Math.max(0, Math.min(...all, g.top ?? 99) - 1), hi = Math.min(C.GRADES.length - 1, Math.max(...all, g.top ?? 0) + 1), step = Math.max(1, Math.ceil((hi - lo) / 4));
-      const domain = { min: lo, max: lo + step * Math.ceil((hi - lo) / step), step }, fmtGr = v => (C.GRADES[Math.round(v)] ? fmtG(C.GRADES[Math.round(v)]) : '');
+      const all = vals.filter(v => v != null), lo = Math.max(0, Math.min(...all, g.top ?? 99) - 1), hi = Math.min(list.length - 1, Math.max(...all, g.top ?? 0) + 1), step = Math.max(1, Math.ceil((hi - lo) / 4));
+      const domain = { min: lo, max: lo + step * Math.ceil((hi - lo) / step), step }, fmtGr = v => (list[Math.round(v)] ? fmtG(list[Math.round(v)]) : '');
       prog.push(h('div', { class: 'prog-r', onclick: () => all.length ? openSheet(surfName(g.surface), [h('p', { class: 'sub' }, 'Top grade sent each week.'),
         Charts.line({ labels: tg.weeks.map(fmtDate), values: vals, name: 'Top grade', domain, fmt: fmtGr, aria: `Top grade sent per week on ${surfName(g.surface)}` })]) : null },
-        h('div', { class: 'grow' }, h('div', { class: 'n' }, catBar('strength'), surfName(g.surface)), h('div', { class: 'sub' }, 'Top grade sent')),
-        h('div', {}, h('div', { class: 'v' }, g.top == null ? '—' : fmtG(C.GRADES[g.top])), g.top != null && g.prev != null ? deltaTag(g.top - g.prev, n => n + (n === 1 ? ' grade' : ' grades')) : null)));
+        h('div', { class: 'grow' }, h('div', { class: 'n' }, catBar(route ? 'endurance' : 'strength'), surfName(g.surface)), h('div', { class: 'sub' }, route ? 'Top route grade (lead)' : 'Top grade sent')),
+        h('div', {}, h('div', { class: 'v' }, g.top == null ? '—' : fmtG(list[g.top])), g.top != null && g.prev != null ? deltaTag(g.top - g.prev, n => n + (n === 1 ? ' grade' : ' grades')) : null)));
     }
     out.push(h('div', { class: 'card' }, h('div', { class: 'ct' }, 'Progress'), h('div', { class: 'sub' }, `Latest value and change since ${fmtDate(from)}. Tap for the trend.`),
       prog.length ? prog : h('p', { class: 'sub' }, 'Add test results (Tests and maxes) or log grades on climbing exercises to see them here.')));
@@ -2348,7 +2375,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
         cloudOn() ? [btn('Restore from GitHub', cloudRestore, 'sm'), btn('Disconnect', async () => { if (await confirmDlg('Disconnect GitHub? The token is deleted from this device; backups already uploaded stay in the repository.', 'Disconnect')) { S.settings.gh = null; clearTimeout(cloudTimer); save(); render(); } }, 'sm danger')] : null));
   }
   /* ---------- Taccuino: note al volo durante la prova dell'app, con il contesto per poterle riprodurre ---------- */
-  const VERSION = '20261121.2002';
+  const VERSION = '20261121.2008';
   function noteSheet() {
     const text = h('textarea', { class: 'inp', placeholder: 'What is wrong, or what would you like to be different?' });
     const where = P ? 'timer: ' + P.steps[P.idx].name : (location.hash.slice(1) || 'home');
@@ -2457,7 +2484,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
   const TRIP_ST = Object.fromEntries(C.TRIP_STATUS);
   const tripById = id => S.trips.find(t => t.id === id);
   // Le vie usano la stessa scala, scritta in minuscolo come nella scala francese (7a+); i blocchi restano Font (7A+).
-  const prjGrade = p => (p.grade ? (p.style === 'route' ? fmtG(p.grade).toLowerCase() : fmtG(p.grade)) : '');
+  const prjGrade = p => (p.grade ? (p.style === 'route' ? (C.ROUTE_GRADES.includes(p.grade) ? p.grade : fmtG(p.grade).toLowerCase()) : fmtG(p.grade)) : '');
   /** "Mar 2027", "Mar – Apr 2027", "14 – 28 Mar 2027", "28 Feb – 3 Mar 2027"; senza date: "No dates yet". */
   function fmtTrip(t) {
     const part = v => { const [y, m, d] = v.split('-').map(Number); return { y, m: MONTHS[m - 1], d }; };
@@ -2541,7 +2568,9 @@ review|other|Attempt review|10|`.split('\n').map(line => {
   }
   function projectSheet(t, p) {
     const name = h('input', { class: 'inp', value: p ? p.name : '', placeholder: 'e.g. Karma' });
-    const grade = opts(gradeOpts(), p ? p.grade : ''), style = opts(C.STYLES, p ? p.style : 'boulder');
+    const grade = opts(gradeOpts(p && p.style === 'route'), p ? p.grade : ''), style = opts(C.STYLES, p ? p.style : 'boulder');
+    // Le vie in scala francese, i blocchi in Font
+    style.addEventListener('change', () => { const route = style.value === 'route', keep = grade.value; grade.replaceChildren(...gradeOpts(route).map(([v, t]) => h('option', { value: v }, t))); grade.value = C.gradeList(route).includes(keep) ? keep : ''; });
     const sector = h('input', { class: 'inp', value: p ? p.sector : '', placeholder: 'e.g. Franchard Cuisinière' });
     const st = opts(C.PROJECT_STATUS, p ? p.status : 'todo');
     const sent = h('input', { class: 'inp', type: 'date', value: p && p.sentOn ? p.sentOn : '' }), sentF = field('Sent on', sent);
@@ -2721,7 +2750,9 @@ review|other|Attempt review|10|`.split('\n').map(line => {
     const tests = ex.load && ex.load.test ? C.refKeys(ex.load.ref).map(k => S.testDefs.find(t => t.key === k)).filter(Boolean)
       .map(def => ({ def, inp: numInp(prevTest(def.key), { placeholder: m[def.key] == null ? '' : 'previous: ' + dec(m[def.key]) }) })) : [];
     const pc = prev && prev.climb;
-    const sf = isClimb ? opts(surfOpts(), pc ? pc.surface : ex.surface || '') : null, gr = isClimb ? opts(gradeOpts(), pc && pc.top || '') : null, sends = isClimb ? numInp(pc ? pc.sends : null) : null;
+    const sf = isClimb ? opts(surfOpts(), pc ? pc.surface : ex.surface || '') : null, gr = isClimb ? opts(gradeOpts(isRoute(sf.value)), pc && pc.top || '') : null, sends = isClimb ? numInp(pc ? pc.sends : null) : null;
+    const sentF = isClimb ? field('Problems sent', sends) : null;
+    if (isClimb) linkGrade(sf, gr, sentF);
     // Serie fatte: precompilate da quelle arrivate in fondo nel timer (le saltate non contano); ripetizioni mancanti a mano.
     const setsDone = sets ? numInp(sets.done) : null, repsMissed = ex.interval && ex.interval.selfPaced && ex.interval.reps ? numInp(prev ? prev.repsMissed : null, { placeholder: '0' }) : null;
     const put = rec => {
@@ -2746,7 +2777,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
       tests.length ? [tests.map(x => field(`Result: ${x.def.name} (${x.def.unit})`, x.inp)), h('p', { class: 'sub' }, 'On save, the result immediately updates the max in the Tests section.')] : null,
       load ? h('div', { class: 'cols' }, field('Load used', load), field('Exercise RPE', rpe)) : null,
       load && prop && planned ? h('p', { class: 'sub' }, `Suggested: ${prop.text} (${prop.why}).`) : null,
-      isClimb ? [h('div', { class: 'cols' }, field('Surface', sf), field('Top grade sent', gr)), field('Problems sent', sends)] : null,
+      isClimb ? [h('div', { class: 'cols' }, field('Surface', sf), field('Top grade sent', gr)), sentF] : null,
       field('Note', note),
       btn('Save', () => {
         const sd = setsDone ? Math.round(val(setsDone)) : null;

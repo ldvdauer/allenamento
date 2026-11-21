@@ -76,7 +76,7 @@ flash|powerEndurance|Flash set|60|r:18/0/120+3/300
 volume|powerEndurance|Volume|40|
 four-by-four|powerEndurance|4x4|25|r:16/1/30+4/240
 circuit|endurance|Endurance circuits|30|
-outdoor-routes|endurance|Outdoor routes|180|
+outdoor-routes|endurance|Lead climbing|120|
 technique|technique|Technique: isolated move|8|r:6/1/60=L~R
 hips|mobility|Hip mobility|10|
 shoulders|mobility|Shoulder mobility|8|
@@ -118,7 +118,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
     [/pallof/i, 'pallof'], [/push.?up|\bdip/i, 'pushup'], [/plank/i, 'plank'], [/front lever/i, 'front-lever'], [/mobilit.* anche|hip mobility/i, 'hips'], [/mobilit.* spall|shoulder mobility/i, 'shoulders'], [/butterfly|farfalla/i, 'butterfly'], [/side.?split|spaccata laterale|straddle/i, 'side-split'], [/\bfrog\b|\brana\b/i, 'frog'], [/(biceps|bicipit).*(stretch|allungament)|(stretch|allungament).*(biceps|bicipit)/i, 'biceps-stretch'], [/mobilit|stretch/i, 'stretch'],
     [/board|benchmark/i, 'board'], [/volume/i, 'volume'], [/4 ?x ?4/i, 'four-by-four'], [/circuit/i, 'circuit']];
   /* Nomi italiani delle versioni precedenti → nome attuale: servono per aggiornare i dati salvati e per riconoscere i programmi scritti in italiano. */
-  const LEGACY_NAMES = {"Peso corporeo": "Body weight", "Pinch block SX": "Pinch block L", "Pinch block DX": "Pinch block R", "Max lift SX": "Max lift L", "Max lift DX": "Max lift R", "Trazione zavorrata": "Weighted pull-up", "Indoor (palestra)": "Indoor (gym)", "Outdoor (roccia)": "Outdoor (rock)", "Riscaldamento generale": "General warm-up", "Riscaldamento sul muro": "Wall warm-up", "Attivazione dita": "Finger activation", "Attivazione spalle con elastico": "Shoulder activation with band", "Tacca minima": "Minimum edge", "Sospensione a un braccio": "One-arm hang", "Sospensione su sloper": "Sloper hang", "Sospensioni lunghe": "Long hangs", "Flessione polso": "Wrist curl", "Estensori delle dita": "Finger extensors", "Trazioni zavorrate": "Weighted pull-ups", "Trazioni": "Pull-ups", "Trazione a un braccio (progressione)": "One-arm pull-up (progression)", "Bloccaggi": "Lock-offs", "Rematore": "Rows", "Push-up o dip": "Push-ups or dips", "Press sopra la testa": "Overhead press", "Extrarotazioni": "External rotations", "Croci (compressione)": "Flys (compression)", "Croci isometriche": "Isometric flys", "Stacco": "Deadlift", "Squat o pistol": "Squat or pistol", "Leg raise alla sbarra": "Hanging leg raise", "Front lever (progressione)": "Front lever (progression)", "Progetto": "Project", "Set al flash": "Flash set", "Tecnica: movimento isolato": "Technique: isolated move", "Circuiti di resistenza": "Endurance circuits", "Roccia": "Rock", "Sessione di attivazione": "Activation session", "Mobilità anche": "Hip mobility", "Mobilità spalle": "Shoulder mobility", "Stretching generale": "General stretching", "Defaticamento": "Cool-down", "Visualizzazione del progetto": "Project visualisation", "Analisi dei tentativi": "Attempt review"};
+  const LEGACY_NAMES = {"Peso corporeo": "Body weight", "Pinch block SX": "Pinch block L", "Pinch block DX": "Pinch block R", "Max lift SX": "Max lift L", "Max lift DX": "Max lift R", "Trazione zavorrata": "Weighted pull-up", "Indoor (palestra)": "Indoor (gym)", "Outdoor (roccia)": "Outdoor (rock)", "Riscaldamento generale": "General warm-up", "Riscaldamento sul muro": "Wall warm-up", "Attivazione dita": "Finger activation", "Attivazione spalle con elastico": "Shoulder activation with band", "Tacca minima": "Minimum edge", "Sospensione a un braccio": "One-arm hang", "Sospensione su sloper": "Sloper hang", "Sospensioni lunghe": "Long hangs", "Flessione polso": "Wrist curl", "Estensori delle dita": "Finger extensors", "Trazioni zavorrate": "Weighted pull-ups", "Trazioni": "Pull-ups", "Trazione a un braccio (progressione)": "One-arm pull-up (progression)", "Bloccaggi": "Lock-offs", "Rematore": "Rows", "Push-up o dip": "Push-ups or dips", "Press sopra la testa": "Overhead press", "Extrarotazioni": "External rotations", "Croci (compressione)": "Flys (compression)", "Croci isometriche": "Isometric flys", "Stacco": "Deadlift", "Squat o pistol": "Squat or pistol", "Leg raise alla sbarra": "Hanging leg raise", "Front lever (progressione)": "Front lever (progression)", "Progetto": "Project", "Set al flash": "Flash set", "Tecnica: movimento isolato": "Technique: isolated move", "Circuiti di resistenza": "Endurance circuits", "Roccia": "Rock", "Sessione di attivazione": "Activation session", "Mobilità anche": "Hip mobility", "Mobilità spalle": "Shoulder mobility", "Stretching generale": "General stretching", "Defaticamento": "Cool-down", "Visualizzazione del progetto": "Project visualisation", "Analisi dei tentativi": "Attempt review", "Outdoor routes": "Lead climbing"};
   const EXACT = Object.fromEntries(LIBRARY.map(x => [x.name.toLowerCase(), x.key]));
   for (const [old, now] of Object.entries(LEGACY_NAMES)) if (EXACT[now.toLowerCase()]) EXACT[old.toLowerCase()] = EXACT[now.toLowerCase()];
   /** Prima il nome esatto di un esercizio standard (anche nella vecchia versione italiana), poi le regole. */
@@ -139,12 +139,18 @@ review|other|Attempt review|10|`.split('\n').map(line => {
   // Scala dei gradi boulder. I dati salvano l'etichetta Font; `fmtGrade` è l'unico punto in cui si sceglie la scala mostrata.
   const GRADES = ['4', '4+', '5', '5+', '6A', '6A+', '6B', '6B+', '6C', '6C+', '7A', '7A+', '7B', '7B+', '7C', '7C+', '8A', '8A+', '8B', '8B+', '8C', '8C+', '9A'];
   const GRADE_SCALES = { font: 'Font' };
-  const gradeIdx = g => (g == null ? -1 : GRADES.indexOf(g));
+  // Scala francese per le vie (lead): sempre minuscola, quindi non si confonde con le etichette Font dei blocchi.
+  const ROUTE_GRADES = ['4a', '4b', '4c', '5a', '5b', '5c', '6a', '6a+', '6b', '6b+', '6c', '6c+', '7a', '7a+', '7b', '7b+', '7c', '7c+', '8a', '8a+', '8b', '8b+', '8c', '8c+', '9a', '9a+', '9b', '9b+', '9c'];
+  /** Posizione del grado nella sua scala (Font per i blocchi, francese per le vie): si confronta solo dentro la stessa superficie. */
+  const gradeIdx = g => (g == null ? -1 : GRADES.includes(g) ? GRADES.indexOf(g) : ROUTE_GRADES.indexOf(g));
+  /** Scala di una superficie: le superfici "route" (lead) usano la francese. */
+  const gradeList = route => (route ? ROUTE_GRADES : GRADES);
   const fmtGrade = (g, scale) => (g == null ? '' : scale && scale !== 'font' ? g : g); // altre scale: da aggiungere qui
   // Superfici di arrampicata predefinite; l'utente può aggiungerne altre.
   const DEFAULT_SURFACES = [
     { key: 'moonboard', name: 'MoonBoard' }, { key: 'kilter', name: 'Kilter Board' }, { key: 'tension', name: 'Tension Board' },
     { key: 'gym', name: 'Indoor (gym)' }, { key: 'outdoor', name: 'Outdoor (rock)' },
+    { key: 'lead-gym', name: 'Lead (gym)', kind: 'route' }, { key: 'lead-rock', name: 'Lead (rock)', kind: 'route' },
   ];
   /** Superficie deducibile dal nome dell'esercizio (solo i casi ovvi), altrimenti stringa vuota. */
   function inferSurface(name) {
@@ -690,13 +696,14 @@ review|other|Attempt review|10|`.split('\n').map(line => {
       const seen = new Set();
       for (const c of l.climbs || []) {
         if (!c.surface) continue;
-        const o = m.get(c.surface) || { surface: c.surface, minutes: 0, sessions: 0, sends: 0, top: -1 };
-        o.minutes += c.minutes || 0; o.sends += c.sends || 0; o.top = Math.max(o.top, gradeIdx(c.top));
+        const o = m.get(c.surface) || { surface: c.surface, minutes: 0, sessions: 0, sends: 0, top: -1, topG: null };
+        o.minutes += c.minutes || 0; o.sends += c.sends || 0;
+        if (gradeIdx(c.top) > o.top) { o.top = gradeIdx(c.top); o.topG = c.top; }
         if (!seen.has(c.surface)) { seen.add(c.surface); o.sessions++; }
         m.set(c.surface, o);
       }
     }
-    return [...m.values()].map(o => ({ ...o, top: o.top >= 0 ? GRADES[o.top] : null })).sort((a, b) => b.minutes - a.minutes || a.surface.localeCompare(b.surface));
+    return [...m.values()].map(({ topG, ...o }) => ({ ...o, top: topG })).sort((a, b) => b.minutes - a.minutes || a.surface.localeCompare(b.surface));
   }
   /** Grado massimo chiuso per settimana: { weeks, series: { superficie: [indice nella scala | null] } }. */
   /** Minuti per categoria giorno per giorno (per i periodi brevi), come weeklyGroups ma senza raggruppare. */
@@ -791,7 +798,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
         status: has(TRIP_STATUS, t.status) ? t.status : OLD_TRIP_STATUS[t.status] || 'idea', notes: clip(notes, 4000),
         since: validISO(t.since) || now, // da quando il viaggio esiste (o almeno da quando l'app lo conosce): inizio dell'anello del countdown
         projects: (Array.isArray(t.projects) ? t.projects : []).filter(p => p && typeof p === 'object').map(p => ({
-          id: typeof p.id === 'string' && p.id ? p.id : uid(), name: clip(p.name, 80) || 'Project', grade: GRADES.includes(p.grade) ? p.grade : '',
+          id: typeof p.id === 'string' && p.id ? p.id : uid(), name: clip(p.name, 80) || 'Project', grade: GRADES.includes(p.grade) || ROUTE_GRADES.includes(p.grade) ? p.grade : '',
           sector: clip(p.sector, 80), style: has(STYLES, p.style) ? p.style : 'boulder', status: has(PROJECT_STATUS, p.status) ? p.status : 'todo',
           sentOn: p.status === 'sent' ? validISO(p.sentOn) || '' : '', notes: clip(p.notes, 2000),
         })),
@@ -848,7 +855,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
 
   return {
     CLIMBING, LEGACY_SECTION, slotOf, blockSection, timeBySection, weeklyGroups, describe, leftoverNote, splitCues, fmtRest, PAIRS, refKeys, LEGACY_NAMES, normSide, firstOffset, firstSessionDate, startForFirst, recordsOf, lastRecord, nextLoad, TEST_TEMPLATES, testLabel, SECTIONS, LIBRARY, STD, stdVariant, matchStd, exName, GRIPS, gripKey, gripText,
-    DAY_TYPES, PERIODS, SLOTS, GRADES, GRADE_SCALES, gradeIdx, fmtGrade, DEFAULT_SURFACES, inferSurface, validISO, uid, toISO, fromISO, todayISO, addDays, diffDays, mondayOf,
+    DAY_TYPES, PERIODS, SLOTS, GRADES, ROUTE_GRADES, gradeList, GRADE_SCALES, gradeIdx, fmtGrade, DEFAULT_SURFACES, inferSurface, validISO, uid, toISO, fromISO, todayISO, addDays, diffDays, mondayOf,
     inferLoad, loadKey, loadKg, latestMaxes, fmtKg, cycle, cueAt, intervalMinutes, buildSteps, normInterval,
     importYaml, exportYaml, parseDuration, parseWeeks, fmtWeeks, testExercise, YAML_REFS, locate, dateOf, sessionMinutes, cloneSession, validState,
     niceRange, scheduled, weeklyStats, summary, parseLoads, loadSeries, surfaceStats, weeklyTopGrades, dailyGroups, setsCompletion, testProgress, gradeProgress,

@@ -37,17 +37,20 @@ Every exercise has a category, shown as a coloured bar next to its name; the sam
 | Fingers | Everything on the hangboard and lifts (block, pinch), whatever the goal |
 | Strength | Hard climbing: limit, project, board, campus, outdoor bouldering |
 | Power endurance | 4x4, flash sets, volume |
-| Endurance | Circuits, outdoor routes |
+| Endurance | Circuits, lead climbing |
 | Technique | Isolated moves |
 | Conditioning | Everything that is not climbing: pull-ups, core, shoulders, antagonists, legs, wrists |
 | Mobility | Stretching and mobility |
 | Other | Mental work, activation sessions, your exercises without a category |
 
+## Lead climbing
+Log lead on the **Lead climbing** exercise (or any climbing exercise) with the surface **Lead (gym)** or **Lead (rock)**: the grade switches to the French scale (4a–9c) and you log the routes sent. A surface you add whose name contains *lead*, *route* or *falesia* uses the French scale too.
+
 ## Trips
 Climbing trips and the projects you want to do there. It is a separate section: it plans nothing and does not touch days, programmes, tests or charts.
 - **+ Trip**: name, place, status (Idea, Confirmed, Done), notes and dates. Dates can be exact days, just a month, or none yet.
 - The list shows confirmed trips coming up first, with the days left; then ideas; then the archive (Done, and confirmed trips already over).
-- **Projects**: boulders and routes with grade (Font; routes are written in lower case, e.g. 7a+), sector, style, status and notes for beta and conditions. Tap the circle to mark a project as sent (today's date), tap again to reopen it. Tap the row to edit it.
+- **Projects**: boulders and routes with grade (Font for boulders, French scale for routes, e.g. 7a+), sector, style, status and notes for beta and conditions. Tap the circle to mark a project as sent (today's date), tap again to reopen it. Tap the row to edit it.
 - **Countdown**: Home shows the nearest trip with dates, Idea or Confirmed (one only), below today's training, with a yellow (Idea) or green (Confirmed) dot. The number is the days to go ("~" when only the month is set; "Day 3 of 14" during the trip); the ring fills up from the day you added the trip to the departure. Tap it to open the trip.
 - Trips are in the backup with everything else; a backup made before this section restores with no trips.
 
@@ -57,7 +60,7 @@ your first logged day, and the change against the previous period appears only o
 - **Donut**: time by category, with the share of climbing in the middle.
 - **Bars**: time per day (week, month) or per week (3 months, year) split by category; with *Training days*, days
   per week against the planned ones.
-- **Progress**: latest value of each test and its change in the period, top grade per surface. Tap a row for the trend.
+- **Progress**: latest value of each test and its change in the period, top grade per surface. Lead surfaces show the top route grade in the French scale, separate from bouldering. Tap a row for the trend.
 - **Consistency**: planned days trained, sets completed, average exercise RPE.
 Tap a chart to see the values; the table is underneath. Tests are managed in *Tests and maxes*.
 
@@ -135,7 +138,7 @@ days:
 - Durations: `7s`, `45s`, `3min`, `1min30s` (also `3'` and `1'30"`).
 - `load`: a percentage of one of your tests: `open-hand`, `half-crimp`, `sloper`, `pinch`, `lift`, `wrist`, `pull-up`, `one-arm`. The kg are calculated from the latest result. `test:` uses the same names.
 - `grip`, `edge`, `hands` (Fingers exercises only): Half crimp, Full crimp, Open hand, Open hand 3 fingers, Half crimp 3 fingers, 2 fingers front/middle/back, Sloper, Pinch; edge depth in mm; 1 or 2 hands.
-- `surface`: one of your surfaces (More → Climbing surfaces), by key or by name.
+- `surface`: one of your surfaces (More → Climbing surfaces), by key or by name. `lead-gym` and `lead-rock` are for routes (French grades).
 - If something is wrong the programme is not imported, and the app lists every problem with the day and exercise it refers to.
 
 Blok Sessions files (`.blokplan`) are no longer supported.

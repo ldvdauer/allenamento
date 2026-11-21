@@ -14,7 +14,7 @@
 
   /* ---------- Stato e persistenza ---------- */
   // Primo avvio: nessun piano precaricato, ogni utente importa o crea i propri.
-  const fresh = () => migrate({ v: 14, plans: [], activePlan: null, exercises: {}, logs: [], tests: [] });
+  const fresh = () => migrate({ v: 15, plans: [], activePlan: null, exercises: {}, logs: [], tests: [] });
   /** I test da cui dipendono i kg degli esercizi (e il peso corporeo) devono esistere nella sezione Test. */
   function ensureTests(s) {
     const need = new Set(['bw'].concat(Object.values(s.exercises).filter(e => e.load).flatMap(e => C.refKeys(e.load.ref))));
@@ -150,7 +150,12 @@
       for (const x of s.extras || []) for (const b of x.blocks) planned.set(b.id, b.minutes);
       for (const l of s.logs) if ((l.blocks || []).length && fillMinutes(l, planned)) l.minutes = l.blocks.reduce((t, x) => t + (x.minutes || 0), 0);
     }
-    s.v = 14;
+    // v15: superfici per la lead (scala francese); "Outdoor routes" diventa "Lead climbing" (nome dalla libreria)
+    if (fromV < 15) for (const d of C.DEFAULT_SURFACES.filter(x => x.kind)) {
+      const x = s.surfaces.find(y => y.key === d.key);
+      if (!x) s.surfaces.push({ ...d }); else if (d.kind) x.kind = d.kind;
+    }
+    s.v = 15;
     return s;
   }
   let rescued = false;
@@ -251,11 +256,24 @@
   const surfName = k => (S.surfaces.find(x => x.key === k) || { name: k }).name;
   const surfOpts = () => [['', '—']].concat(S.surfaces.map(x => [x.key, x.name]));
   const fmtG = g => C.fmtGrade(g, S.settings.gradeScale);
-  const gradeOpts = () => [['', '—']].concat(C.GRADES.map(g => [g, fmtG(g)]));
+  /** Superficie di vie (lead): gradi in scala francese. */
+  const isRoute = k => !!(S.surfaces.find(x => x.key === k) || {}).kind;
+  const gradeOpts = route => [['', '—']].concat(C.gradeList(route).map(g => [g, fmtG(g)]));
+  /** Il select del grado segue la superficie scelta: scala francese per la lead, Font per i blocchi. Restituisce l'etichetta dei "sent". */
+  function linkGrade(sf, gr, sentField) {
+    const sync = () => {
+      const route = isRoute(sf.value), keep = gr.value;
+      gr.replaceChildren(...gradeOpts(route).map(([v, t]) => h('option', { value: v }, t)));
+      gr.value = C.gradeList(route).includes(keep) ? keep : '';
+      if (sentField) sentField.firstChild.textContent = route ? 'Routes sent' : 'Problems sent';
+    };
+    sf.addEventListener('change', sync); sync();
+  }
   function addSurface(name) {
     const hit = S.surfaces.find(x => x.name.toLowerCase() === name.toLowerCase());
     if (hit) return hit.key;
     const x = { key: 's-' + C.uid().slice(0, 8), name };
+    if (/\blead\b|\broutes?\b|\bvie\b|falesia|sport climb/i.test(name)) x.kind = 'route'; // vie: scala francese
     S.surfaces.push(x);
     return x.key;
   }
@@ -505,7 +523,7 @@
     }
     save(); if (ov) ov.remove(); render(); log('exercise', 'log deleted', { name: rec.name });
   }
-  const climbText = c => surfName(c.surface) + (c.top ? ' ' + fmtG(c.top) : '') + (c.sends != null ? ` · ${c.sends} ${c.sends === 1 ? 'send' : 'sends'}` : '');
+  const climbText = c => surfName(c.surface) + (c.top ? ' ' + fmtG(c.top) : '') + (c.sends != null ? ` · ${c.sends} ${isRoute(c.surface) ? (c.sends === 1 ? 'route' : 'routes') : c.sends === 1 ? 'send' : 'sends'}` : '');
   const logCard = l => h('div', { class: 'card tap', onclick: async () => { if (await confirmDlg(`Delete what was logged on ${fmtDate(l.date)} (${l.title})?`, 'Delete')) { const ids = (l.blocks || []).flatMap(x => x.testIds || []); S.tests = S.tests.filter(t => !ids.includes(t.id)); S.logs = S.logs.filter(x => x !== l); save(); render(); } } },
     h('div', { class: 'row' }, h('div', { class: 'grow n', style: 'font-weight:600' }, l.title), h('span', { class: 'tag' }, (l.minutes || 0) + ' min')),
     h('div', { class: 'sub' }, `${wdOf(l.date)} ${fmtDate(l.date)}${l.rpe ? ' · RPE ' + dec(l.rpe) : ''}${l.feel ? ' · feeling ' + l.feel + '/5' : ''}`),
@@ -780,10 +798,11 @@
   function climbEditor(rows, defaultMinutes) {
     const box = h('div', {}), items = [];
     const add = c => {
-      const sf = opts(surfOpts(), c.surface || ''), gr = opts(gradeOpts(), c.top || ''), sends = numInp(c.sends), min = numInp(c.minutes);
+      const sf = opts(surfOpts(), c.surface || ''), gr = opts(gradeOpts(isRoute(c.surface)), c.top || ''), sends = numInp(c.sends), min = numInp(c.minutes), sentF = field('Problems sent', sends);
+      linkGrade(sf, gr, sentF);
       items.push({ c, sf, gr, sends, min });
       box.append(h('div', { class: 'climb' }, c.name ? h('div', { class: 'n' }, c.name) : null,
-        h('div', { class: 'cols' }, field('Surface', sf), field('Top grade sent', gr)), h('div', { class: 'cols' }, field('Problems sent', sends), field('Minutes', min))));
+        h('div', { class: 'cols' }, field('Surface', sf), field('Top grade sent', gr)), h('div', { class: 'cols' }, sentF, field('Minutes', min))));
     };
     rows.forEach(add);
     return { node: h('div', {}, box, btn('+ Surface', () => add({ minutes: items.length ? null : defaultMinutes() }), 'sm')),
@@ -873,13 +892,14 @@
     }
     const grades = C.gradeProgress(S.logs, from, t, prevFrom);
     for (const g of grades) {
+      const route = isRoute(g.surface), list = C.gradeList(route); // ogni superficie nella sua scala: lead in francese, separata dal boulder
       const chFrom = C.addDays(t, -7 * 11), tg = C.weeklyTopGrades(S.logs, P > 77 ? from : chFrom, t), vals = tg.series[g.surface] || [];
-      const all = vals.filter(v => v != null), lo = Math.max(0, Math.min(...all, g.top ?? 99) - 1), hi = Math.min(C.GRADES.length - 1, Math.max(...all, g.top ?? 0) + 1), step = Math.max(1, Math.ceil((hi - lo) / 4));
-      const domain = { min: lo, max: lo + step * Math.ceil((hi - lo) / step), step }, fmtGr = v => (C.GRADES[Math.round(v)] ? fmtG(C.GRADES[Math.round(v)]) : '');
+      const all = vals.filter(v => v != null), lo = Math.max(0, Math.min(...all, g.top ?? 99) - 1), hi = Math.min(list.length - 1, Math.max(...all, g.top ?? 0) + 1), step = Math.max(1, Math.ceil((hi - lo) / 4));
+      const domain = { min: lo, max: lo + step * Math.ceil((hi - lo) / step), step }, fmtGr = v => (list[Math.round(v)] ? fmtG(list[Math.round(v)]) : '');
       prog.push(h('div', { class: 'prog-r', onclick: () => all.length ? openSheet(surfName(g.surface), [h('p', { class: 'sub' }, 'Top grade sent each week.'),
         Charts.line({ labels: tg.weeks.map(fmtDate), values: vals, name: 'Top grade', domain, fmt: fmtGr, aria: `Top grade sent per week on ${surfName(g.surface)}` })]) : null },
-        h('div', { class: 'grow' }, h('div', { class: 'n' }, catBar('strength'), surfName(g.surface)), h('div', { class: 'sub' }, 'Top grade sent')),
-        h('div', {}, h('div', { class: 'v' }, g.top == null ? '—' : fmtG(C.GRADES[g.top])), g.top != null && g.prev != null ? deltaTag(g.top - g.prev, n => n + (n === 1 ? ' grade' : ' grades')) : null)));
+        h('div', { class: 'grow' }, h('div', { class: 'n' }, catBar(route ? 'endurance' : 'strength'), surfName(g.surface)), h('div', { class: 'sub' }, route ? 'Top route grade (lead)' : 'Top grade sent')),
+        h('div', {}, h('div', { class: 'v' }, g.top == null ? '—' : fmtG(list[g.top])), g.top != null && g.prev != null ? deltaTag(g.top - g.prev, n => n + (n === 1 ? ' grade' : ' grades')) : null)));
     }
     out.push(h('div', { class: 'card' }, h('div', { class: 'ct' }, 'Progress'), h('div', { class: 'sub' }, `Latest value and change since ${fmtDate(from)}. Tap for the trend.`),
       prog.length ? prog : h('p', { class: 'sub' }, 'Add test results (Tests and maxes) or log grades on climbing exercises to see them here.')));
@@ -1091,7 +1111,7 @@
   const TRIP_ST = Object.fromEntries(C.TRIP_STATUS);
   const tripById = id => S.trips.find(t => t.id === id);
   // Le vie usano la stessa scala, scritta in minuscolo come nella scala francese (7a+); i blocchi restano Font (7A+).
-  const prjGrade = p => (p.grade ? (p.style === 'route' ? fmtG(p.grade).toLowerCase() : fmtG(p.grade)) : '');
+  const prjGrade = p => (p.grade ? (p.style === 'route' ? (C.ROUTE_GRADES.includes(p.grade) ? p.grade : fmtG(p.grade).toLowerCase()) : fmtG(p.grade)) : '');
   /** "Mar 2027", "Mar – Apr 2027", "14 – 28 Mar 2027", "28 Feb – 3 Mar 2027"; senza date: "No dates yet". */
   function fmtTrip(t) {
     const part = v => { const [y, m, d] = v.split('-').map(Number); return { y, m: MONTHS[m - 1], d }; };
@@ -1175,7 +1195,9 @@
   }
   function projectSheet(t, p) {
     const name = h('input', { class: 'inp', value: p ? p.name : '', placeholder: 'e.g. Karma' });
-    const grade = opts(gradeOpts(), p ? p.grade : ''), style = opts(C.STYLES, p ? p.style : 'boulder');
+    const grade = opts(gradeOpts(p && p.style === 'route'), p ? p.grade : ''), style = opts(C.STYLES, p ? p.style : 'boulder');
+    // Le vie in scala francese, i blocchi in Font
+    style.addEventListener('change', () => { const route = style.value === 'route', keep = grade.value; grade.replaceChildren(...gradeOpts(route).map(([v, t]) => h('option', { value: v }, t))); grade.value = C.gradeList(route).includes(keep) ? keep : ''; });
     const sector = h('input', { class: 'inp', value: p ? p.sector : '', placeholder: 'e.g. Franchard Cuisinière' });
     const st = opts(C.PROJECT_STATUS, p ? p.status : 'todo');
     const sent = h('input', { class: 'inp', type: 'date', value: p && p.sentOn ? p.sentOn : '' }), sentF = field('Sent on', sent);
@@ -1355,7 +1377,9 @@
     const tests = ex.load && ex.load.test ? C.refKeys(ex.load.ref).map(k => S.testDefs.find(t => t.key === k)).filter(Boolean)
       .map(def => ({ def, inp: numInp(prevTest(def.key), { placeholder: m[def.key] == null ? '' : 'previous: ' + dec(m[def.key]) }) })) : [];
     const pc = prev && prev.climb;
-    const sf = isClimb ? opts(surfOpts(), pc ? pc.surface : ex.surface || '') : null, gr = isClimb ? opts(gradeOpts(), pc && pc.top || '') : null, sends = isClimb ? numInp(pc ? pc.sends : null) : null;
+    const sf = isClimb ? opts(surfOpts(), pc ? pc.surface : ex.surface || '') : null, gr = isClimb ? opts(gradeOpts(isRoute(sf.value)), pc && pc.top || '') : null, sends = isClimb ? numInp(pc ? pc.sends : null) : null;
+    const sentF = isClimb ? field('Problems sent', sends) : null;
+    if (isClimb) linkGrade(sf, gr, sentF);
     // Serie fatte: precompilate da quelle arrivate in fondo nel timer (le saltate non contano); ripetizioni mancanti a mano.
     const setsDone = sets ? numInp(sets.done) : null, repsMissed = ex.interval && ex.interval.selfPaced && ex.interval.reps ? numInp(prev ? prev.repsMissed : null, { placeholder: '0' }) : null;
     const put = rec => {
@@ -1380,7 +1404,7 @@
       tests.length ? [tests.map(x => field(`Result: ${x.def.name} (${x.def.unit})`, x.inp)), h('p', { class: 'sub' }, 'On save, the result immediately updates the max in the Tests section.')] : null,
       load ? h('div', { class: 'cols' }, field('Load used', load), field('Exercise RPE', rpe)) : null,
       load && prop && planned ? h('p', { class: 'sub' }, `Suggested: ${prop.text} (${prop.why}).`) : null,
-      isClimb ? [h('div', { class: 'cols' }, field('Surface', sf), field('Top grade sent', gr)), field('Problems sent', sends)] : null,
+      isClimb ? [h('div', { class: 'cols' }, field('Surface', sf), field('Top grade sent', gr)), sentF] : null,
       field('Note', note),
       btn('Save', () => {
         const sd = setsDone ? Math.round(val(setsDone)) : null;

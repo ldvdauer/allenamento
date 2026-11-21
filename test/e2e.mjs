@@ -149,6 +149,12 @@ await logRow('Limit bouldering'); await sleep(80);
 const ed = await pg.evaluate(() => ({ t: document.querySelector('.sheet').innerText, sf: document.querySelector('.sheet .cols label:nth-child(1) select').value, gr: document.querySelector('.sheet .cols label:nth-child(2) select').value,
   note: document.querySelector('.sheet label:last-of-type input').value, min: document.querySelector('.sheet label input').value }));
 ok(ed.t.includes('Edit what you logged on 25 Nov') && ed.sf === 'moonboard' && ed.gr === '7A+' && ed.note === 'buone sensazioni' && ed.min === '6' && ed.t.includes('Delete this log') && !ed.t.includes('Done, without logging'), 'modifica: scheda precompilata con quanto registrato');
+// Lead: scegliendo una superficie di vie il grado passa alla scala francese e "Problems sent" diventa "Routes sent"
+await pg.select('.sheet .cols label:nth-child(1) select', 'lead-gym');
+const lead = await pg.evaluate(() => { const g = document.querySelector('.sheet .cols label:nth-child(2) select'); return { o: [...g.options].map(o => o.value).join(','), v: g.value, t: document.querySelector('.sheet').innerText }; });
+ok(lead.o.startsWith(',4a,4b,4c,5a') && lead.o.includes('7a+') && !lead.o.includes('7A') && lead.v === '' && lead.t.includes('Routes sent') && !lead.t.includes('Problems sent'), 'lead: scala francese e "Routes sent" sulla superficie Lead (gym)');
+await pg.select('.sheet .cols label:nth-child(1) select', 'moonboard');
+ok(await pg.$eval('.sheet .cols label:nth-child(2) select', g => [...g.options].some(o => o.value === '7B')) && (await txt('.sheet')).includes('Problems sent'), 'tornando al MoonBoard: scala Font');
 await pg.evaluate(() => { const i = document.querySelector('.sheet label:last-of-type input'); i.value = 'Prova automatica'; });
 await pg.select('.sheet .cols label:nth-child(2) select', '7B');
 const nLogs = await pg.evaluate(() => __app.state.logs.length);
@@ -295,14 +301,14 @@ await shot('15-trip-sheet');
 await clickText('Save', '.sheet'); await sleep(150);
 let tv = await txt('#view');
 ok(/^#trip-/.test(await pg.evaluate(() => location.hash)) && tv.includes('Fontainebleau spring') && tv.includes('14 – 28 Mar 2027') && tv.includes('in 109 days') && tv.includes('Confirmed'), 'nuovo viaggio: dettaglio con date e giorni alla partenza');
-for (const [name, grade, style] of [['Karma', '8A+', 'boulder'], ['Rainbow', '7A', 'route']]) {
+for (const [name, grade, style] of [['Karma', '8A+', 'boulder'], ['Rainbow', '7a', 'route']]) {
   await clickText('+ Project', '#view');
-  await sheetSet('input.inp', 0, name); await sheetSet('select', 0, grade); await sheetSet('select', 1, style); await sheetSet('input.inp', 1, 'Franchard');
+  await sheetSet('input.inp', 0, name); await sheetSet('select', 1, style); await sheetSet('select', 0, grade); await sheetSet('input.inp', 1, 'Franchard');
   await clickText('Save', '.sheet'); await sleep(100);
 }
 tv = await txt('#view');
 if (process.env.DBG) console.log(JSON.stringify(tv));
-ok(tv.includes('Karma8A+') && tv.includes('Rainbow7a') && tv.includes('0/2 sent'), 'progetti: grado Font per i blocchi, minuscolo per le vie');
+ok(tv.includes('Karma8A+') && tv.includes('Rainbow7a') && tv.includes('0/2 sent'), 'progetti: grado Font per i blocchi, scala francese per le vie');
 await pg.click('#view .pdot'); await sleep(80);
 ok((await pg.$eval('#toast', e => e.innerText)).includes('Karma sent! 1/2') && await pg.$eval('#view .pdot', e => e.classList.contains('pop')), 'un tocco sul cerchio: progetto chiuso, animazione e messaggio');
 await sleep(500);
@@ -332,7 +338,7 @@ await pg.$eval('#view .cd', e => e.click()); await sleep(100);
 ok(/^#trip-/.test(await pg.evaluate(() => location.hash)), 'tocco sul countdown: apre il viaggio');
 await go('trips');
 await pg.reload(); await sleep(400);
-ok(await pg.evaluate(() => __app.state.trips.length === 1 && __app.state.trips[0].projects.length === 2 && __app.state.v === 14), 'viaggi salvati sul dispositivo dopo il riavvio');
+ok(await pg.evaluate(() => __app.state.trips.length === 1 && __app.state.trips[0].projects.length === 2 && __app.state.v === 15), 'viaggi salvati sul dispositivo dopo il riavvio');
 // v14: esercizi registrati con 0 minuti (Analytics a 0) prendono i minuti previsti dalla giornata
 const zero = await pg.evaluate(() => { const st = JSON.parse(localStorage.getItem('allenamento.v1')), l = st.logs.find(x => x.date === '2026-11-25');
   const planned = new Map(); for (const p of st.plans) for (const w of p.weeks) for (const d of w) for (const x of d.sessions) for (const b of x.blocks) planned.set(b.id, b.minutes);
@@ -393,7 +399,7 @@ await pg.evaluate(() => { __app.state.settings.gh = null; });
 
 // Persistenza e migrazione di un backup v2 con due sessioni nello stesso giorno
 await pg.reload();
-ok(await pg.evaluate(() => __app.state.logs.length === 2 && __app.state.extras.length === 1 && __app.state.v === 14), 'i dati sopravvivono al ricaricamento');
+ok(await pg.evaluate(() => __app.state.logs.length === 2 && __app.state.extras.length === 1 && __app.state.v === 15), 'i dati sopravvivono al ricaricamento');
 const mig = await pg.evaluate(async () => {
   const mk = (id, ex) => ({ id, type: 'wall', period: 'base', blocks: [{ id: id + 'b', exId: ex, minutes: 5 }] });
   const old = { v: 2, plans: [{ id: 'p', title: 'Vecchio', startDate: '2026-11-23', weeks: [[{ sessions: [mk('s1', 'e1'), mk('s2', 'e2')] }, ...Array.from({ length: 6 }, () => ({ sessions: [] }))]] }],
@@ -450,7 +456,7 @@ await pg.evaluate(() => {
 });
 await sleep(500);
 const m7 = await pg.evaluate(() => { const s = __app.state; return { v: s.v, trips: s.trips.length, e1: s.exercises.e1.name, cues: s.exercises.e2.interval.cues.join(), e3: s.exercises.e3.name, defs: s.testDefs.map(d => d.name).join('|'), surf: s.surfaces.map(x => x.name).join('|'), sides: s.logs[0].blocks[0].kgs.map(k => k.side).join(), title: s.extras[0].title, note: s.extras[0].blocks[0].note, mins: s.extras[0].blocks.map(b => b.minutes).join(), nx: s.extras.length, lb: s.logs[0].blocks[1].name + '|' + s.logs[0].loads[0].name, nb: s.extras[0].blocks.length, e4: !!s.exercises.e4, secs: s.logs[0].blocks.map(b => b.sec).join(), e3s: s.exercises.e3.section }; });
-ok(m7.v === 14 && m7.trips === 0 && m7.e1 === 'Wrist curl' && m7.cues === 'L,R' && m7.defs === 'Body weight|Pinch block L|Pinch block R' && m7.surf === 'Indoor (gym)|Pannello di casa' && m7.sides === 'L,R', 'dati v6 in italiano: nomi predefiniti, superfici e lati SX/DX passano all\'inglese');
+ok(m7.v === 15 && m7.trips === 0 && m7.e1 === 'Wrist curl' && m7.cues === 'L,R' && m7.defs === 'Body weight|Pinch block L|Pinch block R' && m7.surf === 'Indoor (gym)|Pannello di casa|Lead (gym)|Lead (rock)' && m7.sides === 'L,R', 'dati v6 in italiano: nomi predefiniti, superfici e lati SX/DX passano all\'inglese');
 ok(m7.lb === 'Wrist curl|Wrist curl', 'migrazione v10: le registrazioni passate prendono il nome della libreria');
 ok(m7.nb === 3 && !m7.e4, 'migrazione v11: il riscaldamento esce dalle giornate e dai dati');
 ok(m7.secs === 'fingers,conditioning,strength' && m7.e3s === 'conditioning', 'migrazione v11: registrazioni ed esercizi personali nelle nuove categorie');

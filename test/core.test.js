@@ -567,3 +567,18 @@ test('countdown: anello che si riempie da quando il viaggio è confermato, giorn
   assert.equal(C.tripCountdown(mk('2026-10-01', '2026-10-05', ''), '2026-11-25'), null, 'viaggio finito');
   assert.equal(C.tripCountdown(C.cleanTrips([{ status: 'idea' }])[0], '2026-11-25'), null, 'senza date');
 });
+
+test('lead: scala francese separata dal boulder, per superficie', () => {
+  assert.equal(C.gradeIdx('7a'), C.ROUTE_GRADES.indexOf('7a')); assert.equal(C.gradeIdx('7A'), C.GRADES.indexOf('7A'));
+  assert.equal(C.gradeIdx('7a+') > C.gradeIdx('6c+'), true); assert.equal(C.gradeIdx('boh'), -1);
+  assert.deepEqual(C.gradeList(true), C.ROUTE_GRADES); assert.deepEqual(C.gradeList(false), C.GRADES);
+  assert.ok(C.DEFAULT_SURFACES.some(s => s.key === 'lead-gym' && s.kind === 'route') && C.DEFAULT_SURFACES.some(s => s.key === 'lead-rock' && s.kind === 'route'));
+  const logs = [{ date: '2026-11-20', climbs: [{ surface: 'lead-gym', top: '6c+', sends: 4 }, { surface: 'moonboard', top: '7A' }] },
+    { date: '2026-11-22', climbs: [{ surface: 'lead-gym', top: '7a', sends: 2 }, { surface: 'lead-gym', top: '6b' }] }];
+  const st = Object.fromEntries(C.surfaceStats(logs, '2026-11-01', '2026-11-30').map(x => [x.surface, x]));
+  assert.equal(st['lead-gym'].top, '7a', 'grado massimo in lead in scala francese'); assert.equal(st.moonboard.top, '7A');
+  const g = Object.fromEntries(C.gradeProgress(logs, '2026-11-21', '2026-11-30', '2026-11-14').map(x => [x.surface, x]));
+  assert.equal(C.ROUTE_GRADES[g['lead-gym'].top], '7a'); assert.equal(C.ROUTE_GRADES[g['lead-gym'].prev], '6c+');
+  assert.equal(C.STD['outdoor-routes'].name, 'Lead climbing'); assert.equal(C.matchStd('Outdoor routes'), 'outdoor-routes', 'vecchio nome riconosciuto');
+  assert.equal(C.cleanTrips([{ projects: [{ style: 'route', grade: '7b+' }] }])[0].projects[0].grade, '7b+', 'progetti di via in scala francese');
+});
