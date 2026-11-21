@@ -129,7 +129,8 @@ await pg.type('.sheet input', 'limit'); await sleep(80); await clickText('Limit 
 ok((await pg.$$('#view .blk')).length === nBlocks + 1, 'esercizio aggiunto a metà allenamento');
 await pg.evaluate(() => { const r = [...document.querySelectorAll('#view .blk')]; r[r.length - 1].querySelector('.play').click(); }); await sleep(60);
 ok((await txt('#p-name')) === 'Limit bouldering' && (await txt('#p-clock')) === '40:00', 'il nuovo esercizio parte con il suo timer (durata di base)');
-await adv(6 * 60000); await pg.click('#p-quit');
+ok(await pg.$eval('#p-quit', e => e.hidden) && (await txt('#p-done')) === 'Done', 'esercizio a durata: solo Done, niente End exercise doppione');
+await adv(6 * 60000); await pg.click('#p-done');
 await pg.select('.sheet .cols label:nth-child(1) select', 'moonboard');
 await pg.select('.sheet .cols label:nth-child(2) select', '7A+');
 await pg.type('.sheet .cols + label input', '3');
@@ -216,6 +217,7 @@ ok((await txt('.sheet')).includes('Half-crimp') && (await txt('.sheet')).include
 await clickText('Half-crimp', '.sheet', true);
 ok((await txt('#view')).includes('Test: Half-crimp'), 'test aggiunto alla sessione come esercizio');
 await play('Test: Half-crimp'); await sleep(60);
+ok(!await pg.$eval('#p-quit', e => e.hidden) && (await txt('#p-done')) === 'Skip', 'durante un timer: End exercise per fermarsi prima');
 ok((await txt('#p-ph')) === 'GET READY' && (await txt('#p-note')) === 'Increasing load', 'il test ha il suo timer (7" dai parametri del test)');
 const result = v => pg.evaluate(v => { const i = [...document.querySelectorAll('.sheet label')].find(l => l.innerText.startsWith('Result:')).querySelector('input'); i.value = v; }, v);
 await pg.click('#p-quit');

@@ -1330,6 +1330,8 @@
     $('p-next').textContent = nx ? 'Next: ' + (nx.kind === 'rest' ? `rest ${mmss(nx.seconds)}` : (nx.cue || `round ${nx.round}`)) : 'Last step of the exercise';
     $('p-done').textContent = isAuto(st) ? 'Skip' : 'Done';
     $('p-done').className = 'btn ' + (isAuto(st) ? '' : 'pri');
+    // "End exercise" solo quando serve: se l'ultimo passo si chiude con Done, i due pulsanti farebbero la stessa cosa (nota di Leo del 19 nov)
+    $('p-quit').hidden = !nx && !isAuto(st);
     $('p-plus').disabled = st.kind === 'work';
     $('p-pause').textContent = P.paused ? 'Resume' : 'Pause';
     drawClock();
