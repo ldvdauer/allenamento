@@ -582,3 +582,25 @@ test('lead: scala francese separata dal boulder, per superficie', () => {
   assert.equal(C.STD['outdoor-routes'].name, 'Lead climbing'); assert.equal(C.matchStd('Outdoor routes'), 'outdoor-routes', 'vecchio nome riconosciuto');
   assert.equal(C.cleanTrips([{ projects: [{ style: 'route', grade: '7b+' }] }])[0].projects[0].grade, '7b+', 'progetti di via in scala francese');
 });
+
+test('programmi sovrapposti: finestra visibile e controllo della sovrapposizione', () => {
+  const wk = () => Array.from({ length: 7 }, (_, i) => ({ sessions: i % 2 ? [] : [{ id: C.uid(), blocks: [{ id: C.uid(), minutes: 10 }] }] }));
+  const mk = (start, weeks) => ({ id: C.uid(), startDate: start, weeks: Array.from({ length: weeks }, wk) });
+  const a = mk('2026-11-16', 4), today = '2026-11-25';
+  assert.equal(C.planEnd(a), '2026-12-13');
+  assert.deepEqual(C.locate(a, '2026-11-18'), { w: 0, d: 2 });
+  a.shownUntil = '2026-11-25';
+  assert.equal(C.locate(a, '2026-11-26'), null, 'dopo shownUntil non compare'); assert.ok(C.locate(a, '2026-11-25'));
+  assert.equal(C.scheduled(a, []).some(x => x.date > '2026-11-25'), false, 'né nelle giornate previste (Analytics)');
+  delete a.shownUntil;
+  const b = mk('2026-11-23', 2); b.shownFrom = today;
+  assert.equal(C.locate(b, '2026-11-23'), null, 'prima di shownFrom non compare'); assert.ok(C.locate(b, '2026-11-25'));
+  assert.equal(C.planShownStart(b), today);
+  assert.deepEqual(C.overlapping([a], b, today).map(p => p.id), [a.id], 'si sovrappone da oggi in poi');
+  const c = mk('2026-12-14', 2);
+  assert.deepEqual(C.overlapping([a], c, today), [], 'dopo la fine: nessuna sovrapposizione');
+  const old = mk('2026-10-01', 2);
+  assert.deepEqual(C.overlapping([old], b, today), [], 'un programma già finito non conta');
+  a.shownUntil = '2026-11-24';
+  assert.deepEqual(C.overlapping([a], b, today), [], 'sostituito fino a ieri: non si sovrappone più');
+});

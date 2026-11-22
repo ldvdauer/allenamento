@@ -619,7 +619,7 @@
     const done = () => { save(); ov.remove(); render(); };
     const ov = openSheet('Programme', [field('Name', title), field('First training day on', start),
       h('p', { class: 'sub' }, `${p.weeks.length} weeks · until ${fmtDate(C.dateOf(p, p.weeks.length - 1, 6))}. Days are edited from the calendar.`),
-      btn('Save', () => { p.title = title.value.trim().slice(0, 80) || p.title; if (C.validISO(start.value)) p.startDate = C.startForFirst(p, start.value); done(); }, 'pri block'),
+      btn('Save', () => { p.title = title.value.trim().slice(0, 80) || p.title; if (C.validISO(start.value)) { p.startDate = C.startForFirst(p, start.value); if (p.shownFrom && p.startDate >= p.shownFrom) delete p.shownFrom; } done(); }, 'pri block'),
       h('div', { class: 'btns' }, btn('Export .yaml', () => exportSheet('Export programme', p.title.replace(/[^\w+-]+/g, '_') + '.yaml', C.exportYaml(p, S.exercises)), 'sm'),
         btn('Delete programme', async () => { if (await confirmDlg(`Delete "${p.title}"? Its days disappear from the calendar, logged exercises stay.`, 'Delete')) { S.plans = S.plans.filter(x => x !== p); done(); } }, 'sm danger'))]);
   }
@@ -657,14 +657,52 @@
       btn('Import', () => {
         const iso = C.validISO(start.value);
         if (!iso) return toast('Pick a valid date.');
+        const today = C.todayISO();
         r.plan.title = title.value.trim().slice(0, 80) || r.plan.title; r.plan.startDate = C.startForFirst(r.plan, iso);
-        for (const e of r.exercises) S.exercises[e.id] = e; // già un'istanza per ogni esercizio di ogni sessione
-        ensureTests(S);
-        S.plans.push(r.plan);
-        save(); ov.remove();
-        toast(`Imported ${r.plan.title}.`); log('import', 'programme imported', { title: r.plan.title, weeks: r.plan.weeks.length, exercises: r.exercises.length });
-        go('calendar-' + C.firstSessionDate(r.plan));
+        // Il passato del nuovo programma non compare: non conta come saltato (scelta di Leo, 22 nov)
+        if (r.plan.startDate < today) r.plan.shownFrom = today;
+        const commit = how => {
+          for (const e of r.exercises) S.exercises[e.id] = e; // già un'istanza per ogni esercizio di ogni sessione
+          ensureTests(S);
+          S.plans.push(r.plan);
+          save(); ov.remove();
+          toast(`Imported ${r.plan.title}.`); log('import', 'programme imported', { title: r.plan.title, weeks: r.plan.weeks.length, exercises: r.exercises.length, overlap: how || 'none' });
+          go('calendar-' + (r.plan.shownFrom && r.plan.shownFrom > C.firstSessionDate(r.plan) ? r.plan.shownFrom : C.firstSessionDate(r.plan)));
+        };
+        const over = C.overlapping(S.plans, r.plan, today);
+        if (!over.length) return commit();
+        ov.remove(); overlapSheet(r.plan, over, today, commit);
       }, 'pri block')]);
+  }
+  /** Il nuovo programma si sovrappone a uno già presente: sostituirne i giorni rimasti o partire dopo la sua fine.
+      In nessun caso si toccano registrazioni, test o giorni passati. */
+  function overlapSheet(plan, over, today, commit) {
+    const names = over.map(p => `“${p.title}” (${fmtDate(C.planShownStart(p))} – ${fmtDate(C.planEnd(p))})`).join(', ');
+    // Un giorno di oggi già iniziato (qualcosa registrato) resta al programma vecchio
+    const sids = new Set(over.flatMap(p => p.weeks.flatMap(w => w.flatMap(d => d.sessions.map(x => x.id)))));
+    const startedToday = S.logs.some(l => l.date === today && sids.has(l.sid));
+    const from = startedToday ? C.addDays(today, 1) : today;
+    const lastEnd = over.map(C.planEnd).sort().pop(), after = C.addDays(lastEnd, 1);
+    const ov = openSheet('Overlapping programme', [h('p', {}, `“${plan.title}” overlaps with ${names}.`),
+      h('p', { class: 'sub' }, 'Logged exercises, tests and past days are never changed.'),
+      btn(`Replace its days from ${fmtDate(from)}`, () => {
+        for (const p of over) p.shownUntil = C.addDays(from, -1);
+        if (plan.startDate < from) plan.shownFrom = from;
+        ov.remove(); commit('replace');
+      }, 'pri block'),
+      btn(`Start after it ends (${fmtDate(after)})`, () => {
+        // la prima giornata del nuovo cade il giorno dopo la fine dell'ultimo programma sovrapposto; se ne tocca un altro, si sposta ancora
+        let d = after;
+        delete plan.shownFrom;
+        for (let i = 0; i < 20; i++) {
+          plan.startDate = C.startForFirst(plan, d);
+          const more = C.overlapping(S.plans, plan, today);
+          if (!more.length) break;
+          d = C.addDays(more.map(C.planEnd).sort().pop(), 1);
+        }
+        ov.remove(); commit('after');
+      }, 'block'),
+      btn('Cancel', () => ov.remove(), 'block')]);
   }
 
 
@@ -1100,7 +1138,7 @@
       h('div', { class: 'card tap row', onclick: () => go('diagnostics') }, h('div', { class: 'grow' }, h('div', { class: 'n', style: 'font-weight:600' }, 'Diagnostics'), h('div', { class: 'sub' }, 'Audio, screen on, offline and storage on this device · v' + VERSION)), '›'),
       h('h2', {}, 'Programmes'), h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin-top:0' }, 'A programme is a set of training days: import it, choose when it starts and find it in the calendar.'),
         S.plans.map(p => h('div', { class: 'blk', style: 'cursor:pointer', onclick: () => planSheet(p) }, h('div', { class: 'grow' }, h('div', { class: 'n' }, p.title),
-          h('div', { class: 'p' }, `${fmtDate(C.firstSessionDate(p))} – ${fmtDate(C.dateOf(p, p.weeks.length - 1, 6))} · ${p.weeks.length} weeks`)), h('div', { class: 'm' }, '›'))),
+          h('div', { class: 'p' }, `${fmtDate(C.firstSessionDate(p) > C.planShownStart(p) ? C.firstSessionDate(p) : C.planShownStart(p))} – ${fmtDate(C.planEnd(p))} · ${p.weeks.length} weeks` + (p.shownFrom > p.startDate || p.shownUntil ? ' · partly shown' : ''))), h('div', { class: 'm' }, '›'))),
         h('div', { class: 'btns' }, fileBtn('Import programme (.yaml)'))),
       h('h2', {}, 'Climbing surfaces'), h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin-top:0' }, 'Assigned to exercises and logged exercises, to compare progress in the charts. Tap to rename.'),
         h('div', { class: 'btns', style: 'margin-top:0' }, S.surfaces.map(x => btn(x.name, () => surfaceSheet(x), 'sm'))),

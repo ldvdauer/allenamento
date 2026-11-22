@@ -308,7 +308,19 @@ review|other|Attempt review|10|`.split('\n').map(line => {
 
   /* ---- Piano ---- */
   /** Posizione di una data nel piano: { w, d } oppure null se fuori dal piano. */
+  /* Finestra visibile di un programma: `shownFrom` nasconde i giorni prima (import a metà: il passato del nuovo programma
+     non compare), `shownUntil` quelli dopo (sostituito da un programma nuovo: restano passato e giorni fatti). */
+  const planEnd = plan => plan.shownUntil || addDays(plan.startDate, plan.weeks.length * 7 - 1);
+  const planShownStart = plan => (plan.shownFrom && plan.shownFrom > plan.startDate ? plan.shownFrom : plan.startDate);
+  const inWindow = (plan, iso) => iso >= planShownStart(plan) && iso <= planEnd(plan);
+  /** Programmi già presenti che si sovrappongono al nuovo da `today` in poi (il passato non conta: non si sovrascrive). */
+  function overlapping(plans, plan, today) {
+    const a = planShownStart(plan) > today ? planShownStart(plan) : today, b = planEnd(plan);
+    if (a > b) return [];
+    return plans.filter(p => { const pa = planShownStart(p) > today ? planShownStart(p) : today, pb = planEnd(p); return pa <= pb && pa <= b && a <= pb; });
+  }
   function locate(plan, iso) {
+    if (!inWindow(plan, iso)) return null;
     const n = diffDays(iso, plan.startDate);
     if (n < 0 || n >= plan.weeks.length * 7) return null;
     return { w: Math.floor(n / 7), d: n % 7 };
@@ -566,7 +578,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
   function scheduled(plan, extras) {
     const out = [];
     if (plan) plan.weeks.forEach((wk, w) => wk.forEach((day, d) => day.sessions.forEach(s => {
-      if (s.blocks.length) out.push({ sid: s.id, date: dateOf(plan, w, d), minutes: sessionMinutes(s), type: s.type });
+      if (s.blocks.length && inWindow(plan, dateOf(plan, w, d))) out.push({ sid: s.id, date: dateOf(plan, w, d), minutes: sessionMinutes(s), type: s.type });
     })));
     for (const x of extras || []) if (x.blocks.length) out.push({ sid: x.id, date: x.date, minutes: sessionMinutes(x), type: x.type });
     return out;
@@ -854,7 +866,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
   }
 
   return {
-    CLIMBING, LEGACY_SECTION, slotOf, blockSection, timeBySection, weeklyGroups, describe, leftoverNote, splitCues, fmtRest, PAIRS, refKeys, LEGACY_NAMES, normSide, firstOffset, firstSessionDate, startForFirst, recordsOf, lastRecord, nextLoad, TEST_TEMPLATES, testLabel, SECTIONS, LIBRARY, STD, stdVariant, matchStd, exName, GRIPS, gripKey, gripText,
+    CLIMBING, LEGACY_SECTION, slotOf, blockSection, timeBySection, weeklyGroups, describe, leftoverNote, splitCues, fmtRest, PAIRS, refKeys, LEGACY_NAMES, normSide, firstOffset, firstSessionDate, planEnd, planShownStart, inWindow, overlapping, startForFirst, recordsOf, lastRecord, nextLoad, TEST_TEMPLATES, testLabel, SECTIONS, LIBRARY, STD, stdVariant, matchStd, exName, GRIPS, gripKey, gripText,
     DAY_TYPES, PERIODS, SLOTS, GRADES, ROUTE_GRADES, gradeList, GRADE_SCALES, gradeIdx, fmtGrade, DEFAULT_SURFACES, inferSurface, validISO, uid, toISO, fromISO, todayISO, addDays, diffDays, mondayOf,
     inferLoad, loadKey, loadKg, latestMaxes, fmtKg, cycle, cueAt, intervalMinutes, buildSteps, normInterval,
     importYaml, exportYaml, parseDuration, parseWeeks, fmtWeeks, testExercise, YAML_REFS, locate, dateOf, sessionMinutes, cloneSession, validState,
