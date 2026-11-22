@@ -604,3 +604,12 @@ test('programmi sovrapposti: finestra visibile e controllo della sovrapposizione
   a.shownUntil = '2026-11-24';
   assert.deepEqual(C.overlapping([a], b, today), [], 'sostituito fino a ieri: non si sovrappone più');
 });
+
+test('programma di una sola giornata: finisce quel giorno, non a fine settimana', () => {
+  const day = has => ({ sessions: has ? [{ id: C.uid(), blocks: [{ id: C.uid(), minutes: 30 }] }] : [] });
+  const p = { id: 'a', startDate: '2026-11-16', weeks: [[day(), day(), day(true), day(), day(), day(), day()]] };
+  assert.equal(C.lastSession(p), '2026-11-18'); assert.equal(C.planEnd(p), '2026-11-22');
+  const n = { id: 'n', startDate: '2026-11-22', weeks: [[day(true), day(), day(), day(), day(), day(), day()]] };
+  assert.deepEqual(C.overlapping([p], n, '2026-11-22'), [], 'finito il 18: non si sovrappone a un programma che parte il 22');
+  assert.equal(C.lastSession({ id: 'e', startDate: '2026-11-16', weeks: [[day(), day(), day(), day(), day(), day(), day()]] }), null);
+});

@@ -663,12 +663,12 @@
   /** Il nuovo programma si sovrappone a uno già presente: sostituirne i giorni rimasti o partire dopo la sua fine.
       In nessun caso si toccano registrazioni, test o giorni passati. */
   function overlapSheet(plan, over, today, commit) {
-    const names = over.map(p => `“${p.title}” (${fmtDate(C.planShownStart(p))} – ${fmtDate(C.planEnd(p))})`).join(', ');
+    const names = over.map(p => `“${p.title}” (${fmtDate(C.planShownStart(p))} – ${fmtDate(C.lastSession(p) || C.planEnd(p))})`).join(', ');
     // Un giorno di oggi già iniziato (qualcosa registrato) resta al programma vecchio
     const sids = new Set(over.flatMap(p => p.weeks.flatMap(w => w.flatMap(d => d.sessions.map(x => x.id)))));
     const startedToday = S.logs.some(l => l.date === today && sids.has(l.sid));
     const from = startedToday ? C.addDays(today, 1) : today;
-    const lastEnd = over.map(C.planEnd).sort().pop(), after = C.addDays(lastEnd, 1);
+    const lastEnd = over.map(p => C.lastSession(p) || C.planEnd(p)).sort().pop(), after = C.addDays(lastEnd, 1);
     const ov = openSheet('Overlapping programme', [h('p', {}, `“${plan.title}” overlaps with ${names}.`),
       h('p', { class: 'sub' }, 'Logged exercises, tests and past days are never changed.'),
       btn(`Replace its days from ${fmtDate(from)}`, () => {
@@ -684,7 +684,7 @@
           plan.startDate = C.startForFirst(plan, d);
           const more = C.overlapping(S.plans, plan, today);
           if (!more.length) break;
-          d = C.addDays(more.map(C.planEnd).sort().pop(), 1);
+          d = C.addDays(more.map(p => C.lastSession(p) || C.planEnd(p)).sort().pop(), 1);
         }
         ov.remove(); commit('after');
       }, 'block'),
@@ -1115,14 +1115,16 @@
   /** Programmi divisi in corso, futuri e passati secondo la parte visibile nel calendario. */
   function planGroups() {
     const t = C.todayISO(), now = [], next = [], past = [];
-    for (const p of S.plans) (C.planEnd(p) < t || C.planShownStart(p) > C.planEnd(p) ? past : C.planShownStart(p) > t ? next : now).push(p);
+    // finito = l'ultima giornata con allenamento è prima di oggi (o non ne resta nessuna visibile)
+    const end = p => C.lastSession(p) || '';
+    for (const p of S.plans) (end(p) < t ? past : C.planShownStart(p) > t ? next : now).push(p);
     const by = (a, b) => C.planShownStart(a).localeCompare(C.planShownStart(b));
-    return { now: now.sort(by), next: next.sort(by), past: past.sort((a, b) => C.planEnd(b).localeCompare(C.planEnd(a))) };
+    return { now: now.sort(by), next: next.sort(by), past: past.sort((a, b) => end(b).localeCompare(end(a))) };
   }
   function viewPrograms() {
     const g = planGroups(), yr = C.todayISO().slice(0, 4), fmtY = iso => fmtDate(iso) + (iso.slice(0, 4) === yr ? '' : ' ' + iso.slice(0, 4));
     const row = (p, tag, cls) => h('div', { class: 'blk', style: 'cursor:pointer', onclick: () => planSheet(p) }, h('div', { class: 'grow' }, h('div', { class: 'n' }, p.title),
-      h('div', { class: 'p' }, `${fmtY(C.firstSessionDate(p) > C.planShownStart(p) ? C.firstSessionDate(p) : C.planShownStart(p))} – ${fmtY(C.planEnd(p))} · ${p.weeks.length} weeks` + (p.shownFrom > p.startDate || p.shownUntil ? ' · partly shown' : ''))),
+      h('div', { class: 'p' }, `${fmtY(C.firstSessionDate(p) > C.planShownStart(p) ? C.firstSessionDate(p) : C.planShownStart(p))} – ${fmtY(C.lastSession(p) || C.planEnd(p))} · ${p.weeks.length} weeks` + (p.shownFrom > p.startDate || p.shownUntil ? ' · partly shown' : ''))),
       h('span', { class: 'tag ' + cls }, tag));
     // l'anno solo quando non è quello corrente: programmi passati e futuri non si confondono
     const sec = (title, list, tag, cls) => list.length ? [h('h2', {}, title), h('div', { class: 'card' }, list.map(p => row(p, tag, cls)))] : null;

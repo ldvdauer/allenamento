@@ -313,11 +313,19 @@ review|other|Attempt review|10|`.split('\n').map(line => {
   const planEnd = plan => plan.shownUntil || addDays(plan.startDate, plan.weeks.length * 7 - 1);
   const planShownStart = plan => (plan.shownFrom && plan.shownFrom > plan.startDate ? plan.shownFrom : plan.startDate);
   const inWindow = (plan, iso) => iso >= planShownStart(plan) && iso <= planEnd(plan);
+  /** Ultimo giorno con allenamento nella parte visibile (un programma di una sola giornata finisce quel giorno, non a fine settimana). */
+  function lastSession(plan) {
+    for (let i = plan.weeks.length * 7 - 1; i >= 0; i--) {
+      const iso = addDays(plan.startDate, i);
+      if (plan.weeks[Math.floor(i / 7)][i % 7].sessions.some(s => s.blocks.length) && inWindow(plan, iso)) return iso;
+    }
+    return null;
+  }
   /** Programmi già presenti che si sovrappongono al nuovo da `today` in poi (il passato non conta: non si sovrascrive). */
   function overlapping(plans, plan, today) {
-    const a = planShownStart(plan) > today ? planShownStart(plan) : today, b = planEnd(plan);
+    const a = planShownStart(plan) > today ? planShownStart(plan) : today, b = lastSession(plan) || planEnd(plan);
     if (a > b) return [];
-    return plans.filter(p => { const pa = planShownStart(p) > today ? planShownStart(p) : today, pb = planEnd(p); return pa <= pb && pa <= b && a <= pb; });
+    return plans.filter(p => { const pa = planShownStart(p) > today ? planShownStart(p) : today, pb = lastSession(p); return pb && pa <= pb && pa <= b && a <= pb; });
   }
   function locate(plan, iso) {
     if (!inWindow(plan, iso)) return null;
@@ -866,7 +874,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
   }
 
   return {
-    CLIMBING, LEGACY_SECTION, slotOf, blockSection, timeBySection, weeklyGroups, describe, leftoverNote, splitCues, fmtRest, PAIRS, refKeys, LEGACY_NAMES, normSide, firstOffset, firstSessionDate, planEnd, planShownStart, inWindow, overlapping, startForFirst, recordsOf, lastRecord, nextLoad, TEST_TEMPLATES, testLabel, SECTIONS, LIBRARY, STD, stdVariant, matchStd, exName, GRIPS, gripKey, gripText,
+    CLIMBING, LEGACY_SECTION, slotOf, blockSection, timeBySection, weeklyGroups, describe, leftoverNote, splitCues, fmtRest, PAIRS, refKeys, LEGACY_NAMES, normSide, firstOffset, firstSessionDate, planEnd, planShownStart, inWindow, overlapping, lastSession, startForFirst, recordsOf, lastRecord, nextLoad, TEST_TEMPLATES, testLabel, SECTIONS, LIBRARY, STD, stdVariant, matchStd, exName, GRIPS, gripKey, gripText,
     DAY_TYPES, PERIODS, SLOTS, GRADES, ROUTE_GRADES, gradeList, GRADE_SCALES, gradeIdx, fmtGrade, DEFAULT_SURFACES, inferSurface, validISO, uid, toISO, fromISO, todayISO, addDays, diffDays, mondayOf,
     inferLoad, loadKey, loadKg, latestMaxes, fmtKg, cycle, cueAt, intervalMinutes, buildSteps, normInterval,
     importYaml, exportYaml, parseDuration, parseWeeks, fmtWeeks, testExercise, YAML_REFS, locate, dateOf, sessionMinutes, cloneSession, validState,

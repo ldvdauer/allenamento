@@ -309,7 +309,7 @@ await pg.evaluate(id => { const st = __app.state; st.plans = st.plans.filter((p,
 await importOv('2026-11-20');
 await clickText('Start after it ends', '.sheet'); await sleep(200);
 const aft = await pg.evaluate(id => { const st = __app.state, old = st.plans.find(p => p.id === id), nw = st.plans[st.plans.length - 1];
-  return { oldEnd: Core.planEnd(old), after: Core.addDays(Core.planEnd(old), 1), first: Core.firstSessionDate(nw), until: old.shownUntil || null, from: nw.shownFrom || null }; }, oldId);
+  return { oldEnd: Core.planEnd(old), after: Core.addDays(Core.lastSession(old), 1), first: Core.firstSessionDate(nw), until: old.shownUntil || null, from: nw.shownFrom || null }; }, oldId);
 ok(aft.until === null && aft.from === null && aft.first === aft.after && await snapOv() === before3, 'Start after: il nuovo parte il giorno dopo la fine del vecchio, che resta intatto');
 await pg.evaluate(() => { const st = __app.state; st.plans = st.plans.slice(0, st.plans.length - 1); });
 await pg.evaluate(() => { localStorage.setItem('allenamento.v1', JSON.stringify(__app.state)); });
