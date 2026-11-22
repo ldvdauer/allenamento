@@ -491,7 +491,7 @@
       gone.length ? h('div', { class: 'logged-x' }, gone.map(x => h('div', {}, h('b', {}, x.name), loggedLine(x, () => deleteRecord(l, x))))) : null,
       h('div', { class: 'btns' },
         edit ? [btn('+ Exercise', () => pickExercise(tpl => { addBlock(s, tpl); save(); render(); }), 'sm'), btn('+ Test', () => pickTest(tpl => { addBlock(s, tpl); save(); render(); }), 'sm'),
-          btn('Day…', () => daySheet(r), 'sm')] : null));
+          btn('Edit day', () => daySheet(r), 'sm')] : null));
   }
   /** Riga di ciò che è stato registrato per un esercizio: minuti, carico, RPE, serie, arrampicata, risultati dei test, nota.
       Si tocca per modificare quanto registrato. */
@@ -680,7 +680,7 @@
         save(); ov.remove();
         if (moved) go('calendar-' + iso); else render();
       }, 'pri block'),
-      h('div', { class: 'btns' }, btn('Copy to a date…', () => { ov.remove(); copyToDateSheet(r); }, 'sm'),
+      h('div', { class: 'btns' }, btn('Copy', () => { ov.remove(); copyToDateSheet(r); }, 'sm'),
         btn('Clear the day', async () => {
           if (!await confirmDlg('Remove all exercises from this day? Logged exercises stay.', 'Remove')) return;
           s.blocks = []; save(); ov.remove(); render();

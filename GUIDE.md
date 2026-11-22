@@ -17,7 +17,7 @@
 ## Planning
 - **Calendar**: tap a day to see or change its exercises (+ Exercise, + Test). Drag "≡" to reorder them. A day with no exercises is a rest day: there is nothing to create or delete. Each day shows one dot per category, in the category colour, longest first: a ring is planned, a filled dot is done; "+" means more than three categories.
   What you logged appears under each exercise (minutes, load, RPE, sets, grade, note; yellow if sets or reps were missed). Tap it to edit or delete it.
-- **Day…** on a day: title, move it to another date (days you created), copy its exercises to another date, or clear it.
+- **Edit day** on a day: title, move it to another date (days you created), **Copy** its exercises to another date, or clear it.
 - Tap an exercise to set its parameters *on that day*: rounds, seconds or reps, rests, L/R, reference test and %, surface, note; for Fingers exercises also grip, edge (mm) and one or two hands. With a timer the duration is calculated; minutes are typed only for "Duration only" exercises.
 - **Programmes** (More): import a `.yaml` file (see [Programme files](#programme-files)), choose the first training day and find it in the calendar. Any day of the week works: the other sessions keep their order and the days between them.
 - "Copy to a date" adds the exercises of a day to another day.

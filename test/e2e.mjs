@@ -197,8 +197,8 @@ const nExtras = await pg.evaluate(() => __app.state.extras.length);
 await clickText('+ Exercise', '#view'); await clickText('+ New');
 await pg.type('.sheet input', 'Circuito spray'); await clickText('Create exercise');
 ok((await txt('#view')).includes('Circuito spray') && !(await txt('#view')).includes('Rest day') && await pg.evaluate(n => __app.state.extras.length === n + 1, nExtras), 'primo esercizio aggiunto: il giorno diventa di allenamento');
-await clickText('Day…', '#view'); await pg.type('.sheet label input', 'Natale al muro'); await clickText('Save', '.sheet');
-await clickText('Day…', '#view'); await shot('15-day-sheet'); await pg.evaluate(() => document.querySelectorAll('.overlay').forEach(o => o.remove())); ok((await txt('#view')).includes('Natale al muro'), 'Day…: titolo facoltativo della giornata');
+await clickText('Edit day', '#view'); await pg.type('.sheet label input', 'Natale al muro'); await clickText('Save', '.sheet');
+await clickText('Edit day', '#view'); await shot('15-day-sheet'); await pg.evaluate(() => document.querySelectorAll('.overlay').forEach(o => o.remove())); ok((await txt('#view')).includes('Natale al muro'), 'Day…: titolo facoltativo della giornata');
 // Libreria → ogni aggiunta è un'istanza con parametri propri: modificarne una non tocca l'altra
 await clickText('+ Exercise', '#view'); await pg.type('.sheet input', 'max hang'); await sleep(80); await clickText('Max hang', '.sheet', true);
 await clickText('+ Exercise', '#view'); await pg.type('.sheet input', 'max hang'); await sleep(80); await clickText('Max hang', '.sheet', true);
@@ -438,11 +438,11 @@ if (fs.existsSync(REAL)) {
   ok(d17.includes('Rest day') && !d18.includes('Rest day'), 'calendario: nulla il 17, la prima giornata il 18');
   // Copia su un giorno che ha già esercizi: si aggiungono in fondo, nessuna seconda giornata
   const before = await pg.evaluate(() => { const p = __app.state.plans[0], d = iso => { const l = Core.locate(p, iso); return p.weeks[l.w][l.d].sessions; }; return { d20: d('2026-11-20')[0].blocks.length, d18: d('2026-11-18')[0].blocks.length }; });
-  await go('calendar-2026-11-18'); await clickText('Day…', '#view'); await clickText('Copy to a date…', '.sheet');
+  await go('calendar-2026-11-18'); await clickText('Edit day', '#view'); await clickText('Copy', '.sheet', true);
   await setVal('.sheet input[type=date]', '2026-11-20'); await clickText('Copy', '.sheet');
   ok(await pg.evaluate(b => { const p = __app.state.plans[0], l = Core.locate(p, '2026-11-20'), d = p.weeks[l.w][l.d].sessions; return d.length === 1 && d[0].blocks.length === b.d20 + b.d18 && !__app.state.extras.some(x => x.date === '2026-11-20'); }, before), 'copia su un giorno con esercizi: aggiunti in fondo, una sola giornata');
   // Svuotare un giorno: diventa riposo, senza contenitore vuoto
-  await go('calendar-2026-11-18'); await clickText('Day…', '#view'); await clickText('Clear the day', '.sheet'); await clickText('Remove', '.sheet');
+  await go('calendar-2026-11-18'); await clickText('Edit day', '#view'); await clickText('Clear the day', '.sheet'); await clickText('Remove', '.sheet');
   ok((await txt('#view')).includes('Rest day') && await pg.evaluate(() => { const p = __app.state.plans[0], l = Core.locate(p, '2026-11-18'); return p.weeks[l.w][l.d].sessions.length === 0; }), 'Clear the day: il giorno torna di riposo e la giornata sparisce dai dati');
 }
 
