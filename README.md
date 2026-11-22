@@ -1,7 +1,7 @@
 # Allenamento
 
 Offline PWA to plan and log climbing training: calendar, training days with one timer per exercise, tests and maxes,
-load progression, analytics. No backend and no account: data lives on the device, with backup to a file or
+analytics. No backend and no account: data lives on the device, with backup to a file or
 automatically to a private GitHub repository.
 
 App: https://ldvdauer.github.io/allenamento/ · User guide: [GUIDE.md](GUIDE.md)
@@ -11,7 +11,7 @@ The interface is in English only. Code comments and test descriptions are still 
 ## How it is built
 | File | Content |
 |---|---|
-| `src/core.js` | Pure logic, no DOM: dates, standard library, loads and progression, timer steps, YAML programme import/export, aggregations for analytics. The only file covered by unit tests. |
+| `src/core.js` | Pure logic, no DOM: dates, standard library, loads, timer steps, YAML programme import/export, aggregations for analytics. The only file covered by unit tests. |
 | `src/vendor/` | [js-yaml](https://github.com/nodeca/js-yaml) 4.1.0 (MIT), the only third-party code, inlined by the build. |
 | `src/charts.js` | Dependency-free SVG charts (columns, stacked columns, lines, horizontal bars) with tooltip and table. |
 | `src/app.js` | Interface: Home, calendar, timer, tests, analytics, settings, backup, notebook, diagnostics. |
@@ -47,7 +47,7 @@ The end-to-end test uses a personal, unversioned programme (`private/Karma-8A+.y
 - Programme file format: `importYaml` / `exportYaml` in `core.js`, documented in [GUIDE.md](GUIDE.md#programme-files).
 - Standard exercises and sections: `LIBRARY` and `SECTIONS` in `core.js`. Name recognition on import: exact library
   names first (English, and the Italian names of earlier versions), then `STD_RULES`, which accepts both languages.
-- Test templates: `TEST_TEMPLATES`. kg formula: `loadKg`. Progression rule: `nextLoad`.
+- Test templates: `TEST_TEMPLATES`. kg formula: `loadKg`.
 - Colours: CSS variables at the top of `style.css`. The three group colours in the charts are validated for colour
   blindness: if you change them, run the check again.
 

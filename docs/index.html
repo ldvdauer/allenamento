@@ -1445,7 +1445,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
     s.extras = Array.isArray(s.extras) ? s.extras : [];
     s.surfaces = Array.isArray(s.surfaces) && s.surfaces.length ? s.surfaces : C.DEFAULT_SURFACES.map(x => ({ ...x }));
     s.settings = Object.assign({ prep: 10, sound: true, gradeScale: 'font', lastBackup: null }, s.settings);
-    s.settings.prog = Object.assign({ on: true, step: 2.5, rpe: 8 }, s.settings.prog);
+    delete s.settings.prog; // proposta del carico tolta il 22 nov (scelta di Leo)
     if (!s.plans.some(p => p.id === s.activePlan)) s.activePlan = s.plans[0] ? s.plans[0].id : null;
     for (const p of s.plans) for (const w of p.weeks) for (const d of w) for (const x of d.sessions) if (!x.id) x.id = C.uid();
     for (const e of Object.values(s.exercises)) if (e.surface === undefined) e.surface = C.inferSurface(e.name);
@@ -1775,25 +1775,12 @@ review|other|Attempt review|10|`.split('\n').map(line => {
   // Coppie di test per lato (pinch, max lift) presenti nella sezione Test: negli elenchi compaiono come una voce sola.
   const pairsPresent = () => Object.keys(C.PAIRS).filter(k => C.refKeys(k).every(x => S.testDefs.some(t => t.key === x)));
   const inPair = (key, pairs) => pairs.some(k => C.refKeys(k).includes(key));
-  /* Progressione: la proposta nasce dallo storico dell'esercizio (standard + test di riferimento), non dal programma. */
   // Chiave della serie dei carichi: esercizio, riferimento e presa (Max hang 20 mm half crimp ≠ Max hang 20 mm open hand)
   const exKey = e => (e.std || e.name) + '|' + (e.load ? e.load.ref : '') + (e.grip ? '|' + [e.grip.type || '', e.grip.edge || '', e.grip.hands || ''].join('/') : '');
   function exLabel(e) {
     const base = e.std && C.STD[e.std] ? C.STD[e.std].name : e.name, d = e.load && !C.PAIRS[e.load.ref] ? S.testDefs.find(t => t.key === e.load.ref) : null;
     return [d ? `${base} · ${d.name}` : base, C.gripText(e)].filter(Boolean).join(' · ');
   }
-  const kgText = (kg, mode) => (mode === 'hang' ? C.fmtKg(kg) : dec(kg) + ' kg');
-  /** { text, why } con il carico proposto per la prossima volta, oppure null se non c'è storico o la progressione è spenta. */
-  function proposal(ex) {
-    const rule = S.settings.prog;
-    if (!rule.on || (ex.load && ex.load.test)) return null;
-    const last = C.lastRecord(S.logs, exKey(ex));
-    if (!last) return null;
-    const nx = last.kgs.map(k => ({ side: k.side, ...C.nextLoad(k.kg, last.rpe, rule, last.mode, maxes().bw) }));
-    const fmt = a => a.map(k => (k.side ? k.side + ' ' : '') + kgText(k.kg, last.mode)).join(' · ');
-    return { text: fmt(nx), why: `last time ${fmt(last.kgs)}${last.rpe == null ? ', no RPE' : ', RPE ' + dec(last.rpe)}` };
-  }
-  const propLine = ex => { const p = proposal(ex); return p ? h('div', { class: 'p' }, `Suggested: ${p.text} (${p.why})`) : null; };
   function loadHint(ex) {
     if (!ex.load || ex.load.pct == null) return '';
     const cues = ex.interval && ex.interval.cues.length ? ex.interval.cues : [''];
@@ -1815,7 +1802,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
     if (!ex) return h('div', { class: 'blk', 'data-id': b.id }, grip, h('span', { class: 'p' }, 'Exercise removed'));
     const hint = loadHint(ex);
     return h('div', { class: 'blk', 'data-id': b.id, onclick, style: onclick ? 'cursor:pointer' : null }, grip,
-      h('div', { class: 'grow' }, h('div', { class: 'n' }, catBar(exSection(ex)), C.exName(ex)), exLine(ex) ? h('div', { class: 'p' }, exLine(ex)) : null, hint ? h('div', { class: 'kg' }, hint) : null, propLine(ex), b.note ? h('div', { class: 'p note' }, b.note) : null, extra || null),
+      h('div', { class: 'grow' }, h('div', { class: 'n' }, catBar(exSection(ex)), C.exName(ex)), exLine(ex) ? h('div', { class: 'p' }, exLine(ex)) : null, hint ? h('div', { class: 'kg' }, hint) : null, b.note ? h('div', { class: 'p note' }, b.note) : null, extra || null),
       h('div', { class: 'm' }, b.minutes + ' min', run ? run(b) : null));
   }
   /** Riordino per trascinamento dalla maniglia: la riga segue il dito, l'ordine si salva al rilascio. */
@@ -1999,7 +1986,6 @@ review|other|Attempt review|10|`.split('\n').map(line => {
       h('div', { class: 'week' }, btn('‹', () => shift(-1), 'sm'), h('div', { class: 't big', style: 'font-size:17px;text-transform:capitalize' }, `${MONTHS_FULL[first.getMonth()]} ${first.getFullYear()}`),
         btn('Today', () => { calMonth = t.slice(0, 7) + '-01'; go('calendar-' + t); }, 'sm'), btn('›', () => shift(1), 'sm')),
       h('div', { class: 'cal' }, ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map(x => h('div', { class: 'wh' }, x)), cells.map(cell)),
-      h('div', { class: 'cal-key sub' }, h('span', {}, h('i', { class: 'cat c-other' }), 'planned'), h('span', {}, h('i', { class: 'cat c-other ok' }), 'done'), h('span', {}, 'colour = category')),
       h('h2', { style: 'margin-top:18px;text-transform:capitalize' }, `${WD_FULL[wdIdx(calSel)]} ${fmtDate(calSel)}`),
       refs.length ? refs.map(r => sessionCard(r, true)) : restCard(calSel, true),
       logs.length ? [h('h2', {}, 'Without a planned day'), h('div', { class: 'sub' }, 'Logged on this day, but its day is no longer in the calendar. Tap to delete it.'), logs.map(logCard)] : null];
@@ -2444,7 +2430,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
         cloudOn() ? [btn('Restore from GitHub', cloudRestore, 'sm'), btn('Disconnect', async () => { if (await confirmDlg('Disconnect GitHub? The token is deleted from this device; backups already uploaded stay in the repository.', 'Disconnect')) { S.settings.gh = null; clearTimeout(cloudTimer); save(); render(); } }, 'sm danger')] : null));
   }
   /* ---------- Taccuino: note al volo durante la prova dell'app, con il contesto per poterle riprodurre ---------- */
-  const VERSION = '20261122.1623';
+  const VERSION = '20261122.1632';
   function noteSheet() {
     const text = h('textarea', { class: 'inp', placeholder: 'What is wrong, or what would you like to be different?' });
     const where = P ? 'timer: ' + P.steps[P.idx].name : (location.hash.slice(1) || 'home');
@@ -2519,7 +2505,6 @@ review|other|Attempt review|10|`.split('\n').map(line => {
   }
 
   function viewMore() {
-    const pr = S.settings.prog, progOn = h('input', { type: 'checkbox', checked: pr.on }), progStep = numInp(pr.step), progRpe = numInp(pr.rpe);
     const prep = numInp(S.settings.prep), sound = h('input', { type: 'checkbox', checked: S.settings.sound, onchange: () => { S.settings.sound = sound.checked; save(); } });
     const sfNew = h('input', { class: 'inp', style: 'margin:0', placeholder: 'New surface' });
     return [h('h1', {}, 'More'),
@@ -2538,9 +2523,6 @@ review|other|Attempt review|10|`.split('\n').map(line => {
         h('p', { class: 'sub', style: 'margin-bottom:0' }, `Grade scale: ${C.GRADE_SCALES[S.settings.gradeScale] || 'Font'}. Other scales will be selectable here.`)),
       h('h2', {}, 'Timer'), h('div', { class: 'card' }, h('div', { class: 'cols' }, field('Get-ready time before a hang (s)', prep), h('label', { class: 'f' }, 'Sound signals', h('div', { style: 'margin-top:12px' }, sound, ' on'))),
         btn('Save', () => { S.settings.prep = Math.min(60, Math.max(0, Math.round(val(prep) || 0))); save(); toast('Saved.'); }, 'sm')),
-      h('h2', {}, 'Load progression'), h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin-top:0' }, 'When an exercise ends you log load and RPE. Next time the app suggests the load: higher if the RPE was within the threshold, lower if it was well above, the same otherwise.'),
-        h('div', { class: 'cols3' }, h('label', { class: 'f' }, 'Suggestions', h('div', { style: 'margin-top:12px' }, progOn, ' on')), field('Increase (%)', progStep), field('RPE threshold', progRpe)),
-        btn('Save', () => { Object.assign(S.settings.prog, { on: progOn.checked, step: Math.min(20, Math.max(0.5, val(progStep) || 2.5)), rpe: Math.min(10, Math.max(1, val(progRpe) || 8)) }); save(); toast('Saved.'); render(); }, 'sm')),
       h('h2', {}, 'Automatic backup'), cloudCard(),
       h('h2', {}, 'Data'), h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin-top:0' }, (cloudOn() ? 'Automatic backup to GitHub is active. ' : 'Data stays on this device only. "Save backup" opens the share sheet: choose "Save to Files" to put it in iCloud Drive.') + (S.settings.lastBackup ? ` Last backup: ${fmtDate(S.settings.lastBackup)}.` : ' No backup yet.')),
         h('div', { class: 'btns' }, btn(cloudOn() ? 'Back up now' : 'Save backup', doBackup, 'sm pri'), fileBtn('Restore / import file'),
@@ -2811,9 +2793,9 @@ review|other|Attempt review|10|`.split('\n').map(line => {
   function recordSheet(r, b, ms, sets, prev) {
     const ex = S.exercises[b.exId], m = maxes(), isClimb = ex.slot === 'wall' || !!ex.surface;
     const min = numInp(Math.round(ms / 60000)), note = h('input', { placeholder: 'Optional', value: prev && prev.note || '' });
-    const isTest = !!(ex.load && ex.load.test), prop = proposal(ex), planned = loadHint(ex).replace('kg: maxes missing', '');
+    const isTest = !!(ex.load && ex.load.test), planned = loadHint(ex).replace('kg: maxes missing', '');
     // Carico e RPE per ogni esercizio di forza: sono lo storico da cui nasce la proposta della volta dopo.
-    const load = !isTest && (ex.load || ex.slot === 'strength') ? h('input', { value: prev ? prev.load || '' : planned || (prop ? prop.text : ''), placeholder: 'e.g. 20 kg or L 18 kg · R 20 kg' }) : null;
+    const load = !isTest && (ex.load || ex.slot === 'strength') ? h('input', { value: prev ? prev.load || '' : planned, placeholder: 'e.g. 20 kg or L 18 kg · R 20 kg' }) : null;
     const rpe = load ? numInp(prev ? prev.rpe : null, { placeholder: '1-10' }) : null;
     const prevTest = k => { const t = prev && (prev.testIds || []).map(id => S.tests.find(x => x.id === id)).find(x => x && x.key === k); return t ? t.value : null; };
     const tests = ex.load && ex.load.test ? C.refKeys(ex.load.ref).map(k => S.testDefs.find(t => t.key === k)).filter(Boolean)
@@ -2845,7 +2827,6 @@ review|other|Attempt review|10|`.split('\n').map(line => {
       sets && repsMissed ? field('Minutes', min) : null,
       tests.length ? [tests.map(x => field(`Result: ${x.def.name} (${x.def.unit})`, x.inp)), h('p', { class: 'sub' }, 'On save, the result immediately updates the max in the Tests section.')] : null,
       load ? h('div', { class: 'cols' }, field('Load used', load), field('Exercise RPE', rpe)) : null,
-      load && prop && planned ? h('p', { class: 'sub' }, `Suggested: ${prop.text} (${prop.why}).`) : null,
       isClimb ? [h('div', { class: 'cols' }, field('Surface', sf), field('Top grade sent', gr)), sentF] : null,
       field('Note', note),
       btn('Save', () => {

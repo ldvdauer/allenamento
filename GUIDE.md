@@ -27,7 +27,6 @@
 
 ## Loads and tests
 - An exercise linked to a test with a % shows the kg computed from the latest result.
-- **Progression**: if you log load and RPE, next time the app suggests the load (rule in More → Load progression).
 - **+ Test** on a day adds a test as an exercise: the result updates the max straight away.
 - Hangboard hangs are two-handed; lifts (max lift, pinch) have one test per side, L and R.
 

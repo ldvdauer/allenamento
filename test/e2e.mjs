@@ -188,12 +188,10 @@ ok(!diary.includes('Logged exercises') && !diary.includes('Without a planned day
 await shot('7-diario', true);
 await go('home'); ok(/\d+ of \d+ done/.test(await txt('#view')), 'Home: giornata con gli esercizi fatti contati');
 ok((await txt('#view')).includes('has no backup yet') && (await txt('#view')).includes('Save backup'), 'Home: promemoria backup quando ci sono dati non salvati');
-// Progressione: RPE 7 ≤ soglia 8 → la volta dopo +2,5% sul carico totale: (70 + 4,5) × 1,025 − 70 = 6,4 → 6,5 kg
-await go('calendar-2026-12-02');
-ok((await txt('#view')).includes('Suggested: +6.5 kg (last time +4.5 kg, RPE 7)'), 'progressione: proposta dal carico e dall\'RPE dell\'ultima volta');
-await go('more'); await pg.evaluate(() => { const c = [...document.querySelectorAll('#view input[type=checkbox]')].find(x => x.closest('label').innerText.includes('Suggestions')); c.click(); [...c.closest('.card').querySelectorAll('button')].find(b => b.innerText === 'Save').click(); }); await sleep(80);
-await go('calendar-2026-12-02'); ok(!(await txt('#view')).includes('Suggested:'), 'progressione disattivabile dalle impostazioni');
-await pg.evaluate(() => { __app.state.settings.prog.on = true; });
+// Proposta del carico tolta: niente "Suggested" e niente sezione nelle impostazioni
+await go('calendar-2026-12-02'); ok(!(await txt('#view')).includes('Suggested'), 'niente proposta del carico');
+await go('more'); ok(!(await txt('#view')).includes('Load progression') && await pg.evaluate(() => !('prog' in __app.state.settings)), 'More: niente Load progression');
+await go('calendar-2026-11-25'); ok(!(await pg.$('#view .cal-key')), 'calendario: niente legenda sotto i pallini');
 
 // Il giorno è l'unità: su un giorno di riposo si aggiunge un esercizio e il giorno diventa di allenamento
 await go('calendar-2027-06-01');
