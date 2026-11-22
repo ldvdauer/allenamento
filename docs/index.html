@@ -2119,7 +2119,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
         close();
       }, 'pri block'),
       dayOf(r) <= C.todayISO() ? btn('Log without timer', () => { ov.remove(); recordSheet(r, b, (b.minutes || 0) * 60000, e.interval && e.interval.rounds ? { done: e.interval.rounds, of: e.interval.rounds } : null); }, 'block') : null,
-      h('div', { class: 'btns' }, btn('Replace…', () => pickExercise(tpl => { s.blocks.splice(bi, 1); addBlock(s, tpl); s.blocks.splice(bi, 0, s.blocks.pop()); close(); }), 'sm'), btn('Remove', () => { s.blocks.splice(bi, 1); close(); }, 'sm danger'))]);
+      h('div', { class: 'btns' }, btn('Replace', () => pickExercise(tpl => { s.blocks.splice(bi, 1); addBlock(s, tpl); s.blocks.splice(bi, 0, s.blocks.pop()); close(); }), 'sm'), btn('Remove', () => { s.blocks.splice(bi, 1); close(); }, 'sm danger'))]);
     sync();
   }
 
@@ -2394,7 +2394,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
         cloudOn() ? [btn('Restore from GitHub', cloudRestore, 'sm'), btn('Disconnect', async () => { if (await confirmDlg('Disconnect GitHub? The token is deleted from this device; backups already uploaded stay in the repository.', 'Disconnect')) { S.settings.gh = null; clearTimeout(cloudTimer); save(); render(); } }, 'sm danger')] : null));
   }
   /* ---------- Taccuino: note al volo durante la prova dell'app, con il contesto per poterle riprodurre ---------- */
-  const VERSION = '20261122.1159';
+  const VERSION = '20261122.1211';
   function noteSheet() {
     const text = h('textarea', { class: 'inp', placeholder: 'What is wrong, or what would you like to be different?' });
     const where = P ? 'timer: ' + P.steps[P.idx].name : (location.hash.slice(1) || 'home');
