@@ -15,7 +15,7 @@
 - If you leave halfway, Home offers "Resume".
 
 ## Planning
-- **Calendar**: tap a day to see or change its exercises (+ Exercise, + Test). Drag "≡" to reorder them. A day with no exercises is a rest day: there is nothing to create or delete.
+- **Calendar**: tap a day to see or change its exercises (+ Exercise, + Test). Drag "≡" to reorder them. A day with no exercises is a rest day: there is nothing to create or delete. Each day shows one dot per category, in the category colour, longest first: a ring is planned, a filled dot is done; "+" means more than three categories.
   What you logged appears under each exercise (minutes, load, RPE, sets, grade, note; yellow if sets or reps were missed). Tap it to edit or delete it.
 - **Day…** on a day: title, move it to another date (days you created), copy its exercises to another date, or clear it.
 - Tap an exercise to set its parameters *on that day*: rounds, seconds or reps, rests, L/R, reference test and %, surface, note; for Fingers exercises also grip, edge (mm) and one or two hands. With a timer the duration is calculated; minutes are typed only for "Duration only" exercises.

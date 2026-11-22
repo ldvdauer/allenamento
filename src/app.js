@@ -592,13 +592,13 @@
     const cells = [];
     for (let iso = C.mondayOf(calMonth); !(cells.length % 7 === 0 && iso > lastDay); iso = C.addDays(iso, 1)) cells.push(iso);
     const cell = iso => {
-      const refs = refsOn(iso), ids = new Set(refs.map(r => sessOf(r).id));
-      const dots = refs.slice(0, 3).map(r => h('i', { class: isDone(r) ? 'ok' : '' }));
-      // registrazioni di quel giorno non legate a una sessione in programma lì (diario manuale, sessione fatta in un altro giorno)
-      if (dots.length < 3 && S.logs.some(l => l.date === iso && !ids.has(l.sid))) dots.push(h('i', { class: 'ok' }));
+      const refs = refsOn(iso), cats = dayCategories(iso, refs);
+      // Un pallino per categoria, dalla più lunga: pieno = fatta, cerchietto = prevista; oltre tre un "+"
+      const dots = cats.slice(0, 3).map(c => h('i', { class: 'cat c-' + c.sec + (c.done ? ' ok' : '') }));
+      if (cats.length > 3) dots.push(h('b', { class: 'more', 'aria-hidden': 'true' }, '+'));
       const d = C.fromISO(iso);
       return h('button', { type: 'button', class: 'cal-d' + (iso.slice(0, 7) === calMonth.slice(0, 7) ? '' : ' out') + (iso === t ? ' today' : '') + (iso === calSel ? ' sel' : ''),
-        'aria-label': `${WD_FULL[wdIdx(iso)]} ${d.getDate()} ${MONTHS_FULL[d.getMonth()]}${refs.length ? ', training' : ''}`, 'aria-pressed': iso === calSel ? 'true' : 'false',
+        'aria-label': `${WD_FULL[wdIdx(iso)]} ${d.getDate()} ${MONTHS_FULL[d.getMonth()]}` + (cats.length ? ': ' + cats.map(c => (C.SECTIONS[c.sec] || 'Other') + (c.done ? ' done' : ' planned')).join(', ') : ''), 'aria-pressed': iso === calSel ? 'true' : 'false',
         onclick: () => go('calendar-' + iso) }, d.getDate(), h('span', { class: 'dots' }, dots));
     };
     // Le registrazioni si vedono già nella giornata sopra (✓ sotto ogni esercizio): qui solo quelle senza giornata, es. di un programma eliminato
@@ -607,7 +607,7 @@
       h('div', { class: 'week' }, btn('‹', () => shift(-1), 'sm'), h('div', { class: 't big', style: 'font-size:17px;text-transform:capitalize' }, `${MONTHS_FULL[first.getMonth()]} ${first.getFullYear()}`),
         btn('Today', () => { calMonth = t.slice(0, 7) + '-01'; go('calendar-' + t); }, 'sm'), btn('›', () => shift(1), 'sm')),
       h('div', { class: 'cal' }, ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map(x => h('div', { class: 'wh' }, x)), cells.map(cell)),
-      h('div', { class: 'cal-key sub' }, h('span', {}, h('i', {}), 'planned'), h('span', {}, h('i', { class: 'ok' }), 'done')),
+      h('div', { class: 'cal-key sub' }, h('span', {}, h('i', { class: 'cat c-other' }), 'planned'), h('span', {}, h('i', { class: 'cat c-other ok' }), 'done'), h('span', {}, 'colour = category')),
       h('h2', { style: 'margin-top:18px;text-transform:capitalize' }, `${WD_FULL[wdIdx(calSel)]} ${fmtDate(calSel)}`),
       refs.length ? refs.map(r => sessionCard(r, true)) : restCard(calSel, true),
       logs.length ? [h('h2', {}, 'Without a planned day'), h('div', { class: 'sub' }, 'Logged on this day, but its day is no longer in the calendar. Tap to delete it.'), logs.map(logCard)] : null];
@@ -745,6 +745,18 @@
 
   /* ---------- Esercizi: libreria standard + esercizi propri (solo nome e sezione; i parametri si impostano nella sessione) ---------- */
   /** Barretta colorata della categoria. Il colore aiuta a leggere la giornata; il nome della categoria è nell'etichetta accessibile e nella libreria. */
+  /** Categorie di un giorno per il calendario: minuti previsti per categoria e se qualcosa è stato registrato.
+      Le registrazioni senza esercizio previsto quel giorno (sessione fatta altrove, programma eliminato) contano come fatte. */
+  function dayCategories(iso, refs) {
+    const m = new Map(), add = (sec, min, done) => { const c = m.get(sec) || { sec, min: 0, done: false }; c.min += min || 0; c.done = c.done || done; m.set(sec, c); };
+    const seen = new Set();
+    for (const r of refs) {
+      const s = sessOf(r), l = dayLog(r), logged = new Set(l ? l.blocks.map(x => x.bid) : []);
+      for (const b of s.blocks) { add(exSection(S.exercises[b.exId]), b.minutes, logged.has(b.id)); seen.add(b.id); }
+    }
+    for (const l of S.logs) if (l.date === iso) for (const x of l.blocks || []) if (!x.bid || !seen.has(x.bid)) add(C.SECTIONS[x.sec] ? x.sec : 'other', x.minutes, true);
+    return [...m.values()].sort((a, b) => b.min - a.min);
+  }
   const catBar = sec => h('i', { class: 'cb c-' + (C.SECTIONS[sec] ? sec : 'other'), title: C.SECTIONS[sec] || 'Other', 'aria-label': 'Category: ' + (C.SECTIONS[sec] || 'Other') });
   const secHead = (t, sec) => h('div', { class: 'sec' }, sec ? catBar(sec) : null, t);
   const customTpl = c => { const sec = c.section || 'other', slot = C.slotOf(sec); return { std: null, custom: c.key, name: c.name, section: sec, slot, location: slot === 'wall' ? 'wall' : 'off_wall', domain: 'other', intensity: 'moderate', risk: 'low', equipment: [], interval: null, load: null, surface: '' }; };

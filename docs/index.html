@@ -59,6 +59,11 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
 .cal-d.out{background:none;color:var(--mu)}.cal-d.today{border-color:var(--ac)}.cal-d.sel{background:#2f363e;border-color:#6b7480}
 .dots{display:flex;gap:3px;height:6px}.dots i,.cal-key i{width:6px;height:6px;border-radius:50%;background:#6b7480;display:inline-block}
 .dots i.ok,.cal-key i.ok{background:var(--ok)}
+/* Pallini per categoria: cerchietto del colore della categoria = previsto, pieno = fatto */
+.dots{align-items:center}.dots i.cat,.cal-key i.cat{width:7px;height:7px;background:transparent;box-shadow:inset 0 0 0 1.5px var(--c);box-sizing:border-box}
+.dots i.cat.ok,.cal-key i.cat.ok{background:var(--c)}
+.dots .more{font-size:11px;line-height:6px;font-weight:800;color:var(--tx)}
+.cal-d.out .dots{opacity:.55}
 .cal-key{display:flex;gap:14px;margin-top:8px;font-size:12px}.cal-key i{margin-right:5px;vertical-align:1px}
 .climb{border-top:1px solid var(--line);padding-top:8px;margin-top:8px}.climb:first-child{border-top:0;margin-top:0;padding-top:0}.climb .n{font-weight:600}
 /* Analisi: riquadri e grafici */
@@ -1967,13 +1972,13 @@ review|other|Attempt review|10|`.split('\n').map(line => {
     const cells = [];
     for (let iso = C.mondayOf(calMonth); !(cells.length % 7 === 0 && iso > lastDay); iso = C.addDays(iso, 1)) cells.push(iso);
     const cell = iso => {
-      const refs = refsOn(iso), ids = new Set(refs.map(r => sessOf(r).id));
-      const dots = refs.slice(0, 3).map(r => h('i', { class: isDone(r) ? 'ok' : '' }));
-      // registrazioni di quel giorno non legate a una sessione in programma lì (diario manuale, sessione fatta in un altro giorno)
-      if (dots.length < 3 && S.logs.some(l => l.date === iso && !ids.has(l.sid))) dots.push(h('i', { class: 'ok' }));
+      const refs = refsOn(iso), cats = dayCategories(iso, refs);
+      // Un pallino per categoria, dalla più lunga: pieno = fatta, cerchietto = prevista; oltre tre un "+"
+      const dots = cats.slice(0, 3).map(c => h('i', { class: 'cat c-' + c.sec + (c.done ? ' ok' : '') }));
+      if (cats.length > 3) dots.push(h('b', { class: 'more', 'aria-hidden': 'true' }, '+'));
       const d = C.fromISO(iso);
       return h('button', { type: 'button', class: 'cal-d' + (iso.slice(0, 7) === calMonth.slice(0, 7) ? '' : ' out') + (iso === t ? ' today' : '') + (iso === calSel ? ' sel' : ''),
-        'aria-label': `${WD_FULL[wdIdx(iso)]} ${d.getDate()} ${MONTHS_FULL[d.getMonth()]}${refs.length ? ', training' : ''}`, 'aria-pressed': iso === calSel ? 'true' : 'false',
+        'aria-label': `${WD_FULL[wdIdx(iso)]} ${d.getDate()} ${MONTHS_FULL[d.getMonth()]}` + (cats.length ? ': ' + cats.map(c => (C.SECTIONS[c.sec] || 'Other') + (c.done ? ' done' : ' planned')).join(', ') : ''), 'aria-pressed': iso === calSel ? 'true' : 'false',
         onclick: () => go('calendar-' + iso) }, d.getDate(), h('span', { class: 'dots' }, dots));
     };
     // Le registrazioni si vedono già nella giornata sopra (✓ sotto ogni esercizio): qui solo quelle senza giornata, es. di un programma eliminato
@@ -1982,7 +1987,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
       h('div', { class: 'week' }, btn('‹', () => shift(-1), 'sm'), h('div', { class: 't big', style: 'font-size:17px;text-transform:capitalize' }, `${MONTHS_FULL[first.getMonth()]} ${first.getFullYear()}`),
         btn('Today', () => { calMonth = t.slice(0, 7) + '-01'; go('calendar-' + t); }, 'sm'), btn('›', () => shift(1), 'sm')),
       h('div', { class: 'cal' }, ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map(x => h('div', { class: 'wh' }, x)), cells.map(cell)),
-      h('div', { class: 'cal-key sub' }, h('span', {}, h('i', {}), 'planned'), h('span', {}, h('i', { class: 'ok' }), 'done')),
+      h('div', { class: 'cal-key sub' }, h('span', {}, h('i', { class: 'cat c-other' }), 'planned'), h('span', {}, h('i', { class: 'cat c-other ok' }), 'done'), h('span', {}, 'colour = category')),
       h('h2', { style: 'margin-top:18px;text-transform:capitalize' }, `${WD_FULL[wdIdx(calSel)]} ${fmtDate(calSel)}`),
       refs.length ? refs.map(r => sessionCard(r, true)) : restCard(calSel, true),
       logs.length ? [h('h2', {}, 'Without a planned day'), h('div', { class: 'sub' }, 'Logged on this day, but its day is no longer in the calendar. Tap to delete it.'), logs.map(logCard)] : null];
@@ -2120,6 +2125,18 @@ review|other|Attempt review|10|`.split('\n').map(line => {
 
   /* ---------- Esercizi: libreria standard + esercizi propri (solo nome e sezione; i parametri si impostano nella sessione) ---------- */
   /** Barretta colorata della categoria. Il colore aiuta a leggere la giornata; il nome della categoria è nell'etichetta accessibile e nella libreria. */
+  /** Categorie di un giorno per il calendario: minuti previsti per categoria e se qualcosa è stato registrato.
+      Le registrazioni senza esercizio previsto quel giorno (sessione fatta altrove, programma eliminato) contano come fatte. */
+  function dayCategories(iso, refs) {
+    const m = new Map(), add = (sec, min, done) => { const c = m.get(sec) || { sec, min: 0, done: false }; c.min += min || 0; c.done = c.done || done; m.set(sec, c); };
+    const seen = new Set();
+    for (const r of refs) {
+      const s = sessOf(r), l = dayLog(r), logged = new Set(l ? l.blocks.map(x => x.bid) : []);
+      for (const b of s.blocks) { add(exSection(S.exercises[b.exId]), b.minutes, logged.has(b.id)); seen.add(b.id); }
+    }
+    for (const l of S.logs) if (l.date === iso) for (const x of l.blocks || []) if (!x.bid || !seen.has(x.bid)) add(C.SECTIONS[x.sec] ? x.sec : 'other', x.minutes, true);
+    return [...m.values()].sort((a, b) => b.min - a.min);
+  }
   const catBar = sec => h('i', { class: 'cb c-' + (C.SECTIONS[sec] ? sec : 'other'), title: C.SECTIONS[sec] || 'Other', 'aria-label': 'Category: ' + (C.SECTIONS[sec] || 'Other') });
   const secHead = (t, sec) => h('div', { class: 'sec' }, sec ? catBar(sec) : null, t);
   const customTpl = c => { const sec = c.section || 'other', slot = C.slotOf(sec); return { std: null, custom: c.key, name: c.name, section: sec, slot, location: slot === 'wall' ? 'wall' : 'off_wall', domain: 'other', intensity: 'moderate', risk: 'low', equipment: [], interval: null, load: null, surface: '' }; };
@@ -2377,7 +2394,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
         cloudOn() ? [btn('Restore from GitHub', cloudRestore, 'sm'), btn('Disconnect', async () => { if (await confirmDlg('Disconnect GitHub? The token is deleted from this device; backups already uploaded stay in the repository.', 'Disconnect')) { S.settings.gh = null; clearTimeout(cloudTimer); save(); render(); } }, 'sm danger')] : null));
   }
   /* ---------- Taccuino: note al volo durante la prova dell'app, con il contesto per poterle riprodurre ---------- */
-  const VERSION = '20261122.1157';
+  const VERSION = '20261122.1159';
   function noteSheet() {
     const text = h('textarea', { class: 'inp', placeholder: 'What is wrong, or what would you like to be different?' });
     const where = P ? 'timer: ' + P.steps[P.idx].name : (location.hash.slice(1) || 'home');

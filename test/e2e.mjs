@@ -166,6 +166,11 @@ await pg.select('.sheet .cols label:nth-child(2) select', '7A+'); await pg.evalu
 await clickText('Save', '.sheet'); await sleep(80);
 let diary = await txt('#view');
 ok(diary.includes('MoonBoard 7A+ · 3 sends') && diary.includes('buone sensazioni') && diary.includes('6 min'), 'registrazione nel calendario: minuti, superficie, grado, note');
+const calDots = await pg.evaluate(() => { const b = [...document.querySelectorAll('#view .cal-d:not(.out)')]; const at = n => b.find(x => x.firstChild.textContent === String(n));
+  const d = n => [...at(n).querySelectorAll('.dots i')].map(i => i.className.replace('cat ', '')).join(' ');
+  return { today: d(25), fut: [26, 27, 28, 29, 30].map(d).find(x => x) || '', label: at(25).getAttribute('aria-label'), more: !!document.querySelector('#view .cal-d .more') }; });
+ok(/c-\w+ ok/.test(calDots.today) && calDots.fut && !/ok/.test(calDots.fut) && /: \w.* done/.test(calDots.label), 'calendario: un pallino per categoria con il suo colore, pieno se fatta e cerchietto se prevista');
+await shot('7b-calendario-categorie');
 // Eliminare un esercizio registrato: sparisce con il suo tempo
 await go('calendar-2026-11-25');
 const before2 = await pg.evaluate(() => { const l = __app.state.logs.find(x => x.date === '2026-11-25'); return { n: l.blocks.length, m: l.minutes }; });

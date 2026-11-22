@@ -48,6 +48,11 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
 .cal-d.out{background:none;color:var(--mu)}.cal-d.today{border-color:var(--ac)}.cal-d.sel{background:#2f363e;border-color:#6b7480}
 .dots{display:flex;gap:3px;height:6px}.dots i,.cal-key i{width:6px;height:6px;border-radius:50%;background:#6b7480;display:inline-block}
 .dots i.ok,.cal-key i.ok{background:var(--ok)}
+/* Pallini per categoria: cerchietto del colore della categoria = previsto, pieno = fatto */
+.dots{align-items:center}.dots i.cat,.cal-key i.cat{width:7px;height:7px;background:transparent;box-shadow:inset 0 0 0 1.5px var(--c);box-sizing:border-box}
+.dots i.cat.ok,.cal-key i.cat.ok{background:var(--c)}
+.dots .more{font-size:11px;line-height:6px;font-weight:800;color:var(--tx)}
+.cal-d.out .dots{opacity:.55}
 .cal-key{display:flex;gap:14px;margin-top:8px;font-size:12px}.cal-key i{margin-right:5px;vertical-align:1px}
 .climb{border-top:1px solid var(--line);padding-top:8px;margin-top:8px}.climb:first-child{border-top:0;margin-top:0;padding-top:0}.climb .n{font-weight:600}
 /* Analisi: riquadri e grafici */
