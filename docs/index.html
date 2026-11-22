@@ -102,7 +102,11 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
 #player .clock{flex:1;display:flex;align-items:center;justify-content:center;font-size:min(30vw,190px);font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.04em;color:var(--ph);line-height:1}
 #player .cue{text-align:center;font-size:21px;font-weight:600;min-height:28px}#player .kg{text-align:center;color:var(--ac);font-size:26px;font-weight:800;min-height:34px}
 #player .nx{text-align:center;color:var(--mu);font-size:14px;margin:8px 0 14px;min-height:20px}
-#player .ctl{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}#player .ctl2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+/* Tasti: tre secondari uguali, Done largo sotto, End exercise come link (occupa sempre il suo spazio, così i tasti non si spostano) */
+#player .ctl{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+#player #p-done{width:100%;margin-top:12px;min-height:62px;font-size:19px;font-weight:700}
+#player .linkbtn{background:none;border:0;color:var(--mu);font-size:15px;min-height:44px;margin-top:4px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+#player #p-quit[hidden]{display:block!important;visibility:hidden}
 #player .btn{min-height:54px;font-size:17px}
 [hidden]{display:none!important}
 
@@ -227,12 +231,10 @@ h2 .cnt{color:var(--mu);font-weight:400;font-size:.85em}
   <div class="ctl">
     <button class="btn" id="p-back" type="button">‹ Back</button>
     <button class="btn" id="p-pause" type="button">Pause</button>
-    <button class="btn" id="p-done" type="button">Done</button>
-  </div>
-  <div class="ctl2">
     <button class="btn" id="p-plus" type="button">+30 s</button>
-    <button class="btn" id="p-quit" type="button">End exercise</button>
   </div>
+  <button class="btn pri" id="p-done" type="button">Done</button>
+  <button class="linkbtn" id="p-quit" type="button">End exercise</button>
 </section>
 <div id="toast" hidden></div>
 <script>/*! js-yaml 4.1.0 https://github.com/nodeca/js-yaml @license MIT */
@@ -2375,7 +2377,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
         cloudOn() ? [btn('Restore from GitHub', cloudRestore, 'sm'), btn('Disconnect', async () => { if (await confirmDlg('Disconnect GitHub? The token is deleted from this device; backups already uploaded stay in the repository.', 'Disconnect')) { S.settings.gh = null; clearTimeout(cloudTimer); save(); render(); } }, 'sm danger')] : null));
   }
   /* ---------- Taccuino: note al volo durante la prova dell'app, con il contesto per poterle riprodurre ---------- */
-  const VERSION = '20261121.2008';
+  const VERSION = '20261122.1157';
   function noteSheet() {
     const text = h('textarea', { class: 'inp', placeholder: 'What is wrong, or what would you like to be different?' });
     const where = P ? 'timer: ' + P.steps[P.idx].name : (location.hash.slice(1) || 'home');
@@ -2724,7 +2726,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
     $('p-kg').textContent = kg == null ? '' : (ex.load.mode === 'hang' ? C.fmtKg(kg) : dec(kg) + ' kg');
     $('p-next').textContent = nx ? 'Next: ' + (nx.kind === 'rest' ? `rest ${mmss(nx.seconds)}` : (nx.cue || `round ${nx.round}`)) : 'Last step of the exercise';
     $('p-done').textContent = isAuto(st) ? 'Skip' : 'Done';
-    $('p-done').className = 'btn ' + (isAuto(st) ? '' : 'pri');
+    $('p-done').className = 'btn ' + (isAuto(st) ? 'skip' : 'pri');
     // "End exercise" solo quando serve: se l'ultimo passo si chiude con Done, i due pulsanti farebbero la stessa cosa (nota di Leo del 19 nov)
     $('p-quit').hidden = !nx && !isAuto(st);
     $('p-plus').disabled = st.kind === 'work';

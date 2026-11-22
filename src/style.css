@@ -91,7 +91,11 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
 #player .clock{flex:1;display:flex;align-items:center;justify-content:center;font-size:min(30vw,190px);font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.04em;color:var(--ph);line-height:1}
 #player .cue{text-align:center;font-size:21px;font-weight:600;min-height:28px}#player .kg{text-align:center;color:var(--ac);font-size:26px;font-weight:800;min-height:34px}
 #player .nx{text-align:center;color:var(--mu);font-size:14px;margin:8px 0 14px;min-height:20px}
-#player .ctl{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}#player .ctl2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+/* Tasti: tre secondari uguali, Done largo sotto, End exercise come link (occupa sempre il suo spazio, così i tasti non si spostano) */
+#player .ctl{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+#player #p-done{width:100%;margin-top:12px;min-height:62px;font-size:19px;font-weight:700}
+#player .linkbtn{background:none;border:0;color:var(--mu);font-size:15px;min-height:44px;margin-top:4px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+#player #p-quit[hidden]{display:block!important;visibility:hidden}
 #player .btn{min-height:54px;font-size:17px}
 [hidden]{display:none!important}
 

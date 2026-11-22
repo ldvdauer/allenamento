@@ -1351,7 +1351,7 @@
     $('p-kg').textContent = kg == null ? '' : (ex.load.mode === 'hang' ? C.fmtKg(kg) : dec(kg) + ' kg');
     $('p-next').textContent = nx ? 'Next: ' + (nx.kind === 'rest' ? `rest ${mmss(nx.seconds)}` : (nx.cue || `round ${nx.round}`)) : 'Last step of the exercise';
     $('p-done').textContent = isAuto(st) ? 'Skip' : 'Done';
-    $('p-done').className = 'btn ' + (isAuto(st) ? '' : 'pri');
+    $('p-done').className = 'btn ' + (isAuto(st) ? 'skip' : 'pri');
     // "End exercise" solo quando serve: se l'ultimo passo si chiude con Done, i due pulsanti farebbero la stessa cosa (nota di Leo del 19 nov)
     $('p-quit').hidden = !nx && !isAuto(st);
     $('p-plus').disabled = st.kind === 'work';
