@@ -41,7 +41,7 @@ ok(!/programme|this week/i.test(home), 'Home: nessun riferimento al piano né ri
 ok((await txt('#tabs')).replace(/\s+/g, ' ').trim() === 'Home Calendar Trips Analytics More', 'navigazione: Home, Calendar, Trips, Analytics, More (Nota in More)');
 
 // Import: si sceglie la data di inizio e il programma finisce nel calendario
-await go('more');
+await go('programmes');
 await (await pg.$('#view input[type=file]')).uploadFile(PLAN); await sleep(400);
 ok((await txt('.sheet')).includes('Import programme') && (await pg.$eval('.sheet input[type=date]', e => e.value)) === '2026-11-16', 'import: chiede da quando parte (default dal file)');
 await clickText('Import', '.sheet');
@@ -261,13 +261,25 @@ ok((await txt('.sheet')).includes('Sets done (of 6)') && (await pg.$eval('.sheet
 await clickText('Save', '.sheet');
 ok(await pg.evaluate(() => { const l = __app.state.logs.filter(x => x.date === '2026-11-25'); return l.length === 1 && l[0].blocks.some(b => b.name === 'Pinch block'); }), 'esercizio registrato nella stessa giornata (una sola registrazione per giorno)');
 
+// Programmi: in More solo la voce; la pagina li divide in corso, futuri e passati
+await go('more'); ok((await txt('#more-programmes')).includes('Programmes') && (await txt('#more-programmes')).includes('1 in progress') && !(await txt('#view')).includes('Karma 8A+'), 'More: solo la voce Programmes con il riepilogo');
+await pg.click('#more-programmes'); await sleep(100);
+ok(await pg.evaluate(() => location.hash === '#programmes') && /In progress\nKarma 8A\+[\s\S]*In progress/.test(await txt('#view')) && (await txt('#view')).includes('Import programme'), 'pagina Programmes: programma in corso marcato, import');
+await pg.evaluate(() => { const p = JSON.parse(JSON.stringify(__app.state.plans[0])); p.id = 'old'; p.title = 'Old plan'; p.startDate = '2026-06-01'; p.weeks = p.weeks.slice(0, 2); delete p.shownFrom; delete p.shownUntil;
+  const q = JSON.parse(JSON.stringify(p)); q.id = 'next'; q.title = 'Next plan'; q.startDate = '2027-06-07';
+  for (const x of [p, q]) x.weeks.forEach(w => w.forEach(d => d.sessions.forEach(s => { s.id += x.id; }))); __app.state.plans.push(p, q); __app.render(); });
+const pgTxt = await txt('#view');
+ok(pgTxt.indexOf('In progress') < pgTxt.indexOf('Upcoming') && pgTxt.indexOf('Upcoming') < pgTxt.indexOf('Past') && /Upcoming\nNext plan/.test(pgTxt) && /Past\nOld plan/.test(pgTxt), 'pagina Programmes: in corso, futuri e passati, ognuno marcato');
+await shot('9b-programmi');
+await go('more'); ok((await txt('#more-programmes')).includes('1 in progress · 1 upcoming · 1 past'), 'More: riepilogo per stato');
+await pg.evaluate(() => { __app.state.plans = __app.state.plans.filter(p => p.id !== 'old' && p.id !== 'next'); });
 // Programmi: gestione da Altro, spostare la data di inizio sposta le sessioni nel calendario
-await go('more'); await clickText('Karma 8A+', '#view', true);
+await go('programmes'); await clickText('Karma 8A+', '#view', true);
 await setVal('.sheet input[type=date]', '2026-11-25'); await clickText('Save', '.sheet');
 ok(await pg.evaluate(() => __app.state.plans[0].startDate === '2026-11-25'), 'programma: la prima sessione cade nel giorno scelto, anche se non è lunedì');
 await shot('9-altro');
 // Export YAML: il programma esce come testo leggibile, che l'app rilegge uguale
-await go('more'); await clickText('Karma 8A+', '#view', true); await clickText('Export .yaml', '.sheet');
+await go('programmes'); await clickText('Karma 8A+', '#view', true); await clickText('Export .yaml', '.sheet');
 const yamlOut = await pg.$eval('.sheet textarea', e => e.value);
 ok(/^title: Karma 8A\+$/m.test(yamlOut) && /^first_session: "2026-11-25"$/m.test(yamlOut) && /\n  - week: [\d,-]+\n    day: (mon|tue|wed|thu|fri|sat|sun)\n/.test(yamlOut), 'export: programma in YAML con settimane, giorni e data della prima sessione');
 ok(await pg.evaluate(t => { const r = Core.importYaml(t); return r.plan.weeks.length === __app.state.plans[0].weeks.length; }, yamlOut), 'export: il testo esportato si reimporta');
@@ -275,7 +287,7 @@ await pg.keyboard.press('Escape'); await pg.evaluate(() => document.querySelecto
 // Programma che si sovrappone a uno in corso: si sceglie cosa fare, le registrazioni non cambiano mai
 const snapOv = () => pg.evaluate(() => JSON.stringify({ l: __app.state.logs, t: __app.state.tests, tr: __app.state.trips }));
 const before3 = await snapOv(), nPlansOv = await pg.evaluate(() => __app.state.plans.length), oldId = await pg.evaluate(() => __app.state.plans[0].id);
-const importOv = async date => { await go('more'); await (await pg.$('#view input[type=file]')).uploadFile(PLAN); await sleep(400);
+const importOv = async date => { await go('programmes'); await (await pg.$('#view input[type=file]')).uploadFile(PLAN); await sleep(400);
   await pg.evaluate(d => { document.querySelector('.sheet input[type=date]').value = d; }, date); await clickText('Import', '.sheet'); await sleep(150); };
 await importOv('2026-11-20');
 let ovt = await txt('.sheet');
@@ -305,7 +317,7 @@ await pg.evaluate(() => { localStorage.setItem('allenamento.v1', JSON.stringify(
 const BAD = '/tmp/e2e-bad.yaml';
 writeFileSync(BAD, 'title: Rotto\nweeks: 2\nsessions:\n  - week: 3\n    day: mon\n    exercises:\n      - name: Sloper hang\n        sets: 4\n        work: sette secondi\n');
 const nPlans = await pg.evaluate(() => __app.state.plans.length);
-await go('more'); await (await pg.$('#view input[type=file]')).uploadFile(BAD); await sleep(400);
+await go('programmes'); await (await pg.$('#view input[type=file]')).uploadFile(BAD); await sleep(400);
 const errTxt = await txt('.sheet'); await shot('11-errori');
 ok(errTxt.includes('The programme was not imported') && errTxt.includes('week: "3" is not valid') && errTxt.includes('"sette secondi" is not a duration'), 'import con errori: tutti gli errori elencati, con sessione ed esercizio');
 ok(await pg.evaluate(n => __app.state.plans.length === n, nPlans), 'import con errori: nessun programma aggiunto');
@@ -461,7 +473,7 @@ if (fs.existsSync(REAL)) {
   await pg.evaluate(t => { localStorage.setItem('allenamento.v1', t); location.reload(); }, fs.readFileSync(REAL, 'utf8'));
   await sleep(500);
   ok(await pg.evaluate(() => Array.isArray(__app.state.trips) && __app.state.trips.length === 0), 'backup reale precedente ai viaggi: si apre senza errori, nessun viaggio');
-  await go('more'); await clickText('Karma - Fase 1', '#view', true);
+  await go('programmes'); await clickText('Karma - Fase 1', '#view', true);
   ok(await pg.$eval('.sheet input[type=date]', e => e.value) === '2026-11-17', 'backup reale: la data mostrata è quella della prima sessione (mar 17)');
   await setVal('.sheet input[type=date]', '2026-11-18'); await clickText('Save', '.sheet');
   ok(await pg.evaluate(() => __app.state.plans[0].startDate === '2026-11-17'), 'backup reale: prima sessione mercoledì 18');

@@ -19,7 +19,7 @@
   What you logged appears under each exercise (minutes, load, RPE, sets, grade, note; yellow if sets or reps were missed). Tap it to edit or delete it.
 - **Edit day** on a day: title, move it to another date (days you created), **Copy** its exercises to another date, or clear it.
 - Tap an exercise to set its parameters *on that day*: rounds, seconds or reps, rests, L/R, reference test and %, surface, note; for Fingers exercises also grip, edge (mm) and one or two hands. With a timer the duration is calculated; minutes are typed only for "Duration only" exercises.
-- **Programmes** (More): import a `.yaml` file (see [Programme files](#programme-files)), choose the first training day and find it in the calendar. Any day of the week works: the other sessions keep their order and the days between them.
+- **Programmes** (More → Programmes, grouped into in progress, upcoming and past): import a `.yaml` file (see [Programme files](#programme-files)), choose the first training day and find it in the calendar. Any day of the week works: the other sessions keep their order and the days between them.
   - Days of a new programme that fall before today are not shown, so they never count as missed.
   - If the new programme overlaps one you are following, the app asks: **Replace its days from** today (tomorrow if you already logged something today) or **Start after it ends**. Logged exercises, tests, trips and past days are never changed.
 - "Copy to a date" adds the exercises of a day to another day.

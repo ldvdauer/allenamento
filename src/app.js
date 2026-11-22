@@ -1112,6 +1112,26 @@
     } catch (e) { /* offline o anteprima: nessun controllo */ }
   }
 
+  /** Programmi divisi in corso, futuri e passati secondo la parte visibile nel calendario. */
+  function planGroups() {
+    const t = C.todayISO(), now = [], next = [], past = [];
+    for (const p of S.plans) (C.planEnd(p) < t || C.planShownStart(p) > C.planEnd(p) ? past : C.planShownStart(p) > t ? next : now).push(p);
+    const by = (a, b) => C.planShownStart(a).localeCompare(C.planShownStart(b));
+    return { now: now.sort(by), next: next.sort(by), past: past.sort((a, b) => C.planEnd(b).localeCompare(C.planEnd(a))) };
+  }
+  function viewPrograms() {
+    const g = planGroups(), yr = C.todayISO().slice(0, 4), fmtY = iso => fmtDate(iso) + (iso.slice(0, 4) === yr ? '' : ' ' + iso.slice(0, 4));
+    const row = (p, tag, cls) => h('div', { class: 'blk', style: 'cursor:pointer', onclick: () => planSheet(p) }, h('div', { class: 'grow' }, h('div', { class: 'n' }, p.title),
+      h('div', { class: 'p' }, `${fmtY(C.firstSessionDate(p) > C.planShownStart(p) ? C.firstSessionDate(p) : C.planShownStart(p))} – ${fmtY(C.planEnd(p))} · ${p.weeks.length} weeks` + (p.shownFrom > p.startDate || p.shownUntil ? ' · partly shown' : ''))),
+      h('span', { class: 'tag ' + cls }, tag));
+    // l'anno solo quando non è quello corrente: programmi passati e futuri non si confondono
+    const sec = (title, list, tag, cls) => list.length ? [h('h2', {}, title), h('div', { class: 'card' }, list.map(p => row(p, tag, cls)))] : null;
+    return [h('div', { class: 'row' }, btn('‹ More', () => go('more'), 'sm')), h('h1', {}, 'Programmes'),
+      h('p', { class: 'sub' }, 'A programme is a set of training days: import it, choose when it starts and find it in the calendar. Deleting one keeps what you logged.'),
+      h('div', { class: 'btns' }, fileBtn('Import programme (.yaml)')),
+      sec('In progress', g.now, 'In progress', 'ts-confirmed'), sec('Upcoming', g.next, 'Upcoming', 'ts-idea'), sec('Past', g.past, 'Past', 'ts-done'),
+      !S.plans.length ? h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin:0' }, 'No programmes yet.')) : null];
+  }
   function viewMore() {
     const prep = numInp(S.settings.prep), sound = h('input', { type: 'checkbox', checked: S.settings.sound, onchange: () => { S.settings.sound = sound.checked; save(); } });
     const sfNew = h('input', { class: 'inp', style: 'margin:0', placeholder: 'New surface' });
@@ -1121,10 +1141,10 @@
       h('div', { class: 'card tap row', onclick: () => { location.hash = 'library'; } }, h('div', { class: 'grow' }, h('div', { class: 'n', style: 'font-weight:600' }, 'Exercise library'), h('div', { class: 'sub' }, (C.LIBRARY.length + S.custom.length) + ' exercises')), '›'),
       h('div', { class: 'card tap row', onclick: () => go('notebook') }, h('div', { class: 'grow' }, h('div', { class: 'n', style: 'font-weight:600' }, 'Notebook'), h('div', { class: 'sub' }, S.notes.length ? `${S.notes.length} notes` : 'No notes yet')), '›'),
       h('div', { class: 'card tap row', onclick: () => go('diagnostics') }, h('div', { class: 'grow' }, h('div', { class: 'n', style: 'font-weight:600' }, 'Diagnostics'), h('div', { class: 'sub' }, 'Audio, screen on, offline and storage on this device · v' + VERSION)), '›'),
-      h('h2', {}, 'Programmes'), h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin-top:0' }, 'A programme is a set of training days: import it, choose when it starts and find it in the calendar.'),
-        S.plans.map(p => h('div', { class: 'blk', style: 'cursor:pointer', onclick: () => planSheet(p) }, h('div', { class: 'grow' }, h('div', { class: 'n' }, p.title),
-          h('div', { class: 'p' }, `${fmtDate(C.firstSessionDate(p) > C.planShownStart(p) ? C.firstSessionDate(p) : C.planShownStart(p))} – ${fmtDate(C.planEnd(p))} · ${p.weeks.length} weeks` + (p.shownFrom > p.startDate || p.shownUntil ? ' · partly shown' : ''))), h('div', { class: 'm' }, '›'))),
-        h('div', { class: 'btns' }, fileBtn('Import programme (.yaml)'))),
+      // Programmi: in More solo la voce, la lista (in corso, futuri, passati) sta nella sua pagina
+      (() => { const g = planGroups(); return h('div', { class: 'card tap row', id: 'more-programmes', onclick: () => go('programmes') },
+        h('div', { class: 'grow' }, h('div', { class: 'n', style: 'font-weight:600' }, 'Programmes'),
+          h('div', { class: 'sub' }, S.plans.length ? [g.now.length ? g.now.length + ' in progress' : '', g.next.length ? g.next.length + ' upcoming' : '', g.past.length ? g.past.length + ' past' : ''].filter(Boolean).join(' · ') : 'Import a programme')), '›'); })(),
       h('h2', {}, 'Climbing surfaces'), h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin-top:0' }, 'Assigned to exercises and logged exercises, to compare progress in the charts. Tap to rename.'),
         h('div', { class: 'btns', style: 'margin-top:0' }, S.surfaces.map(x => btn(x.name, () => surfaceSheet(x), 'sm'))),
         h('div', { class: 'row', style: 'margin-top:10px' }, h('div', { class: 'grow' }, sfNew), btn('Add', () => { const n = sfNew.value.trim().slice(0, 40); if (!n) return toast('Type a name.'); addSurface(n); save(); render(); }, 'sm')),
@@ -1463,7 +1483,7 @@
   }
 
   /* ---------- Router ---------- */
-  const VIEWS = { home: viewHome, calendar: viewCalendar, trips: viewTrips, trip: viewTrip, analytics: viewAnalytics, tests: viewProgress, more: viewMore, library: viewLibrary, notebook: viewNotes, diagnostics: viewDiag };
+  const VIEWS = { home: viewHome, calendar: viewCalendar, trips: viewTrips, trip: viewTrip, analytics: viewAnalytics, tests: viewProgress, more: viewMore, programmes: viewPrograms, library: viewLibrary, notebook: viewNotes, diagnostics: viewDiag };
   function render() {
     const [name, ...args] = (location.hash.slice(1) || 'home').split('-');
     const fn = VIEWS[name] || viewHome;
@@ -1471,7 +1491,7 @@
     try { nodes = fn(args); }
     catch (e) { console.error('[ui] error in view ' + name, e); nodes = [h('h1', {}, 'Something went wrong'), h('p', { class: 'sub' }, String(e.message || e)), btn('Back to Home', () => go('home'))]; }
     $('view').replaceChildren(...[nodes].flat(Infinity).filter(n => n != null && n !== false));
-    const tab = { library: 'more', notebook: 'more', diagnostics: 'more', tests: 'analytics', trip: 'trips' }[name] || (VIEWS[name] ? name : 'home');
+    const tab = { library: 'more', programmes: 'more', notebook: 'more', diagnostics: 'more', tests: 'analytics', trip: 'trips' }[name] || (VIEWS[name] ? name : 'home');
     for (const el of document.querySelectorAll('#tabs a')) el.classList.toggle('on', el.getAttribute('href') === '#' + tab);
   }
   let lastView = (location.hash.slice(1) || 'home').split('-')[0];
