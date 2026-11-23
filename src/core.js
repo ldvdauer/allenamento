@@ -221,6 +221,8 @@ review|other|Attempt review|10|`.split('\n').map(line => {
     return out;
   }
   const fmtKg = kg => (kg > 0 ? '+' : '') + kg + ' kg';
+  /** Carichi registrati (kg oltre il peso corporeo): "+20 kg" oppure "L +15 kg · R +18 kg". */
+  const fmtLoads = kgs => (kgs || []).filter(x => x && Number.isFinite(x.kg)).map(x => (x.side ? x.side + ' ' : '') + fmtKg(x.kg)).join(' · ');
 
   /* ---- Timer ---- */
   const cycle = a => { // periodo minimo di un array ripetuto
@@ -875,7 +877,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
 
   return {
     CLIMBING, LEGACY_SECTION, slotOf, blockSection, timeBySection, weeklyGroups, describe, leftoverNote, splitCues, fmtRest, PAIRS, refKeys, LEGACY_NAMES, normSide, firstOffset, firstSessionDate, planEnd, planShownStart, inWindow, overlapping, lastSession, startForFirst, recordsOf, lastRecord, nextLoad, TEST_TEMPLATES, testLabel, SECTIONS, LIBRARY, STD, stdVariant, matchStd, exName, GRIPS, gripKey, gripText,
-    DAY_TYPES, PERIODS, SLOTS, GRADES, ROUTE_GRADES, gradeList, GRADE_SCALES, gradeIdx, fmtGrade, DEFAULT_SURFACES, inferSurface, validISO, uid, toISO, fromISO, todayISO, addDays, diffDays, mondayOf,
+    DAY_TYPES, PERIODS, SLOTS, fmtLoads, GRADES, ROUTE_GRADES, gradeList, GRADE_SCALES, gradeIdx, fmtGrade, DEFAULT_SURFACES, inferSurface, validISO, uid, toISO, fromISO, todayISO, addDays, diffDays, mondayOf,
     inferLoad, loadKey, loadKg, latestMaxes, fmtKg, cycle, cueAt, intervalMinutes, buildSteps, normInterval,
     importYaml, exportYaml, parseDuration, parseWeeks, fmtWeeks, testExercise, YAML_REFS, locate, dateOf, sessionMinutes, cloneSession, validState,
     niceRange, scheduled, weeklyStats, summary, parseLoads, loadSeries, surfaceStats, weeklyTopGrades, dailyGroups, setsCompletion, testProgress, gradeProgress,

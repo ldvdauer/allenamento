@@ -114,7 +114,7 @@ const c0 = await txt('#p-clock'); await pg.click('#p-plus'); ok((await txt('#p-c
 await pg.click('#p-pause'); const c1 = await txt('#p-clock'); await adv(60000); ok((await txt('#p-clock')) === c1, 'pausa: il tempo non scorre'); await pg.click('#p-pause');
 for (let i = 0; i < 20 && !(await pg.$eval('#player', e => e.hidden)); i++) await pg.click('#p-done'); // salta le altre serie
 ok((await txt('.sheet')).includes('Sets done (of 4)') && (await pg.$eval('.sheet .cols label:nth-child(1) input', e => e.value)) === '1', 'serie saltate: "Sets done" precompilato con quelle finite (1 di 4)');
-ok((await pg.evaluate(() => [...document.querySelectorAll('.sheet label')].find(l => l.innerText.startsWith('Load used')).querySelector('input').value)) === '+4.5 kg', 'fine esercizio: carico precompilato');
+ok((await pg.evaluate(() => { const l = [...document.querySelectorAll('.sheet label')].find(x => x.innerText.startsWith('Added load (kg over body weight)')); return l && l.querySelectorAll('input').length === 1 ? l.querySelector('input').value : null; })) === '4.5', 'fine esercizio: carico in kg oltre il peso corporeo, precompilato (solo il numero)');
 await pg.evaluate(() => { const i = [...document.querySelectorAll('.sheet label')].find(l => l.innerText.startsWith('Exercise RPE')).querySelector('input'); i.value = '7'; });
 await clickText('Save', '.sheet');
 
@@ -258,7 +258,13 @@ ok(!/log session|logged session/i.test(await txt('#view')), 'Home: nessun "Log s
 await pg.evaluate(() => [...document.querySelectorAll('#view .blk')].find(r => r.innerText.includes('Pinch block')).click()); await sleep(60);
 await clickText('Log without timer', '.sheet');
 ok((await txt('.sheet')).includes('Sets done (of 6)') && (await pg.$eval('.sheet .cols label:nth-child(1) input', e => e.value)) === '6', 'registrazione senza timer: serie tutte fatte, modificabili');
+// Esercizio per lato: due campi kg (L e R); il tasto ± per un carico negativo (scaricato)
+const kgIn = await pg.$$('.sheet .kg-in input');
+ok(kgIn.length === 2 && (await txt('.sheet .kg-wrap')).includes('L') && (await txt('.sheet .kg-wrap')).includes('R'), 'carico per lato: due campi L/R');
+await kgIn[0].type('12'); await kgIn[1].type('10'); await pg.evaluate(() => document.querySelectorAll('.sheet .kg-sign')[1].click());
 await clickText('Save', '.sheet');
+ok(await pg.evaluate(() => { const b = __app.state.logs.find(x => x.date === '2026-11-25').blocks.find(x => x.name === 'Pinch block'); return b.load === 'L +12 kg · R -10 kg' && b.kgs.length === 2 && b.kgs[1].kg === -10 && b.mode === 'hang'; }), 'carico salvato in kg oltre il peso corporeo, anche negativo');
+ok((await txt('#view')).includes('L +12 kg · R -10 kg'), 'carico mostrato sotto l\'esercizio');
 ok(await pg.evaluate(() => { const l = __app.state.logs.filter(x => x.date === '2026-11-25'); return l.length === 1 && l[0].blocks.some(b => b.name === 'Pinch block'); }), 'esercizio registrato nella stessa giornata (una sola registrazione per giorno)');
 
 // Programmi: in More solo la voce; la pagina li divide in corso, futuri e passati

@@ -484,7 +484,7 @@
       Si tocca per modificare quanto registrato. */
   function loggedLine(x, onEdit) {
     const res = (x.testIds || []).map(id => S.tests.find(t => t.id === id)).filter(Boolean).map(t => { const d = S.testDefs.find(k => k.key === t.key); return `${d ? d.name : t.key} ${dec(t.value)}`; });
-    const parts = [x.minutes ? x.minutes + ' min' : '', x.load, x.rpe ? 'RPE ' + dec(x.rpe) : '', x.sets ? `${x.sets.done}/${x.sets.of} sets` : '', x.repsMissed ? `${x.repsMissed} reps missed` : '',
+    const parts = [x.minutes ? x.minutes + ' min' : '', (x.kgs || []).length ? C.fmtLoads(x.kgs) : x.load, x.rpe ? 'RPE ' + dec(x.rpe) : '', x.sets ? `${x.sets.done}/${x.sets.of} sets` : '', x.repsMissed ? `${x.repsMissed} reps missed` : '',
       x.climb ? climbText(x.climb) : '', ...res].filter(Boolean);
     const short = (x.sets && x.sets.done < x.sets.of) || x.repsMissed;
     return h('div', { class: 'logged' + (short ? ' short' : '') + (onEdit ? ' tap' : ''), role: onEdit ? 'button' : null, 'aria-label': onEdit ? 'Edit what was logged for ' + x.name : null,
@@ -1385,10 +1385,10 @@
   }
   function drawClock() {
     const st = P.steps[P.idx], rem = remaining();
-    // A ripetizioni il numero da fare conta più del tempo: si mostra quello (e il tempo trascorso solo se non c'è un numero)
-    const reps = st.kind === 'work' && st.selfPaced && st.reps;
-    $('p-clock').classList.toggle('reps', !!reps);
-    $('p-clock').textContent = reps ? `${st.reps} reps` : st.kind === 'work' && st.selfPaced ? mmss(st.seconds - rem) : mmss(Math.ceil(rem));
+    // A ripetizioni (o blocchi) niente tempo che scorre: si mostra cosa fare, il timer parte solo col recupero dopo "Done" (nota del 23 nov)
+    const self = st.kind === 'work' && st.selfPaced;
+    $('p-clock').classList.toggle('reps', self);
+    $('p-clock').textContent = self ? (st.reps ? `${st.reps} reps` : `${st.round} / ${st.rounds}`) : mmss(Math.ceil(rem));
   }
   function draw() {
     const st = P.steps[P.idx], nx = P.steps[P.idx + 1], ex = S.exercises[st.exId];
@@ -1425,7 +1425,17 @@
     const min = numInp(Math.round(ms / 60000)), note = h('input', { placeholder: 'Optional', value: prev && prev.note || '' });
     const isTest = !!(ex.load && ex.load.test), planned = loadHint(ex).replace('kg: maxes missing', '');
     // Carico e RPE per ogni esercizio di forza: sono lo storico da cui nasce la proposta della volta dopo.
-    const load = !isTest && (ex.load || ex.slot === 'strength') ? h('input', { value: prev ? prev.load || '' : planned, placeholder: 'e.g. 20 kg or L 18 kg · R 20 kg' }) : null;
+    // Carico: sempre kg in più rispetto al peso corporeo (nota di Leo del 23 nov); due campi se l'esercizio è per lato
+    const sided = !!(ex.interval && C.splitCues(ex.interval.cues).sided) || !!(ex.load && C.PAIRS[ex.load.ref]);
+    const plannedKg = side => { if (!ex.load || ex.load.mode !== 'hang' || ex.load.pct == null) return null; const c = (ex.interval && ex.interval.cues.find(x => !side || C.normSide(x.split(' ')[0]) === side)) || ''; return C.loadKg(ex.load, c, m); };
+    const prevKg = side => { const k = prev && (prev.kgs || []).find(x => (x.side || null) === side); return k ? k.kg : prev ? null : plannedKg(side); };
+    const kgInp = side => { const i = numInp(prevKg(side), { placeholder: '0' });
+      return h('div', { class: 'kg-in' }, side ? h('span', { class: 'kg-side' }, side) : null, i, h('span', { class: 'kg-u' }, 'kg'),
+        h('button', { type: 'button', class: 'btn sm kg-sign', 'aria-label': 'Change sign (assisted, less than body weight)', onclick: () => { const v = val(i); i.value = v == null ? '-' : dec(-v); } }, '±')); };
+    const withLoad = !isTest && (ex.load || ex.slot === 'strength');
+    const kgBoxes = withLoad ? (sided ? [['L', kgInp('L')], ['R', kgInp('R')]] : [[null, kgInp(null)]]) : [];
+    const load = withLoad ? h('div', { class: 'kg-wrap' }, kgBoxes.map(x => x[1])) : null;
+    const readKgs = () => kgBoxes.map(([side, box]) => ({ side, kg: val(box.querySelector('input')) })).filter(x => x.kg != null);
     const rpe = load ? numInp(prev ? prev.rpe : null, { placeholder: '1-10' }) : null;
     const prevTest = k => { const t = prev && (prev.testIds || []).map(id => S.tests.find(x => x.id === id)).find(x => x && x.key === k); return t ? t.value : null; };
     const tests = ex.load && ex.load.test ? C.refKeys(ex.load.ref).map(k => S.testDefs.find(t => t.key === k)).filter(Boolean)
@@ -1456,15 +1466,15 @@
       sets ? h('div', { class: 'cols' }, field(`Sets done (of ${of})`, setsDone), repsMissed ? field('Reps missed (total)', repsMissed) : field('Minutes', min)) : field('Minutes', min),
       sets && repsMissed ? field('Minutes', min) : null,
       tests.length ? [tests.map(x => field(`Result: ${x.def.name} (${x.def.unit})`, x.inp)), h('p', { class: 'sub' }, 'On save, the result immediately updates the max in the Tests section.')] : null,
-      load ? h('div', { class: 'cols' }, field('Load used', load), field('Exercise RPE', rpe)) : null,
+      load ? [field('Added load (kg over body weight)', load), field('Exercise RPE', rpe)] : null,
       isClimb ? [h('div', { class: 'cols' }, field('Surface', sf), field('Top grade sent', gr)), sentF] : null,
       field('Note', note),
       btn('Save', () => {
         const sd = setsDone ? Math.round(val(setsDone)) : null;
         if (setsDone && !(sd >= 0 && sd <= of)) return toast(`Sets done: from 0 to ${of}.`);
         const rm = repsMissed ? Math.max(0, Math.round(val(repsMissed) || 0)) : null;
-        put({ name: C.exName(ex), minutes: Math.max(0, Math.round(val(min) || 0)), note: note.value.trim().slice(0, 200), load: load ? load.value.trim() : '', sec: exSection(ex),
-          key: exKey(ex), label: exLabel(ex), kgs: load ? C.parseLoads(load.value) : [], rpe: rpe ? val(rpe) : null, mode: ex.load ? ex.load.mode : 'lift',
+        put({ name: C.exName(ex), minutes: Math.max(0, Math.round(val(min) || 0)), note: note.value.trim().slice(0, 200), load: load ? C.fmtLoads(readKgs()) : '', sec: exSection(ex),
+          key: exKey(ex), label: exLabel(ex), kgs: load ? readKgs() : [], rpe: rpe ? val(rpe) : null, mode: 'hang',
           sets: sets ? { done: sd, of } : null, repsMissed: rm || null,
           tests: tests.map(x => ({ key: x.def.key, value: val(x.inp) })).filter(x => x.value != null),
           climb: isClimb && sf.value ? { name: C.exName(ex), surface: sf.value, top: gr.value || null, sends: val(sends) == null ? null : Math.max(0, Math.round(val(sends))), minutes: Math.max(0, Math.round(val(min) || 0)) } : null });
