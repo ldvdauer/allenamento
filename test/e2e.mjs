@@ -112,9 +112,12 @@ await adv(7500);
 ok((await txt('#p-ph')) === 'REST', 'hang finito → recupero');
 const c0 = await txt('#p-clock'); await pg.click('#p-plus'); ok((await txt('#p-clock')) !== c0, '+30 s sul recupero');
 await pg.click('#p-pause'); const c1 = await txt('#p-clock'); await adv(60000); ok((await txt('#p-clock')) === c1, 'pausa: il tempo non scorre'); await pg.click('#p-pause');
+const tb = await pg.evaluate(() => ({ rows: document.querySelectorAll('#p-table .tb-r').length, done: document.querySelectorAll('#p-table .tb-r.done').length, cur: [...document.querySelectorAll('#p-table .tb-r')].findIndex(r => r.classList.contains('cur')), kg: document.querySelector('#p-table .stp-in').value, head: document.querySelector('#p-table .tb-h').innerText }));
+ok(tb.rows === 4 && tb.done === 1 && tb.cur === 1 && tb.kg === '4.5' && tb.head.includes('kg over body weight'), 'tabella nel timer: 4 serie, la prima fatta, la seconda evidenziata, kg precompilati (' + JSON.stringify(tb) + ')');
+await shot('5b-timer-tabella');
 for (let i = 0; i < 20 && !(await pg.$eval('#player', e => e.hidden)); i++) await pg.click('#p-done'); // salta le altre serie
-ok((await txt('.sheet')).includes('Sets done (of 4)') && (await pg.$eval('.sheet .cols label:nth-child(1) input', e => e.value)) === '1', 'serie saltate: "Sets done" precompilato con quelle finite (1 di 4)');
-ok((await pg.evaluate(() => { const l = [...document.querySelectorAll('.sheet label')].find(x => x.innerText.startsWith('Added load (kg over body weight)')); return l && l.querySelectorAll('input').length === 1 ? l.querySelector('input').value : null; })) === '4.5', 'fine esercizio: carico in kg oltre il peso corporeo, precompilato (solo il numero)');
+ok((await txt('.sheet .sum')) === '1/4 sets · +4.5 kg', 'conferma breve: riepilogo dalla tabella (1 serie su 4, +4.5 kg)');
+ok(!(await txt('.sheet')).includes('Sets done') && !(await txt('.sheet')).includes('Added load'), 'conferma breve: niente campi già compilati nella tabella');
 await pg.evaluate(() => { const i = [...document.querySelectorAll('.sheet label')].find(l => l.innerText.startsWith('Exercise RPE')).querySelector('input'); i.value = '7'; });
 await clickText('Save', '.sheet');
 
@@ -122,8 +125,12 @@ await clickText('Save', '.sheet');
 await play('Wrist curl'); await sleep(60);
 ok((await txt('#p-clock')) === '6' && (await txt('#p-unit')) === 'reps' && (await txt('#p-ph')) === 'GO', 'a ripetizioni: "6" grande e "reps" sotto, niente tempo');
 ok(/^Up next: \d+ (min|s).* rest between sets$/.test(await txt('#p-next')), 'Up next: recupero tra le serie (' + await txt('#p-next') + ')');
+const wc = await pg.evaluate(() => ({ rows: document.querySelectorAll('#p-table .tb-r').length, reps: [...document.querySelectorAll('#p-table .tb-r')][0].querySelector('.stp-v').innerText, head: document.querySelector('#p-table .tb-h').innerText }));
+ok(wc.rows >= 2 && wc.reps === '6' && wc.head.includes('Reps'), 'a ripetizioni: righe con le ripetizioni modificabili (' + JSON.stringify(wc) + ')');
+await pg.evaluate(() => [...document.querySelectorAll('#p-table .tb-r')][0].querySelectorAll('.stp-b')[0].click());
+ok(await pg.evaluate(() => [...document.querySelectorAll('#p-table .tb-r')][0].querySelector('.stp-v').innerText) === '5', '− sulle ripetizioni');
 await pg.click('#p-quit');
-ok((await txt('.sheet')).includes('Reps missed'), 'a ripetizioni: si possono segnare le ripetizioni mancanti');
+ok((await txt('.sheet')).includes('Exercise complete') && (await txt('.sheet')).includes('0/'), 'a ripetizioni: conferma breve');
 await clickText('Not done', '.sheet');
 ok((await pg.$$('#view .play.done')).length === 2, '"Not done": nessuna registrazione');
 
@@ -136,11 +143,21 @@ ok((await pg.$$('#view .blk')).length === nBlocks + 1, 'esercizio aggiunto a met
 await pg.evaluate(() => { const r = [...document.querySelectorAll('#view .blk')]; r[r.length - 1].querySelector('.play').click(); }); await sleep(60);
 ok((await txt('#p-name')) === 'Limit bouldering' && (await txt('#p-clock')) === '40:00', 'il nuovo esercizio parte con il suo timer (durata di base)');
 ok(await pg.$eval('#p-quit', e => e.hidden) && (await txt('#p-done')) === 'Done', 'esercizio a durata: solo Done, niente End exercise doppione');
+// Arrampicata: superficie nella tabella, "+ Add climb" e grado con −/+ per ogni blocco
+await pg.select('#p-table .tb-h select', 'moonboard');
+for (let i = 0; i < 3; i++) await pg.evaluate(() => [...document.querySelectorAll('#p-table .linkbtn')].find(b => b.innerText === '+ Add climb').click());
+await pg.evaluate(() => { const r = document.querySelectorAll('#p-table .tb-r'); r[0].querySelectorAll('.stp-b')[1].click(); });
+const cl = await pg.evaluate(() => ({ rows: document.querySelectorAll('#p-table .tb-r').length, g: document.querySelector('#p-table .tb-r .stp-v').innerText }));
+ok(cl.rows === 3 && cl.g !== '—', 'arrampicata: blocchi aggiunti e grado scelto con + (' + JSON.stringify(cl) + ')');
+await shot('6-timer-blocchi');
 await adv(6 * 60000); await pg.click('#p-done');
-await pg.select('.sheet .cols label:nth-child(1) select', 'moonboard');
+ok((await txt('.sheet .sum')).startsWith('3 climbs · top ') && (await txt('.sheet .sum')).includes('MoonBoard'), 'conferma breve: blocchi, grado massimo e superficie');
+await pg.evaluate(() => { [...document.querySelectorAll('.sheet label')].find(l => l.innerText.startsWith('Note')).querySelector('input').value = 'buone sensazioni'; });
+await clickText('Save', '.sheet');
+// grado preciso e blocchi chiusi si correggono poi dalla riga ✓ (scheda completa)
+await pg.evaluate(() => { const rows = [...document.querySelectorAll('#view .blk')].filter(b => b.querySelector('.n').innerText.includes('Limit bouldering') && b.querySelector('.logged')); rows[rows.length - 1].querySelector('.logged').click(); }); await sleep(60);
 await pg.select('.sheet .cols label:nth-child(2) select', '7A+');
-await pg.type('.sheet .cols + label input', '3');
-await pg.type('.sheet label:last-of-type input', 'buone sensazioni');
+await pg.evaluate(() => { const i = document.querySelector('.sheet .cols + label input'); i.value = '3'; });
 await shot('6-registrazione');
 await clickText('Save', '.sheet');
 await pg.evaluate(() => [...document.querySelectorAll('#view .blk')].find(r => r.innerText.includes('Ab wheel')).click()); await sleep(60);

@@ -1361,6 +1361,8 @@
     if (!steps.length) return toast('Exercise not available.');
     audioInit(); wake();
     P = { r, b, steps, idx: null, ms: 0, paused: false, completed: 0, works: steps.filter(x => x.kind === 'work').length };
+    P.rows = buildRows(b, steps);
+    $('player').classList.toggle('tbl', !!P.rows);
     $('player').hidden = false;
     P.timer = setInterval(tick, 200);
     enter(0);
@@ -1386,7 +1388,7 @@
       if (rem <= 0) {
         const last = P.idx + 1 >= P.steps.length;
         if (last) SOUND.exEnd(); else if (st.kind === 'work') SOUND.setEnd(); else SOUND.go();
-        if (st.kind === 'work') P.completed = (P.completed || 0) + 1; // serie arrivata in fondo, non saltata
+        if (st.kind === 'work') { P.completed = (P.completed || 0) + 1; rowDone(st); } // serie arrivata in fondo, non saltata
         return next();
       }
       if (rem <= 3 && rem !== P.lastBeep) { P.lastBeep = rem; SOUND.count(); }
@@ -1427,6 +1429,83 @@
     $('p-plus').disabled = st.kind === 'work';
     $('p-pause').textContent = P.paused ? 'Resume' : 'Pause';
     drawClock();
+    drawTable();
+  }
+  /* ---- Tabella sotto il timer (fase B, ispirata a Lattice): si compila durante l'esercizio ----
+     Serie: una riga per serie (L/R separate) con reps e kg in più rispetto al peso corporeo, precompilati.
+     Arrampicata: una riga per blocco/via con il grado (scala della superficie). Skip e Add; a fine esercizio una conferma breve. */
+  const isClimbEx = ex => ex.slot === 'wall' || !!ex.surface;
+  /** Ultimi kg registrati per questo esercizio (per lato), per precompilare. */
+  function lastKgs(ex) {
+    const key = exKey(ex);
+    for (const l of [...S.logs].sort((a, b) => (a.date < b.date ? 1 : -1))) for (const x of l.blocks || []) if (x.key === key && (x.kgs || []).length) return x.kgs;
+    return [];
+  }
+  function buildRows(b, steps) {
+    const ex = S.exercises[b.exId];
+    if (!ex || (ex.load && ex.load.test)) return null; // i test hanno la loro scheda con il risultato
+    let n = 0;
+    const works = steps.filter(st => st.kind === 'work');
+    works.forEach(st => { st.row = n++; });
+    if (isClimbEx(ex)) {
+      P.surface = ex.surface || ''; // senza superficie niente dati di arrampicata, come nella scheda completa
+      return works.map(st => ({ grade: '', done: false, round: st.round }));
+    }
+    const withLoad = !!(ex.load || ex.slot === 'strength'), hasReps = works.some(st => st.reps);
+    if (!withLoad && !hasReps) return null; // stretching, mobilità: basta il timer
+    const last = lastKgs(ex), m = maxes();
+    const kgFor = side => {
+      if (!withLoad) return undefined;
+      if (ex.load && ex.load.mode === 'hang' && ex.load.pct != null) { const kg = C.loadKg(ex.load, side || '', m); if (kg != null) return kg; }
+      const k = last.find(x => (x.side || null) === side) || last[0];
+      return k ? k.kg : 0;
+    };
+    return works.map(st => { const side = st.cue === 'L' || st.cue === 'R' ? st.cue : null; return { side, plan: st.reps || null, reps: st.reps || null, kg: kgFor(side), done: false, round: st.round }; });
+  }
+  function rowDone(st) { if (P.rows && st.row != null && P.rows[st.row]) { P.rows[st.row].done = true; P.rows[st.row].skipped = false; } }
+  /** Riga corrente: quella del passo di lavoro in corso, o della prossima serie durante il recupero. */
+  function currentRow() {
+    for (let i = P.idx; i < P.steps.length; i++) if (P.steps[i].row != null) return P.steps[i].row;
+    return -1;
+  }
+  function stepper(value, fmt, onStep, input) {
+    return h('div', { class: 'stp' }, h('button', { type: 'button', class: 'stp-b', 'aria-label': 'Decrease', onclick: () => onStep(-1) }, '−'),
+      input || h('span', { class: 'stp-v' }, fmt(value)), h('button', { type: 'button', class: 'stp-b', 'aria-label': 'Increase', onclick: () => onStep(1) }, '+'));
+  }
+  function drawTable() {
+    const box = $('p-table');
+    if (!P || !P.rows) { box.replaceChildren(); return; }
+    const ex = S.exercises[P.steps[0].exId], climb = isClimbEx(ex), cur = currentRow(), route = climb && isRoute(P.surface), list = C.gradeList(route);
+    const withKg = !climb && P.rows.some(x => x.kg !== undefined), withReps = !climb && P.rows.some(x => x.plan != null);
+    const head = climb
+      ? h('div', { class: 'tb-h' }, h('span', {}, route ? 'Route' : 'Climb'), h('span', { class: 'grow' }), opts(surfOpts(), P.surface, { onchange: e => { P.surface = e.target.value; drawTable(); } }))
+      : h('div', { class: 'tb-h' }, h('span', {}, 'Set'), withReps ? h('span', { class: 'c-reps' }, 'Reps') : null, withKg ? h('span', { class: 'c-kg' }, 'kg over body weight') : null);
+    const rows = P.rows.map((x, i) => {
+      const set = (k, v) => { x[k] = v; drawTable(); };
+      let cells;
+      if (climb) {
+        const gi = x.grade ? list.indexOf(x.grade) : -1;
+        const start = () => { const prev = [...P.rows].reverse().find(y => y.grade && list.includes(y.grade)); return prev ? list.indexOf(prev.grade) : Math.floor(list.length / 2) - 4; };
+        cells = [stepper(x.grade, g => (g ? fmtG(g) : '—'), d => set('grade', list[Math.max(0, Math.min(list.length - 1, gi < 0 ? start() : gi + d))]))];
+      } else {
+        const kgIn = x.kg === undefined ? null : numInp(x.kg, { class: 'stp-in', 'aria-label': 'kg' });
+        if (kgIn) kgIn.addEventListener('change', () => { const v = val(kgIn); x.kg = v == null ? 0 : v; });
+        cells = [x.plan != null ? stepper(x.reps, v => String(v), d => set('reps', Math.max(0, (x.reps || 0) + d))) : null,
+          kgIn ? stepper(x.kg, null, d => set('kg', Math.round(((x.kg || 0) + d) * 2) / 2), kgIn) : null];
+      }
+      return h('div', { class: 'tb-r' + (i === cur ? ' cur' : '') + (x.done ? ' done' : '') + (x.skipped ? ' skip' : ''), role: 'group', 'aria-label': `${climb ? 'Climb' : 'Set'} ${i + 1}${x.done ? ', done' : ''}` },
+        h('span', { class: 'tb-n' }, String(i + 1)), x.side ? h('span', { class: 'tb-side' }, x.side) : null, h('div', { class: 'tb-c' }, cells));
+    });
+    const skip = () => {
+      const c = currentRow(); if (c < 0) return;
+      P.rows[c].skipped = true;
+      const j = P.steps.findIndex((st, k) => k > P.idx && st.row != null && st.row > c);
+      if (j < 0) endBlock(); else enter(j);
+    };
+    const add = () => { const last = P.rows[P.rows.length - 1]; P.rows.push(last ? { ...last, done: true, skipped: false, added: true, round: (last.round || 0) + 1 } : { grade: '', done: true, added: true }); drawTable(); };
+    box.replaceChildren(head, ...rows, h('div', { class: 'tb-f' },
+      cur >= 0 ? h('button', { type: 'button', class: 'linkbtn', onclick: skip }, climb ? 'Skip climb' : 'Skip set') : h('span'),
+      h('button', { type: 'button', class: 'linkbtn', onclick: add }, climb ? '+ Add climb' : '+ Add set')));
   }
   /** Riga "Up next" (stile Lattice): recupero tra serie o tra ripetizioni, lato, oppure fine dell'esercizio. */
   function upNext(nx, ex) {
@@ -1446,12 +1525,14 @@
   /** Fine dell'esercizio: il timer si ferma e si apre la sua registrazione. */
   function endBlock() {
     track();
-    const { r, b, ms, completed, works } = P;
+    const { r, b, ms, completed, works, rows, surface } = P;
     clearInterval(P.timer); P = null; $('player').hidden = true;
     try { if (wl) wl.release(); } catch (e) { /* già rilasciato */ } wl = null;
+    if (rows) return recordSheet(r, b, ms, null, null, { rows, surface });
     recordSheet(r, b, ms, works ? { done: completed, of: works } : null);
   }
-  function recordSheet(r, b, ms, sets, prev) {
+  function recordSheet(r, b, ms, sets, prev, table) {
+    if (table) return confirmSheet(r, b, ms, table);
     const ex = S.exercises[b.exId], m = maxes(), isClimb = ex.slot === 'wall' || !!ex.surface;
     const min = numInp(Math.round(ms / 60000)), note = h('input', { placeholder: 'Optional', value: prev && prev.note || '' });
     const isTest = !!(ex.load && ex.load.test), planned = loadHint(ex).replace('kg: maxes missing', '');
@@ -1479,6 +1560,7 @@
     const setsDone = sets ? numInp(sets.done) : null, repsMissed = ex.interval && ex.interval.selfPaced && ex.interval.reps ? numInp(prev ? prev.repsMissed : null, { placeholder: '0' }) : null;
     const put = rec => {
       const l = dayLog(r, true), i = l.blocks.findIndex(x => x.bid === b.id), prev = i >= 0 ? l.blocks[i] : null;
+      if (prev && prev.rows && !rec.rows) rec.rows = prev.rows; // la tabella del timer resta anche se si modifica il riepilogo
       if (prev && prev.testIds) S.tests = S.tests.filter(t => !prev.testIds.includes(t.id)); // rifatto: il nuovo risultato sostituisce il precedente
       rec.testIds = (rec.tests || []).map(t => { const id = C.uid(); S.tests.push({ id, key: t.key, date: l.date, value: t.value }); return id; });
       delete rec.tests;
@@ -1513,8 +1595,45 @@
       prev ? btn('Delete this log', () => deleteRecord(dayLog(r), prev, ov), 'danger block') : btn('Mark as done, no details', () => put({ name: C.exName(ex), minutes: Math.round(ms / 60000), sec: exSection(ex), key: exKey(ex), label: exLabel(ex) }), 'block'),
       btn(prev ? 'Cancel' : 'Not done, discard', () => ov.remove(), 'block')]);
   }
+  /** Fine esercizio con la tabella già compilata: conferma breve (riepilogo, minuti, RPE, nota). */
+  function confirmSheet(r, b, ms, table) {
+    const ex = S.exercises[b.exId], climb = isClimbEx(ex), rows = table.rows, done = rows.filter(x => x.done);
+    const min = numInp(Math.round(ms / 60000)), note = h('input', { placeholder: 'Optional' }), rpe = numInp(null, { placeholder: '1-10' });
+    // kg per lato: il massimo delle serie fatte (è il valore che conta per lo storico dei carichi)
+    const kgs = climb ? [] : [...new Set(done.filter(x => x.kg !== undefined).map(x => x.side || null))].map(side => ({ side, kg: Math.max(...done.filter(x => (x.side || null) === side && x.kg !== undefined).map(x => x.kg)) }));
+    const grades = climb ? done.map(x => x.grade).filter(Boolean) : [];
+    const top = grades.length ? grades.reduce((a, g) => (C.gradeIdx(g) > C.gradeIdx(a) ? g : a)) : null;
+    const repsMissed = climb ? 0 : done.reduce((t, x) => t + (x.plan != null ? Math.max(0, x.plan - (x.reps || 0)) : 0), 0);
+    const summary = climb
+      ? `${done.length} ${isRoute(table.surface) ? 'routes' : 'climbs'}` + (top ? ` · top ${fmtG(top)}` : '') + (table.surface ? ` · ${surfName(table.surface)}` : '')
+      : `${done.length}/${rows.length} sets` + (kgs.length ? ' · ' + C.fmtLoads(kgs) : '') + (repsMissed ? ` · ${repsMissed} reps missed` : '');
+    const ov = openSheet(C.exName(ex), [h('p', { class: 'sub' }, 'Exercise complete.'), h('p', { class: 'sum' }, summary),
+      h('div', { class: 'cols' }, field('Minutes', min), field('Exercise RPE', rpe)), field('Note', note),
+      btn('Save', () => {
+        const minutes = Math.max(0, Math.round(val(min) || 0));
+        savePut(r, b, ms, ov, { name: C.exName(ex), minutes, note: note.value.trim().slice(0, 200), sec: exSection(ex), key: exKey(ex), label: exLabel(ex),
+          load: C.fmtLoads(kgs), kgs, rpe: val(rpe), mode: 'hang', sets: climb ? null : { done: done.length, of: rows.length }, repsMissed: repsMissed || null,
+          rows: rows.map(x => climb ? { grade: x.grade || null, done: x.done } : { side: x.side, reps: x.reps, kg: x.kg, done: x.done }),
+          climb: climb && table.surface ? { name: C.exName(ex), surface: table.surface, top, sends: done.length, minutes, grades } : null });
+      }, 'pri block'),
+      btn('Not done, discard', () => ov.remove(), 'block')]);
+  }
+  /** Salva una registrazione (stessa logica della scheda completa). */
+  function savePut(r, b, ms, ov, rec) {
+    const l = dayLog(r, true), i = l.blocks.findIndex(x => x.bid === b.id), prev = i >= 0 ? l.blocks[i] : null;
+    if (prev && prev.testIds) S.tests = S.tests.filter(t => !prev.testIds.includes(t.id));
+    rec.bid = b.id;
+    if (!(rec.minutes > 0)) { rec.minutes = plannedShare(b.minutes, rec.sets); if (rec.climb) rec.climb.minutes = rec.minutes; }
+    for (const k of Object.keys(rec)) if (rec[k] == null || rec[k] === '' || (Array.isArray(rec[k]) && !rec[k].length)) delete rec[k];
+    if (prev) l.blocks[i] = rec; else l.blocks.push(rec);
+    l.minutes = Math.max(0, (l.minutes || 0) + (rec.minutes || 0) - (prev && prev.minutes || 0));
+    l.loads = l.blocks.filter(x => x.load).map(x => ({ name: x.name, kg: x.load }));
+    l.climbs = l.blocks.map(x => x.climb).filter(Boolean);
+    save(); ov.remove(); render();
+    log('exercise', 'logged', { name: rec.name, minutes: rec.minutes || 0, measured: Math.round(ms / 1000), rows: (rec.rows || []).length });
+  }
   function wirePlayer() {
-    $('p-done').onclick = () => { const st = P.steps[P.idx]; if (st.kind === 'work' && st.selfPaced) { P.completed++; if (P.idx + 1 < P.steps.length) SOUND.setEnd(); } next(); };
+    $('p-done').onclick = () => { const st = P.steps[P.idx]; if (st.kind === 'work' && st.selfPaced) { P.completed++; rowDone(st); if (P.idx + 1 < P.steps.length) SOUND.setEnd(); } next(); };
     $('p-back').onclick = () => enter(Math.max(0, P.idx - 1));
     $('p-plus').onclick = () => { if (P.paused) P.remain += 30000; else P.endAt += 30000; P.lastBeep = null; drawClock(); };
     $('p-pause').onclick = () => {

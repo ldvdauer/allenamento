@@ -205,3 +205,23 @@ h2 .cnt{color:var(--mu);font-weight:400;font-size:.85em}
 .kg-side{width:18px;font-weight:700;color:var(--mu)}.kg-u{color:var(--mu)}.kg-sign{min-width:44px}
 
 #player .unit{text-align:center;font-size:18px;color:var(--mu);margin-top:-6px;min-height:22px}
+/* Timer con tabella (fase B): orologio più compatto, la tabella scorre sotto i comandi */
+#player.tbl .clock{flex:none;font-size:min(22vw,120px);margin:6px 0}
+#player.tbl .clock.reps{font-size:min(18vw,96px)}
+#player #p-table{display:none}
+#player.tbl #p-table{display:block;flex:1;min-height:120px;overflow-y:auto;-webkit-overflow-scrolling:touch;margin:4px -6px 0;padding:0 6px}
+#p-table .tb-h{display:flex;align-items:center;gap:10px;color:var(--mu);font-size:13px;padding:4px 2px 6px}
+#p-table .tb-h select{width:auto;margin:0;font-size:14px;padding:6px 8px}
+#p-table .tb-h .c-reps{margin-left:auto;width:118px;text-align:center}#p-table .tb-h .c-kg{margin-left:auto;text-align:right;padding-right:10px}#p-table .tb-h .c-reps+.c-kg{margin-left:0;width:150px;text-align:center;padding:0}
+#p-table .tb-r{display:flex;align-items:center;gap:8px;padding:6px 8px;border:2px solid transparent;border-radius:14px;background:var(--card);margin-bottom:6px}
+#p-table .tb-r.cur{border-color:var(--ac)}#p-table .tb-r.done .tb-n{background:var(--ac);color:#0e1012;border-color:var(--ac)}
+#p-table .tb-r.skip{opacity:.45}
+#p-table .tb-n{flex:none;width:34px;height:34px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;font-weight:700;font-size:15px}
+#p-table .tb-side{flex:none;font-weight:800;font-size:13px;color:var(--mu);width:16px}
+#p-table .tb-c{flex:1;display:flex;justify-content:flex-end;gap:8px}
+#p-table .stp{display:flex;align-items:center;background:#1c2126;border-radius:10px;min-width:118px}
+#p-table .stp-b{width:40px;height:44px;border:0;background:none;color:var(--tx);font-size:22px;cursor:pointer}
+#p-table .stp-v,#p-table .stp-in{flex:1;text-align:center;font-weight:700;font-size:18px;min-width:40px}
+#p-table .stp-in{background:none;border:0;color:var(--tx);width:56px;padding:0;margin:0}
+#p-table .tb-f{display:flex;justify-content:space-between;padding:4px 4px 10px}
+.sheet .sum{font-size:18px;font-weight:700;margin:0 0 8px}
