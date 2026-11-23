@@ -340,6 +340,15 @@ await pg.evaluate(() => { const s = document.querySelector('#view .an-sel select
 await sleep(100);
 ok((await txt('#view')).includes('days / week'), 'Analisi: metrica giorni di allenamento');
 ok((await txt('#view')).includes('Average exercise RPE') && !(await txt('#view')).includes('feeling'), 'Analisi: RPE medio degli esercizi, niente sensazione del giorno');
+// Toccando un esercizio registrato: "Edit log" e "Delete log"; cancellare la registrazione lascia l'esercizio nella giornata
+await go('home');
+const target = await pg.evaluate(() => { const row = document.querySelector('#view .blk'); const n = row.querySelector('.n').innerText; row.click(); return n; }); await sleep(60);
+await clickText('Log without timer', '.sheet'); await clickText('Save', '.sheet'); await sleep(80);
+await pg.evaluate(n => [...document.querySelectorAll('#view .blk')].find(b => b.querySelector('.n').innerText === n).click(), target); await sleep(60);
+ok(target && (await txt('.sheet')).includes('Edit log') && (await txt('.sheet')).includes('Delete log') && !(await txt('.sheet')).includes('Log without timer'), 'esercizio registrato: Edit log e Delete log al posto di Log without timer');
+const nRows = await pg.$$eval('#view .blk', x => x.length);
+await clickText('Delete log', '.sheet'); await sleep(50); await clickText('Delete', '.sheet'); await sleep(100);
+ok(await pg.$$eval('#view .blk', x => x.length) === nRows && await pg.evaluate(n => { const row = [...document.querySelectorAll('#view .blk')].find(b => b.querySelector('.n').innerText === n); return row && !row.querySelector('.logged'); }, target), 'Delete log: registrazione tolta, esercizio ancora nella giornata');
 await shot('10-analisi', true);
 
 // Viaggi e progetti: sezione a sé, nella barra

@@ -714,6 +714,7 @@
   function blockSheet(r, bi) {
     const s = sessOf(r), b = s.blocks[bi], e = S.exercises[b.exId];
     const close = () => { save(); ov.remove(); render(); };
+    const dl = dayLog(r), logged = dl ? dl.blocks.find(x => x.bid === b.id) : null;
     if (!e) { const ov0 = openSheet('Exercise removed', btn('Remove from the day', () => { s.blocks.splice(bi, 1); save(); ov0.remove(); render(); }, 'danger block')); return; }
     const iv = e.interval || {}, ld = e.load || {}, isStd = !!(e.std && e.std !== 'test' && C.STD[e.std]);
     const name = h('input', { value: e.name }), min = numInp(b.minutes), note = h('input', { value: b.note || '', placeholder: 'Optional: also shown in the timer' });
@@ -762,7 +763,9 @@
         b.note = note.value.trim().slice(0, 200);
         close();
       }, 'pri block'),
-      dayOf(r) <= C.todayISO() ? btn('Log without timer', () => { ov.remove(); recordSheet(r, b, (b.minutes || 0) * 60000, e.interval && e.interval.rounds ? { done: e.interval.rounds, of: e.interval.rounds } : null); }, 'block') : null,
+      // Già registrato: si modifica o si cancella la registrazione, l'esercizio resta nella giornata
+      logged ? [btn('Edit log', () => { ov.remove(); editRecord(r, b, logged); }, 'block'), btn('Delete log', () => { ov.remove(); deleteRecord(dayLog(r), logged); }, 'danger block')]
+        : dayOf(r) <= C.todayISO() ? btn('Log without timer', () => { ov.remove(); recordSheet(r, b, (b.minutes || 0) * 60000, e.interval && e.interval.rounds ? { done: e.interval.rounds, of: e.interval.rounds } : null); }, 'block') : null,
       h('div', { class: 'btns' }, btn('Replace', () => pickExercise(tpl => { s.blocks.splice(bi, 1); addBlock(s, tpl); s.blocks.splice(bi, 0, s.blocks.pop()); close(); }), 'sm'), btn('Remove', () => { s.blocks.splice(bi, 1); close(); }, 'sm danger'))]);
     sync();
   }
@@ -1479,8 +1482,8 @@
           tests: tests.map(x => ({ key: x.def.key, value: val(x.inp) })).filter(x => x.value != null),
           climb: isClimb && sf.value ? { name: C.exName(ex), surface: sf.value, top: gr.value || null, sends: val(sends) == null ? null : Math.max(0, Math.round(val(sends))), minutes: Math.max(0, Math.round(val(min) || 0)) } : null });
       }, 'pri block'),
-      prev ? btn('Delete this log', () => deleteRecord(dayLog(r), prev, ov), 'danger block') : btn('Done, without logging', () => put({ name: C.exName(ex), minutes: Math.round(ms / 60000), sec: exSection(ex), key: exKey(ex), label: exLabel(ex) }), 'block'),
-      btn(prev ? 'Cancel' : 'Not done', () => ov.remove(), 'block')]);
+      prev ? btn('Delete this log', () => deleteRecord(dayLog(r), prev, ov), 'danger block') : btn('Mark as done, no details', () => put({ name: C.exName(ex), minutes: Math.round(ms / 60000), sec: exSection(ex), key: exKey(ex), label: exLabel(ex) }), 'block'),
+      btn(prev ? 'Cancel' : 'Not done, discard', () => ov.remove(), 'block')]);
   }
   function wirePlayer() {
     $('p-done').onclick = () => { const st = P.steps[P.idx]; if (st.kind === 'work' && st.selfPaced) { P.completed++; if (P.idx + 1 < P.steps.length) SOUND.setEnd(); } next(); };
