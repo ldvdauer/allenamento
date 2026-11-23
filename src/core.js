@@ -81,10 +81,10 @@ technique|technique|Technique: isolated move|8|r:6/1/60=L~R
 hips|mobility|Hip mobility|10|
 shoulders|mobility|Shoulder mobility|8|
 stretch|mobility|General stretching|10|
-butterfly|mobility|Butterfly stretch|5|
-side-split|mobility|Side split|5|
-frog|mobility|Frog stretch|5|
-biceps-stretch|mobility|Biceps stretch|5|
+butterfly|mobility|Butterfly stretch|2|t:3/30/15
+side-split|mobility|Side split|2|t:3/30/15
+frog|mobility|Frog stretch|2|t:3/30/15
+biceps-stretch|mobility|Biceps stretch|4|t:6/30/15=L~R
 cooldown|mobility|Cool-down|10|
 activation|other|Activation session|30|
 visualize|other|Project visualisation|5|

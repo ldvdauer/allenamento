@@ -331,10 +331,10 @@ technique|technique|Technique: isolated move|8|r:6/1/60=L~R
 hips|mobility|Hip mobility|10|
 shoulders|mobility|Shoulder mobility|8|
 stretch|mobility|General stretching|10|
-butterfly|mobility|Butterfly stretch|5|
-side-split|mobility|Side split|5|
-frog|mobility|Frog stretch|5|
-biceps-stretch|mobility|Biceps stretch|5|
+butterfly|mobility|Butterfly stretch|2|t:3/30/15
+side-split|mobility|Side split|2|t:3/30/15
+frog|mobility|Frog stretch|2|t:3/30/15
+biceps-stretch|mobility|Biceps stretch|4|t:6/30/15=L~R
 cooldown|mobility|Cool-down|10|
 activation|other|Activation session|30|
 visualize|other|Project visualisation|5|
@@ -1419,7 +1419,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
 
   /* ---------- Stato e persistenza ---------- */
   // Primo avvio: nessun piano precaricato, ogni utente importa o crea i propri.
-  const fresh = () => migrate({ v: 15, plans: [], activePlan: null, exercises: {}, logs: [], tests: [] });
+  const fresh = () => migrate({ v: 16, plans: [], activePlan: null, exercises: {}, logs: [], tests: [] });
   /** I test da cui dipendono i kg degli esercizi (e il peso corporeo) devono esistere nella sezione Test. */
   function ensureTests(s) {
     const need = new Set(['bw'].concat(Object.values(s.exercises).filter(e => e.load).flatMap(e => C.refKeys(e.load.ref))));
@@ -1560,7 +1560,18 @@ review|other|Attempt review|10|`.split('\n').map(line => {
       const x = s.surfaces.find(y => y.key === d.key);
       if (!x) s.surfaces.push({ ...d }); else if (d.kind) x.kind = d.kind;
     }
-    s.v = 15;
+    // v16: gli stretching della libreria sono tenute a tempo (3 × 30", bicipiti 6 × 30" L/R), non 5 minuti di durata
+    // (nota di Leo del 23 nov): si aggiornano le versioni di base mai personalizzate rimaste senza timer
+    if (fromV < 16) {
+      const fixed = new Set();
+      for (const e of Object.values(s.exercises)) {
+        const d = C.STD[e.std];
+        if (d && ['butterfly', 'side-split', 'frog', 'biceps-stretch'].includes(e.std) && !e.interval && d.interval) { e.interval = JSON.parse(JSON.stringify(d.interval)); e.minutes = C.intervalMinutes(e.interval); fixed.add(e.id); }
+      }
+      const blocks = [...s.plans.flatMap(p => p.weeks.flatMap(w => w.flatMap(d => d.sessions.flatMap(x => x.blocks)))), ...(s.extras || []).flatMap(x => x.blocks)];
+      for (const b of blocks) if (fixed.has(b.exId)) b.minutes = s.exercises[b.exId].minutes;
+    }
+    s.v = 16;
     return s;
   }
   let rescued = false;
@@ -2446,7 +2457,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
         cloudOn() ? [btn('Restore from GitHub', cloudRestore, 'sm'), btn('Disconnect', async () => { if (await confirmDlg('Disconnect GitHub? The token is deleted from this device; backups already uploaded stay in the repository.', 'Disconnect')) { S.settings.gh = null; clearTimeout(cloudTimer); save(); render(); } }, 'sm danger')] : null));
   }
   /* ---------- Taccuino: note al volo durante la prova dell'app, con il contesto per poterle riprodurre ---------- */
-  const VERSION = '20261123.1520';
+  const VERSION = '20261123.1804';
   function noteSheet() {
     const text = h('textarea', { class: 'inp', placeholder: 'What is wrong, or what would you like to be different?' });
     const where = P ? 'timer: ' + P.steps[P.idx].name : (location.hash.slice(1) || 'home');

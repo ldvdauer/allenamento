@@ -613,3 +613,13 @@ test('programma di una sola giornata: finisce quel giorno, non a fine settimana'
   assert.deepEqual(C.overlapping([p], n, '2026-11-22'), [], 'finito il 18: non si sovrappone a un programma che parte il 22');
   assert.equal(C.lastSession({ id: 'e', startDate: '2026-11-16', weeks: [[day(), day(), day(), day(), day(), day(), day()]] }), null);
 });
+
+test('stretching della libreria: tenute a tempo, non 5 minuti di durata', () => {
+  for (const k of ['butterfly', 'side-split', 'frog']) assert.deepEqual([C.STD[k].interval.rounds, C.STD[k].interval.workSeconds, C.STD[k].interval.restSeconds], [3, 30, 15]);
+  const b = C.STD['biceps-stretch'].interval;
+  assert.deepEqual([b.rounds, b.workSeconds, b.cues], [6, 30, ['L', 'R']]);
+  const e = { id: 'x', ...C.stdVariant('biceps-stretch') };
+  const st = C.buildSteps([{ exId: 'x', minutes: 4 }], { x: e });
+  assert.equal(st.filter(x => x.kind === 'work').length, 6); assert.ok(st.every(x => x.kind !== 'free'), 'nessun timer unico da minuti');
+  assert.equal(st.find(x => x.kind === 'work').seconds, 30);
+});

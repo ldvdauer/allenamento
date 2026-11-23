@@ -14,7 +14,7 @@
 
   /* ---------- Stato e persistenza ---------- */
   // Primo avvio: nessun piano precaricato, ogni utente importa o crea i propri.
-  const fresh = () => migrate({ v: 15, plans: [], activePlan: null, exercises: {}, logs: [], tests: [] });
+  const fresh = () => migrate({ v: 16, plans: [], activePlan: null, exercises: {}, logs: [], tests: [] });
   /** I test da cui dipendono i kg degli esercizi (e il peso corporeo) devono esistere nella sezione Test. */
   function ensureTests(s) {
     const need = new Set(['bw'].concat(Object.values(s.exercises).filter(e => e.load).flatMap(e => C.refKeys(e.load.ref))));
@@ -155,7 +155,18 @@
       const x = s.surfaces.find(y => y.key === d.key);
       if (!x) s.surfaces.push({ ...d }); else if (d.kind) x.kind = d.kind;
     }
-    s.v = 15;
+    // v16: gli stretching della libreria sono tenute a tempo (3 × 30", bicipiti 6 × 30" L/R), non 5 minuti di durata
+    // (nota di Leo del 23 nov): si aggiornano le versioni di base mai personalizzate rimaste senza timer
+    if (fromV < 16) {
+      const fixed = new Set();
+      for (const e of Object.values(s.exercises)) {
+        const d = C.STD[e.std];
+        if (d && ['butterfly', 'side-split', 'frog', 'biceps-stretch'].includes(e.std) && !e.interval && d.interval) { e.interval = JSON.parse(JSON.stringify(d.interval)); e.minutes = C.intervalMinutes(e.interval); fixed.add(e.id); }
+      }
+      const blocks = [...s.plans.flatMap(p => p.weeks.flatMap(w => w.flatMap(d => d.sessions.flatMap(x => x.blocks)))), ...(s.extras || []).flatMap(x => x.blocks)];
+      for (const b of blocks) if (fixed.has(b.exId)) b.minutes = s.exercises[b.exId].minutes;
+    }
+    s.v = 16;
     return s;
   }
   let rescued = false;
