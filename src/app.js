@@ -1400,9 +1400,11 @@
   function drawClock() {
     const st = P.steps[P.idx], rem = remaining();
     // A ripetizioni (o blocchi) niente tempo che scorre: si mostra cosa fare, il timer parte solo col recupero dopo "Done" (nota del 23 nov)
+    // Tre tipi come Lattice: a ripetizioni il numero da fare, a blocchi il blocco corrente, a tempo il tempo che scende
     const self = st.kind === 'work' && st.selfPaced;
     $('p-clock').classList.toggle('reps', self);
-    $('p-clock').textContent = self ? (st.reps ? `${st.reps} reps` : `${st.round} / ${st.rounds}`) : mmss(Math.ceil(rem));
+    $('p-clock').textContent = self ? String(st.reps || st.round) : mmss(Math.ceil(rem));
+    $('p-unit').textContent = self ? (st.reps ? (st.reps === 1 ? 'rep' : 'reps') : `of ${st.rounds}`) : '';
   }
   function draw() {
     const st = P.steps[P.idx], nx = P.steps[P.idx + 1], ex = S.exercises[st.exId];
@@ -1417,7 +1419,7 @@
     $('p-note').textContent = P.b.note || '';
     const kg = ex && st.kind !== 'free' ? C.loadKg(ex.load, st.cue, maxes()) : null;
     $('p-kg').textContent = kg == null ? '' : (ex.load.mode === 'hang' ? C.fmtKg(kg) : dec(kg) + ' kg');
-    $('p-next').textContent = nx ? 'Next: ' + (nx.kind === 'rest' ? `rest ${mmss(nx.seconds)}` : (nx.cue || `round ${nx.round}`)) : 'Last step of the exercise';
+    $('p-next').textContent = 'Up next: ' + upNext(nx, ex);
     $('p-done').textContent = isAuto(st) ? 'Skip' : 'Done';
     $('p-done').className = 'btn ' + (isAuto(st) ? 'skip' : 'pri');
     // "End exercise" solo quando serve: se l'ultimo passo si chiude con Done, i due pulsanti farebbero la stessa cosa (nota di Leo del 19 nov)
@@ -1425,6 +1427,21 @@
     $('p-plus').disabled = st.kind === 'work';
     $('p-pause').textContent = P.paused ? 'Resume' : 'Pause';
     drawClock();
+  }
+  /** Riga "Up next" (stile Lattice): recupero tra serie o tra ripetizioni, lato, oppure fine dell'esercizio. */
+  function upNext(nx, ex) {
+    if (!nx) return 'finish the exercise';
+    const iv = ex && ex.interval;
+    if (nx.kind === 'rest') {
+      const dur = nx.seconds >= 60 ? `${Math.floor(nx.seconds / 60)} min${nx.seconds % 60 ? ' ' + nx.seconds % 60 + ' s' : ''}` : nx.seconds + ' s';
+      if (nx.prep) return 'get ready';
+      if (nx.afterBlock) return `${dur} rest, then the next exercise`;
+      const between = iv && iv.roundsPerSet ? (nx.round % iv.roundsPerSet === 0 ? ' between sets' : ' between reps') : iv && iv.selfPaced ? ' between sets' : '';
+      return dur + ' rest' + between;
+    }
+    const side = nx.cue === 'L' ? 'left · ' : nx.cue === 'R' ? 'right · ' : nx.cue ? nx.cue + ' · ' : '';
+    const what = nx.selfPaced ? (nx.reps ? `${nx.reps} reps` : `${nx.round} of ${nx.rounds}`) : `${nx.seconds} s work`;
+    return side + what + (nx.selfPaced && !nx.reps ? '' : ` (${nx.round}/${nx.rounds})`);
   }
   /** Fine dell'esercizio: il timer si ferma e si apre la sua registrazione. */
   function endBlock() {

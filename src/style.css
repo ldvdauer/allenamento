@@ -203,3 +203,5 @@ h2 .cnt{color:var(--mu);font-weight:400;font-size:.85em}
 /* Carico: kg oltre il peso corporeo, uno o due campi (L/R) */
 .kg-wrap{display:flex;flex-direction:column;gap:8px}.kg-in{display:flex;align-items:center;gap:8px}.kg-in input{flex:1;margin:0}
 .kg-side{width:18px;font-weight:700;color:var(--mu)}.kg-u{color:var(--mu)}.kg-sign{min-width:44px}
+
+#player .unit{text-align:center;font-size:18px;color:var(--mu);margin-top:-6px;min-height:22px}

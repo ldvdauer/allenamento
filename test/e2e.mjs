@@ -120,7 +120,8 @@ await clickText('Save', '.sheet');
 
 // Esercizio a ripetizioni: il timer mostra quante farne, non il tempo
 await play('Wrist curl'); await sleep(60);
-ok((await txt('#p-clock')) === '6 reps' && (await txt('#p-ph')) === 'GO', 'a ripetizioni: "6 reps" al posto del tempo');
+ok((await txt('#p-clock')) === '6' && (await txt('#p-unit')) === 'reps' && (await txt('#p-ph')) === 'GO', 'a ripetizioni: "6" grande e "reps" sotto, niente tempo');
+ok(/^Up next: \d+ (min|s).* rest between sets$/.test(await txt('#p-next')), 'Up next: recupero tra le serie (' + await txt('#p-next') + ')');
 await pg.click('#p-quit');
 ok((await txt('.sheet')).includes('Reps missed'), 'a ripetizioni: si possono segnare le ripetizioni mancanti');
 await clickText('Not done', '.sheet');
