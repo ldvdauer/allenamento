@@ -31,27 +31,30 @@
 
   /* Libreria standard: ogni esercizio del calendario è una versione personalizzata di uno di questi.
      Riga: chiave | sezione | nome | minuti | timer. Timer: "t:round/lavoro/recupero" a tempo, "r:round/rip/recupero" a ripetizioni,
-     "+serie/recuperoSerie" per le serie raggruppate, "=cue~cue" per i cue a rotazione; vuoto = solo durata. */
+     "+serie/recuperoSerie" per le serie raggruppate, "=L~R" per gli esercizi alternati (round = serie complete L+R,
+     cambio lato di 10 s tra L e R); vuoto = solo durata. */
   /* Categorie = qualità dell'allenamento (non luoghi). Il riscaldamento non è una categoria: si dà per scontato.
      L'ordine è quello dei colori (palette validata per il daltonismo, vedi style.css) e delle pile nei grafici. */
   const SECTIONS = { fingers: 'Fingers', strength: 'Strength', powerEndurance: 'Power endurance', endurance: 'Endurance', technique: 'Technique', conditioning: 'Conditioning', mobility: 'Mobility', other: 'Other' };
   const CLIMBING = ['strength', 'powerEndurance', 'endurance', 'technique'];
+  /** Cambio lato predefinito tra L e R negli esercizi alternati (secondi). */
+  const SWITCH_DEFAULT = 10;
   const LIBRARY = `warmup-fingers|fingers|Finger activation|6|t:5/7/60
 warmup-shoulders|conditioning|Shoulder activation with band|5|r:2/15/45
 max-hang|fingers|Max hang|13|t:4/7/180
 repeaters|fingers|Repeaters 7/3|14|t:24/7/3+6/180
 min-edge|fingers|Minimum edge|13|t:4/7/180
-one-arm-hang|fingers|One-arm hang|14|t:6/7/120=L~R
+one-arm-hang|fingers|One-arm hang|14|t:3/7/120=L~R
 sloper-hang|fingers|Sloper hang|13|t:4/7/180
-pinch-lift|fingers|Pinch block|8|t:6/7/75=L~R
-block-lift|fingers|Max lift|13|t:6/7/120=L~R
+pinch-lift|fingers|Pinch block|8|t:3/7/75=L~R
+block-lift|fingers|Max lift|13|t:3/7/120=L~R
 density-hang|fingers|Long hangs|9|t:4/30/120
 wrist-curl|conditioning|Wrist curl|7|r:3/6/120
 finger-ext|conditioning|Finger extensors|4|r:2/15/45
 weighted-pullup|conditioning|Weighted pull-ups|9|r:3/4/180
 pullup|conditioning|Pull-ups|7|r:3/6/120
-one-arm-pull|conditioning|One-arm pull-up (progression)|14|r:6/2/150=L~R
-lockoff|conditioning|Lock-offs|9|t:6/7/90=L~R
+one-arm-pull|conditioning|One-arm pull-up (progression)|14|r:3/2/150=L~R
+lockoff|conditioning|Lock-offs|9|t:3/7/90=L~R
 row|conditioning|Rows|6|r:3/8/90
 campus|strength|Campus board|12|r:5/1/150
 pushup|conditioning|Push-ups or dips|7|r:3/8/120
@@ -64,7 +67,7 @@ deadlift|conditioning|Deadlift|10|r:3/5/180
 squat|conditioning|Squat or pistol|7|r:3/6/120
 hollow|conditioning|Hollow body hold|4|t:3/25/60
 ab-wheel|conditioning|Ab wheel|6|r:3/6/90
-pallof|conditioning|Pallof press|7|r:6/10/45=L~R
+pallof|conditioning|Pallof press|7|r:3/10/45=L~R
 leg-raise|conditioning|Hanging leg raise|6|r:3/8/90
 front-lever|conditioning|Front lever (progression)|9|t:4/6/120
 plank|conditioning|Plank|5|t:3/40/60
@@ -77,14 +80,14 @@ volume|powerEndurance|Volume|40|
 four-by-four|powerEndurance|4x4|25|r:16/1/30+4/240
 circuit|endurance|Endurance circuits|30|
 outdoor-routes|endurance|Lead climbing|120|
-technique|technique|Technique: isolated move|8|r:6/1/60=L~R
+technique|technique|Technique: isolated move|8|r:3/1/60=L~R
 hips|mobility|Hip mobility|10|
 shoulders|mobility|Shoulder mobility|8|
 stretch|mobility|General stretching|10|
 butterfly|mobility|Butterfly stretch|2|t:3/30/15
 side-split|mobility|Side split|2|t:3/30/15
 frog|mobility|Frog stretch|2|t:3/30/15
-biceps-stretch|mobility|Biceps stretch|4|t:6/30/15=L~R
+biceps-stretch|mobility|Biceps stretch|4|t:3/30/15=L~R
 cooldown|mobility|Cool-down|10|
 activation|other|Activation session|30|
 visualize|other|Project visualisation|5|
@@ -94,6 +97,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
     if (timer) {
       const [main, cues] = timer.split('='), [base, set] = main.split('+'), [rounds, x, rest] = base.slice(2).split('/').map(Number), reps = base[0] === 'r';
       interval = { rounds, workSeconds: reps ? 45 : x, restSeconds: rest, cues: cues ? cues.split('~') : [] };
+      if (cues === 'L~R') { interval.sides = 2; interval.switchSeconds = SWITCH_DEFAULT; }
       if (reps) { interval.selfPaced = true; if (x) interval.reps = x; }
       if (set) { const [per, sr] = set.split('/').map(Number); interval.roundsPerSet = per; interval.setRestSeconds = sr; }
     }
@@ -231,9 +235,31 @@ review|other|Attempt review|10|`.split('\n').map(line => {
   };
   const cueAt = (iv, i) => (iv && iv.cues && iv.cues.length ? iv.cues[i % iv.cues.length] : '');
   const restAfter = (iv, r) => (iv.roundsPerSet && iv.setRestSeconds && (r + 1) % iv.roundsPerSet === 0 ? iv.setRestSeconds : iv.restSeconds || 0);
+  /** Esercizio alternato: ogni round è una serie completa L + R, con un cambio lato breve in mezzo. */
+  const isSided = iv => !!(iv && iv.sides === 2);
+  const switchOf = iv => (iv && iv.switchSeconds != null ? iv.switchSeconds : SWITCH_DEFAULT);
+  /** Formato precedente (round = lati, cue L/R alternati, recupero anche tra L e R) → serie complete L+R con cambio lato di 10 s.
+      Restituisce una copia; gli intervalli già convertiti o non alternati tornano invariati. */
+  function toSeries(iv) {
+    if (!iv || isSided(iv) || !(iv.cues && iv.cues.length === 2 && iv.cues[0] === 'L' && iv.cues[1] === 'R')) return iv;
+    return { ...iv, rounds: Math.max(1, Math.ceil(iv.rounds / 2)), sides: 2, switchSeconds: SWITCH_DEFAULT };
+  }
+  /** Migrazione v17 dei dati salvati: gli esercizi alternati passano a serie complete L+R e i minuti previsti dei blocchi
+      che li usano si ricalcolano. I log (allenamenti già registrati) non si toccano. Restituisce gli id convertiti. */
+  function sidesToSeries(state) {
+    const done = new Set();
+    for (const e of Object.values(state.exercises || {})) {
+      const iv = toSeries(e.interval);
+      if (iv !== e.interval) { e.interval = iv; if (e.minutes != null) e.minutes = intervalMinutes(iv); done.add(e.id); }
+    }
+    const blocks = [...(state.plans || []).flatMap(p => p.weeks.flatMap(w => w.flatMap(d => d.sessions.flatMap(x => x.blocks)))), ...(state.extras || []).flatMap(x => x.blocks)];
+    for (const b of blocks) if (done.has(b.exId)) b.minutes = intervalMinutes(state.exercises[b.exId].interval);
+    return done;
+  }
   function intervalMinutes(iv) {
     if (!iv) return 0;
-    let s = iv.rounds * iv.workSeconds;
+    const sides = isSided(iv) ? 2 : 1;
+    let s = iv.rounds * (iv.workSeconds * sides + (sides - 1) * switchOf(iv));
     for (let r = 0; r < iv.rounds - 1; r++) s += restAfter(iv, r);
     return Math.ceil(s / 60);
   }
@@ -250,17 +276,22 @@ review|other|Attempt review|10|`.split('\n').map(line => {
         steps.push({ ...base, kind: 'free', seconds: (b.minutes || 0) * 60, cue: ex.prescription || '', round: 1, rounds: 1 });
         return;
       }
+      // Alternato: ogni round è una serie L → cambio lato → R; il recupero della serie parte solo dopo R
+      const sided = isSided(iv), cueOf = (r, k) => (sided ? (k ? 'R' : 'L') : cueAt(iv, r));
       for (let r = 0; r < iv.rounds; r++) {
         const timed = !iv.selfPaced;
         const prev = steps[steps.length - 1];
         if (timed && prep > 0 && (!prev || prev.kind !== 'rest'))
-          steps.push({ ...base, kind: 'rest', prep: true, seconds: prep, cue: cueAt(iv, r), round: r + 1, rounds: iv.rounds });
-        steps.push({ ...base, kind: 'work', selfPaced: !!iv.selfPaced, seconds: iv.workSeconds || 0, reps: iv.reps || null, cue: cueAt(iv, r), round: r + 1, rounds: iv.rounds });
+          steps.push({ ...base, kind: 'rest', prep: true, seconds: prep, cue: cueOf(r, 0), round: r + 1, rounds: iv.rounds });
+        for (let k = 0; k < (sided ? 2 : 1); k++) {
+          if (k) { const sw = switchOf(iv); if (sw > 0) steps.push({ ...base, kind: 'rest', switch: true, seconds: sw, cue: 'R', round: r + 1, rounds: iv.rounds }); }
+          steps.push({ ...base, kind: 'work', selfPaced: !!iv.selfPaced, seconds: iv.workSeconds || 0, reps: iv.reps || null, cue: cueOf(r, k), round: r + 1, rounds: iv.rounds });
+        }
         const last = r === iv.rounds - 1;
         const rest = last ? iv.restSeconds || 0 : restAfter(iv, r);
         const hasNext = !last || blocks.slice(bi + 1).some(x => exMap[x.exId]);
         if (rest > 0 && hasNext)
-          steps.push({ ...base, kind: 'rest', seconds: rest, cue: last ? '' : cueAt(iv, r + 1), round: r + 1, rounds: iv.rounds, afterBlock: last });
+          steps.push({ ...base, kind: 'rest', seconds: rest, cue: last ? '' : cueOf(r + 1, 0), round: r + 1, rounds: iv.rounds, afterBlock: last });
       }
     });
     return steps;
@@ -275,7 +306,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
       const sets = iv.roundsPerSet && iv.rounds % iv.roundsPerSet === 0 ? iv.rounds / iv.roundsPerSet : 0;
       const unit = iv.selfPaced ? (iv.reps ? iv.reps + ' reps' : '') : iv.workSeconds + '"';
       const count = sets ? `${sets} sets × ${iv.roundsPerSet}` : String(iv.rounds);
-      out.push(unit ? `${count} × ${unit}` : sets ? count : `${count} round`);
+      out.push((unit ? `${count} × ${unit}` : sets ? count : `${count} round`) + (isSided(iv) ? ' L/R' : ''));
       if (iv.restSeconds) out.push('rest ' + fmtRest(iv.restSeconds) + (sets && iv.setRestSeconds ? ' / ' + fmtRest(iv.setRestSeconds) + ' between sets' : ''));
     }
     if (e.load && e.load.pct != null) out.push(e.load.pct + '%');
@@ -304,6 +335,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
     if (int(iv.reps)) out.reps = int(iv.reps);
     if (int(iv.roundsPerSet)) { out.roundsPerSet = int(iv.roundsPerSet); out.setRestSeconds = int(iv.setRestSeconds); }
     out.cues = Array.isArray(iv.cues) ? cycle(iv.cues.map(c => str(c, ''))) : [];
+    if (int(iv.sides) === 2) { out.sides = 2; out.switchSeconds = iv.switchSeconds == null ? SWITCH_DEFAULT : int(iv.switchSeconds); out.cues = ['L', 'R']; }
     return out;
   }
 
@@ -352,7 +384,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
   const yamlRefName = ref => Object.keys(YAML_REFS).find(k => YAML_REFS[k] === ref) || ref;
   const PROGRAMME_FIELDS = ['title', 'weeks', 'first_session', 'days', 'sessions']; // "sessions": nome dei file scritti prima di "days"
   const DAY_FIELDS = ['week', 'day', 'title', 'exercises'];
-  const EXERCISE_FIELDS = ['name', 'test', 'category', 'grip', 'edge', 'hands', 'minutes', 'sets', 'rounds', 'work', 'reps', 'rest', 'set_rest', 'sides', 'load', 'surface', 'note'];
+  const EXERCISE_FIELDS = ['name', 'test', 'category', 'grip', 'edge', 'hands', 'minutes', 'sets', 'rounds', 'work', 'reps', 'rest', 'set_rest', 'sides', 'switch', 'load', 'surface', 'note'];
 
   /** "7s", "45 s", "3min", "3 min", "1min30s", "2'", "1'30\"", oppure un numero (secondi). Restituisce i secondi o null. */
   function parseDuration(v) {
@@ -392,7 +424,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
     const two = !!PAIRS[ref], key = two ? ref + 'L' : ref;
     const d = (defs || []).find(t => t.key === key) || TEST_TEMPLATES.find(t => t.key === key);
     if (!d) return null;
-    const interval = normInterval({ rounds: two ? 8 : 4, workSeconds: d.seconds || 45, restSeconds: two ? 90 : 180, selfPaced: !d.seconds, reps: d.reps || 0, cues: two ? ['L', 'R'] : [] });
+    const interval = normInterval({ rounds: 4, workSeconds: d.seconds || 45, restSeconds: two ? 90 : 180, selfPaced: !d.seconds, reps: d.reps || 0, cues: two ? ['L', 'R'] : [], sides: two ? 2 : 0 });
     return { std: 'test', note: d.mode === 'value' ? 'All out' : 'Increasing load', name: 'Test: ' + (two ? PAIRS[ref] : d.name), slot: 'strength', location: 'off_wall', domain: 'finger_strength',
       intensity: 'max', risk: 'moderate', equipment: [], interval, load: { ref, mode: d.mode === 'lift' ? 'lift' : 'hang', pct: null, test: true }, surface: '' };
   }
@@ -477,21 +509,23 @@ review|other|Attempt review|10|`.split('\n').map(line => {
         }
         e = { std, name, section: v ? undefined : section, slot: v ? v.slot : slotOf(section), location: v ? v.location : slotOf(section) === 'wall' ? 'wall' : 'off_wall', domain: 'other', intensity: 'moderate', risk: 'low', equipment: [], interval: null, load: null, surface: inferSurface(name) };
       }
-      // Timer: sets (round in tutto, i due lati contano entrambi) × rounds per set, lavoro a tempo o a ripetizioni.
+      // Timer: sets × rounds per set, lavoro a tempo o a ripetizioni. Con sides: L/R una serie è L + R (switch tra i due lati).
       const has = k => x[k] !== undefined, posInt = k => (Number.isInteger(x[k]) && x[k] > 0 ? x[k] : (err(where, `${k}: must be a whole number greater than 0`), null));
       const dur = k => { const s = parseDuration(x[k]); if (s == null) err(where, `${k}: "${x[k]}" is not a duration (examples: 7s, 3min, 1min30s)`); return s; };
-      if (['sets', 'rounds', 'work', 'reps', 'rest', 'set_rest', 'sides'].some(has)) {
+      if (['sets', 'rounds', 'work', 'reps', 'rest', 'set_rest', 'sides', 'switch'].some(has)) {
         if (!has('sets')) err(where, 'sets: required when the exercise has a timer (work, reps, rest…)');
         if (has('work') === has('reps')) err(where, has('work') ? 'use either work (timed) or reps (counted), not both' : 'give work (a time like 7s, or done) or reps (e.g. 6)');
         if (has('set_rest') && !has('rounds')) err(where, 'set_rest needs rounds (rounds per set)');
         if (has('sides') && x.sides !== 'L/R') err(where, 'sides: the only value is L/R');
         if (has('sides') && has('rounds')) err(where, 'sides and rounds cannot be combined');
+        if (has('switch') && !has('sides')) err(where, 'switch needs sides: L/R (time to change side between L and R)');
+        const sw = has('switch') ? dur('switch') : SWITCH_DEFAULT;
         const sets = has('sets') ? posInt('sets') : null, per = has('rounds') ? posInt('rounds') : null;
         const untilDone = x.work === 'done', work = has('work') && !untilDone ? dur('work') : 45, reps = has('reps') ? posInt('reps') : null, rest = has('rest') ? dur('rest') : 0;
         const setRest = has('set_rest') ? dur('set_rest') : null;
         if (errors.length === n0) {
           e.interval = normInterval({ rounds: sets * (per || 1), workSeconds: work, restSeconds: rest, selfPaced: !!reps || untilDone, reps: reps || 0,
-            roundsPerSet: per || 0, setRestSeconds: setRest || 0, cues: has('sides') ? ['L', 'R'] : [] });
+            roundsPerSet: per || 0, setRestSeconds: setRest || 0, cues: has('sides') ? ['L', 'R'] : [], sides: has('sides') ? 2 : 0, switchSeconds: sw });
         }
       }
       if (has('load')) {
@@ -539,13 +573,13 @@ review|other|Attempt review|10|`.split('\n').map(line => {
       if (!e.std && e.section && e.section !== 'other' && SECTIONS[e.section]) o.category = SECTIONS[e.section];
       if (!(iv && iv.rounds)) o.minutes = b.minutes || 1; // con un timer i minuti si calcolano
       if (iv && iv.rounds) {
-        const sided = iv.cues && iv.cues.length === 2 && iv.cues[0] === 'L' && iv.cues[1] === 'R';
+        const sided = isSided(iv);
         if (iv.roundsPerSet && iv.rounds % iv.roundsPerSet === 0 && !sided) { o.sets = iv.rounds / iv.roundsPerSet; o.rounds = iv.roundsPerSet; } else o.sets = iv.rounds;
         // A ripetizioni o "fino a Fatto" il lavoro non ha durata: i minuti del blocco sono già scritti a parte.
         if (iv.selfPaced) { if (iv.reps) o.reps = iv.reps; else o.work = 'done'; } else o.work = fmtDuration(iv.workSeconds);
         if (iv.restSeconds) o.rest = fmtDuration(iv.restSeconds);
         if (o.rounds && iv.setRestSeconds) o.set_rest = fmtDuration(iv.setRestSeconds);
-        if (sided) o.sides = 'L/R';
+        if (sided) { o.sides = 'L/R'; if (switchOf(iv) !== SWITCH_DEFAULT) o.switch = fmtDuration(switchOf(iv)); }
       }
       if (e.grip) { if (e.grip.type) o.grip = GRIPS[e.grip.type]; if (e.grip.edge) o.edge = e.grip.edge; if (e.grip.hands) o.hands = e.grip.hands; }
       if (e.load && !e.load.test) o.load = (e.load.pct != null ? e.load.pct + '% ' : '') + yamlRefName(e.load.ref);
@@ -878,7 +912,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
   return {
     CLIMBING, LEGACY_SECTION, slotOf, blockSection, timeBySection, weeklyGroups, describe, leftoverNote, splitCues, fmtRest, PAIRS, refKeys, LEGACY_NAMES, normSide, firstOffset, firstSessionDate, planEnd, planShownStart, inWindow, overlapping, lastSession, startForFirst, recordsOf, lastRecord, nextLoad, TEST_TEMPLATES, testLabel, SECTIONS, LIBRARY, STD, stdVariant, matchStd, exName, GRIPS, gripKey, gripText,
     DAY_TYPES, PERIODS, SLOTS, fmtLoads, GRADES, ROUTE_GRADES, gradeList, GRADE_SCALES, gradeIdx, fmtGrade, DEFAULT_SURFACES, inferSurface, validISO, uid, toISO, fromISO, todayISO, addDays, diffDays, mondayOf,
-    inferLoad, loadKey, loadKg, latestMaxes, fmtKg, cycle, cueAt, intervalMinutes, buildSteps, normInterval,
+    inferLoad, loadKey, loadKg, latestMaxes, fmtKg, cycle, cueAt, intervalMinutes, buildSteps, normInterval, isSided, switchOf, toSeries, sidesToSeries, SWITCH_DEFAULT,
     importYaml, exportYaml, parseDuration, parseWeeks, fmtWeeks, testExercise, YAML_REFS, locate, dateOf, sessionMinutes, cloneSession, validState,
     niceRange, scheduled, weeklyStats, summary, parseLoads, loadSeries, surfaceStats, weeklyTopGrades, dailyGroups, setsCompletion, testProgress, gradeProgress,
     TRIP_STATUS, PROJECT_STATUS, STYLES, tripDate, tripFirst, tripLast, cleanTrips, tripProgress, tripPhase, daysTo, tripCountdown, nextTrip, groupTrips,

@@ -16,7 +16,7 @@
 
 ## Planning
 - **Calendar**: tap a day to see or change its exercises (+ Exercise, + Test). Drag "≡" to reorder them. A day with no exercises is a rest day: there is nothing to create or delete. Each day shows one dot per category, in the category colour, longest first: a ring is planned, a filled dot is done; "+" means more than three categories.
-  While an exercise runs, a table under the timer is filled in as you go (inspired by Lattice): one row per set with reps and kg over body weight (L/R rows for exercises per side), or one row per climb with its grade (−/+, in the scale of the surface chosen above the table). The current row is highlighted and turns green when done; **Skip set/climb** jumps to the next one, **+ Add set/climb** adds a row. At the end a short confirmation shows the summary with minutes, exercise RPE and note. Tests and stretching keep the plain timer.
+  While an exercise runs, a table under the timer is filled in as you go (inspired by Lattice): one row per set with reps and kg over body weight (L and R rows with the same set number for exercises per side), or one row per climb with its grade (−/+, in the scale of the surface chosen above the table). The current row is highlighted and turns green when done; **Skip set/climb** jumps to the next one, **+ Add set/climb** adds a row. At the end a short confirmation shows the summary with minutes, exercise RPE and note. Tests and stretching keep the plain timer.
   What you logged appears under each exercise (minutes, load, RPE, sets, grade, note; yellow if sets or reps were missed). Tap it to edit or delete it; tapping the exercise also shows **Edit log** and **Delete log** (the exercise stays in the day). When an exercise ends: **Save**, **Mark as done, no details** (logs it with the time only) or **Not done, discard** (logs nothing).
 - **Edit day** on a day: title, move it to another date (days you created), **Copy** its exercises to another date, or clear it.
 - Tap an exercise to set its parameters *on that day*: rounds, seconds or reps, rests, L/R, reference test and %, surface, note; for Fingers exercises also grip, edge (mm) and one or two hands. With a timer the duration is calculated; minutes are typed only for "Duration only" exercises.
@@ -97,10 +97,11 @@ days:
         load: 82.5% sloper
         note: 2-3" in reserve
       - name: Pinch block
-        sets: 6              # with sides, sets count both sides: 6 = 3 per side
+        sets: 3              # with sides, a set is L + R: 3 = 3 per side
         work: 7s
         rest: 1min15s
         sides: L/R
+        switch: 10s          # optional: time to change side between L and R (default 10s)
         load: 75% pinch
         grip: Pinch
       - name: Max hang
@@ -136,6 +137,7 @@ days:
 - Warm-up is taken for granted: it is not written in programmes and is not a category.
 - `name` is free text. If it is recognised as a standard exercise (also in Italian, e.g. "Flessione polso"), the app shows the library name ("Wrist curl") and counts the time in the right category. Put details such as the board or the edge in `note`. Names that are not recognised become your own exercises and are shown as written, in Other unless you add `category` (Fingers, Strength, Power endurance, Endurance, Technique, Conditioning, Mobility, Other). With `category` the exercise is always your own, even if its name looks like a standard one.
 - Timer: `sets` plus either `work` (a time, or `done`) or `reps`. `rest`, `rounds` + `set_rest` and `sides: L/R` are optional.
+- `sides: L/R`: each set is left then right. Between the two sides there is a short switch (`switch`, default 10s); `rest` starts only after both sides. With `reps`, the switch starts after you tap Done on the left side.
 - `minutes`: only for exercises without a timer (required unless it is a standard exercise). With a timer the minutes are calculated from its parameters; with `reps` or `work: done` each round counts about 45 s.
 - Durations: `7s`, `45s`, `3min`, `1min30s` (also `3'` and `1'30"`).
 - `load`: a percentage of one of your tests: `open-hand`, `half-crimp`, `sloper`, `pinch`, `lift`, `wrist`, `pull-up`, `one-arm`. The kg are calculated from the latest result. `test:` uses the same names.

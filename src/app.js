@@ -14,7 +14,7 @@
 
   /* ---------- Stato e persistenza ---------- */
   // Primo avvio: nessun piano precaricato, ogni utente importa o crea i propri.
-  const fresh = () => migrate({ v: 16, plans: [], activePlan: null, exercises: {}, logs: [], tests: [] });
+  const fresh = () => migrate({ v: 17, plans: [], activePlan: null, exercises: {}, logs: [], tests: [] });
   /** I test da cui dipendono i kg degli esercizi (e il peso corporeo) devono esistere nella sezione Test. */
   function ensureTests(s) {
     const need = new Set(['bw'].concat(Object.values(s.exercises).filter(e => e.load).flatMap(e => C.refKeys(e.load.ref))));
@@ -166,7 +166,10 @@
       const blocks = [...s.plans.flatMap(p => p.weeks.flatMap(w => w.flatMap(d => d.sessions.flatMap(x => x.blocks)))), ...(s.extras || []).flatMap(x => x.blocks)];
       for (const b of blocks) if (fixed.has(b.exId)) b.minutes = s.exercises[b.exId].minutes;
     }
-    s.v = 16;
+    // v17: negli esercizi alternati L/R una serie è L + R (cambio lato di 10 s, poi il recupero della serie): i round salvati
+    // contavano i lati, quindi si dimezzano. I log restano com'erano.
+    if (fromV < 17) C.sidesToSeries(s);
+    s.v = 17;
     return s;
   }
   let rescued = false;
@@ -739,24 +742,26 @@
     const mode = opts([['none', 'Duration only'], ['timed', 'Timed (countdown)'], ['reps', 'Reps (tap "Done")']], !e.interval ? 'none' : iv.selfPaced ? 'reps' : 'timed', { onchange: () => sync() });
     const rounds = numInp(iv.rounds || 3), work = numInp(iv.workSeconds || 7), rest = numInp(iv.restSeconds == null ? 180 : iv.restSeconds);
     const reps = numInp(iv.reps), perSet = numInp(iv.roundsPerSet), setRest = numInp(iv.setRestSeconds);
-    const sides = h('input', { type: 'checkbox', checked: (iv.cues || []).length > 0 });
+    const sides = h('input', { type: 'checkbox', checked: C.isSided(iv) || (iv.cues || []).length > 0 }), sw = numInp(C.switchOf(iv));
     const pairs = pairsPresent();
     const refs = [['', 'None']].concat(S.testDefs.filter(t => t.key !== 'bw' && !inPair(t.key, pairs)).map(t => [t.key, t.name]), pairs.map(k => [k, C.PAIRS[k] + ' (L/R alternating)']));
     const ref = opts(refs, ld.ref || ''), pct = numInp(ld.pct);
     const isFingers = exSection(e) === 'fingers', gp = e.grip || {};
     const grip = opts([['', '—']].concat(Object.entries(C.GRIPS)), gp.type || ''), edge = numInp(gp.edge, { placeholder: 'mm' }), hands = opts([['', '—'], ['2', 'Two'], ['1', 'One']], gp.hands ? String(gp.hands) : '');
     const workF = field('Work (s)', work), repsF = field('Reps', reps);
-    const timer = h('div', {}, h('div', { class: 'cols3' }, field('Round', rounds), workF, repsF, field('Rest (s)', rest)),
-      h('div', { class: 'cols' }, field('Rounds per set (optional)', perSet), field('Rest between sets (s)', setRest)),
-      h('label', { class: 'f' }, 'Sides', h('div', { style: 'margin-top:8px;color:var(--tx)' }, sides, ' Alternate L/R (rounds count both sides: 6 rounds = 3 per side)')));
+    // Con L/R un round è una serie completa L + R: cambio lato breve tra i due, il recupero dopo R
+    const perSetBox = h('div', { class: 'cols' }, field('Rounds per set (optional)', perSet), field('Rest between sets (s)', setRest)), swF = field('Switch side (s)', sw);
+    const timer = h('div', {}, h('div', { class: 'cols3' }, field('Round', rounds), workF, repsF, field('Rest (s)', rest)), perSetBox,
+      h('label', { class: 'f' }, 'Sides', h('div', { style: 'margin-top:8px;color:var(--tx)' }, sides, ' Alternate L/R (each round = L + R, rest after both sides)')), swF);
     // Minuti: con un timer si calcolano dai parametri (sola lettura); a mano solo per "Duration only".
     const minF = field('Minutes', min), durLine = h('p', { class: 'sub' });
     const draft = () => C.normInterval({ rounds: Math.max(1, val(rounds) || 1), workSeconds: mode.value === 'timed' ? val(work) || 0 : 45, restSeconds: val(rest) || 0, selfPaced: mode.value === 'reps',
-      reps: mode.value === 'reps' ? val(reps) || 0 : 0, roundsPerSet: val(perSet) || 0, setRestSeconds: val(setRest) || 0, cues: sides.checked ? ['L', 'R'] : [] });
+      reps: mode.value === 'reps' ? val(reps) || 0 : 0, roundsPerSet: sides.checked ? 0 : val(perSet) || 0, setRestSeconds: sides.checked ? 0 : val(setRest) || 0, cues: sides.checked ? ['L', 'R'] : [],
+      sides: sides.checked ? 2 : 0, switchSeconds: val(sw) == null ? C.SWITCH_DEFAULT : val(sw) });
     const showDur = () => { if (mode.value !== 'none') durLine.textContent = `Duration: ${C.intervalMinutes(draft())} min, calculated from the timer` + (mode.value === 'reps' ? ' (about 45 s per round)' : '') + '.'; };
-    for (const x of [rounds, work, rest, reps, perSet, setRest]) x.addEventListener('input', showDur);
-    sides.addEventListener('change', showDur);
-    const sync = () => { minF.hidden = mode.value !== 'none'; durLine.hidden = mode.value === 'none'; showDur(); timer.hidden = mode.value === 'none'; workF.hidden = mode.value !== 'timed'; repsF.hidden = mode.value !== 'reps'; sfNewField.hidden = sfSel.value !== '+new'; };
+    for (const x of [rounds, work, rest, reps, perSet, setRest, sw]) x.addEventListener('input', showDur);
+    sides.addEventListener('change', () => { sync(); });
+    const sync = () => { minF.hidden = mode.value !== 'none'; durLine.hidden = mode.value === 'none'; showDur(); timer.hidden = mode.value === 'none'; workF.hidden = mode.value !== 'timed'; repsF.hidden = mode.value !== 'reps'; sfNewField.hidden = sfSel.value !== '+new'; swF.hidden = !sides.checked; perSetBox.hidden = sides.checked; };
     const isTest = !!ld.test;
     const ov = openSheet(C.exName(e), [h('p', { class: 'sub' }, isStd ? 'Parameters of this exercise on this day. To change exercise use Replace.' : 'Parameters of this exercise on this day.'),
       isStd ? null : field('Name', name),
@@ -1418,9 +1423,10 @@
     const ph = st.prep ? 'prep' : st.kind;
     $('player').dataset.ph = ph;
     $('p-bar').style.width = (P.idx / P.steps.length * 100) + '%';
-    $('p-ph').textContent = { prep: 'GET READY', work: st.selfPaced ? 'GO' : 'WORK', rest: 'REST', free: 'IN PROGRESS' }[ph];
+    $('p-ph').textContent = st.switch ? 'SWITCH SIDE' : { prep: 'GET READY', work: st.selfPaced ? 'GO' : 'WORK', rest: 'REST', free: 'IN PROGRESS' }[ph];
     $('p-name').textContent = st.name;
-    $('p-round').textContent = st.kind === 'free' ? (ex && ex.surface ? surfName(ex.surface) : '') : `Round ${st.round} of ${st.rounds}`;
+    // Alternati L/R: il conteggio è per serie (L + R), non per lato
+    $('p-round').textContent = st.kind === 'free' ? (ex && ex.surface ? surfName(ex.surface) : '') : `${ex && C.isSided(ex.interval) ? 'Set' : 'Round'} ${st.round} of ${st.rounds}`;
     // Parametri dell'esercizio (lato, presa, tacca, mani, % del massimale); la nota del giorno sotto, più piccola
     $('p-cue').textContent = [st.cue, C.gripText(ex), ex && ex.load && ex.load.pct != null && !ex.load.test ? ex.load.pct + '% max' : ''].filter(Boolean).join(' · ');
     $('p-note').textContent = P.b.note || '';
@@ -1499,7 +1505,7 @@
           kgIn ? stepper(x.kg, null, d => set('kg', Math.round(((x.kg || 0) + d) * 2) / 2), kgIn) : null];
       }
       return h('div', { class: 'tb-r' + (i === cur ? ' cur' : '') + (x.done ? ' done' : '') + (x.skipped ? ' skip' : ''), role: 'group', 'aria-label': `${climb ? 'Climb' : 'Set'} ${i + 1}${x.done ? ', done' : ''}` },
-        h('span', { class: 'tb-n' }, String(i + 1)), x.side ? h('span', { class: 'tb-side' }, x.side) : null, h('div', { class: 'tb-c' }, cells));
+        h('span', { class: 'tb-n' }, String(x.side && x.round ? x.round : i + 1)), x.side ? h('span', { class: 'tb-side' }, x.side) : null, h('div', { class: 'tb-c' }, cells));
     });
     const skip = () => {
       const c = currentRow(); if (c < 0) return;
@@ -1512,19 +1518,20 @@
     const add = () => {
       const last = P.rows[P.rows.length - 1];
       if (climb || !last) { P.rows.push(last ? { ...last, done: true, skipped: false, added: true, round: (last.round || 0) + 1 } : { grade: '', done: true, added: true }); drawTable(); return; }
-      // Modello: l'ultima serie (L+R se per lato), ripetendo il recupero che la precedeva
+      // Modello: l'ultima serie (per gli alternati L → cambio lato → R), preceduta dal recupero della serie
       const wi = P.steps.map((st, k) => (st.kind === 'work' ? k : -1)).filter(k => k >= 0);
-      const lastI = wi[wi.length - 1], lastW = P.steps[lastI], prevW = P.steps[wi[wi.length - 2]];
-      const sided = /^[LR]$/.test(lastW.cue || '') && prevW && /^[LR]$/.test(prevW.cue || '') && prevW.cue !== lastW.cue;
-      const tplI = sided ? wi.slice(-2) : [lastI];
-      const restBefore = k => { const r = P.steps[k - 1]; return r && r.kind === 'rest' && !r.prep ? r.seconds : (ex.interval || {}).restSeconds || 60; };
-      const rounds = lastW.rounds + tplI.length, extra = [];
-      tplI.forEach((k, n) => {
-        const w = P.steps[k], round = lastW.round + n + 1, row = P.rows.length, src = P.rows[w.row] || last;
-        extra.push({ ...w, kind: 'rest', prep: false, selfPaced: false, afterBlock: false, row: undefined, seconds: restBefore(k), cue: w.cue, round: round - 1 });
+      const lastI = wi[wi.length - 1], lastW = P.steps[lastI], iv = ex.interval || {};
+      const sided = C.isSided(iv) && wi.length >= 2 && P.steps[wi[wi.length - 2]].round === lastW.round;
+      const from = sided ? wi[wi.length - 2] : lastI, round = lastW.round + 1, rounds = lastW.rounds + 1;
+      const before = P.steps[from - 1], restS = before && before.kind === 'rest' && !before.prep && !before.switch ? before.seconds : iv.restSeconds || 60;
+      const extra = [{ ...lastW, kind: 'rest', prep: false, switch: false, selfPaced: false, afterBlock: false, row: undefined, reps: null, seconds: restS, cue: P.steps[from].cue, round: lastW.round }];
+      for (let k = from; k <= lastI; k++) {
+        const st = P.steps[k];
+        if (st.kind !== 'work') { extra.push({ ...st, round }); continue; } // il cambio lato tra L e R
+        const src = P.rows[st.row] || last, row = P.rows.length;
         P.rows.push({ side: src.side, plan: src.plan, reps: src.plan, kg: src.kg, done: false, round, added: true });
-        extra.push({ ...w, round, row });
-      });
+        extra.push({ ...st, round, row });
+      }
       P.steps.forEach(st => { st.rounds = rounds; });
       extra.forEach(st => { st.rounds = rounds; });
       // dopo l'ultimo passo di lavoro, mai prima del passo in corso
@@ -1544,7 +1551,8 @@
       const dur = nx.seconds >= 60 ? `${Math.floor(nx.seconds / 60)} min${nx.seconds % 60 ? ' ' + nx.seconds % 60 + ' s' : ''}` : nx.seconds + ' s';
       if (nx.prep) return 'get ready';
       if (nx.afterBlock) return `${dur} rest, then the next exercise`;
-      const between = iv && iv.roundsPerSet ? (nx.round % iv.roundsPerSet === 0 ? ' between sets' : ' between reps') : iv && iv.selfPaced ? ' between sets' : '';
+      if (nx.switch) return `${dur} switch to the right side`;
+      const between = iv && iv.roundsPerSet ? (nx.round % iv.roundsPerSet === 0 ? ' between sets' : ' between reps') : iv && (iv.selfPaced || C.isSided(iv)) ? ' between sets' : '';
       return dur + ' rest' + between;
     }
     const side = nx.cue === 'L' ? 'left · ' : nx.cue === 'R' ? 'right · ' : nx.cue ? nx.cue + ' · ' : '';
@@ -1632,20 +1640,30 @@
     const kgs = climb ? [] : [...new Set(done.filter(x => x.kg !== undefined).map(x => x.side || null))].map(side => ({ side, kg: Math.max(...done.filter(x => (x.side || null) === side && x.kg !== undefined).map(x => x.kg)) }));
     const grades = climb ? done.map(x => x.grade).filter(Boolean) : [];
     const top = grades.length ? grades.reduce((a, g) => (C.gradeIdx(g) > C.gradeIdx(a) ? g : a)) : null;
+    // Serie: con L/R una serie è fatta quando lo sono entrambi i lati (righe con lo stesso round)
+    const series = climb ? null : seriesCount(rows);
     const repsMissed = climb ? 0 : done.reduce((t, x) => t + (x.plan != null ? Math.max(0, x.plan - (x.reps || 0)) : 0), 0);
     const summary = climb
       ? `${done.length} ${isRoute(table.surface) ? 'routes' : 'climbs'}` + (top ? ` · top ${fmtG(top)}` : '') + (table.surface ? ` · ${surfName(table.surface)}` : '')
-      : `${done.length}/${rows.length} sets` + (kgs.length ? ' · ' + C.fmtLoads(kgs) : '') + (repsMissed ? ` · ${repsMissed} reps missed` : '');
+      : `${series.done}/${series.of} sets` + (kgs.length ? ' · ' + C.fmtLoads(kgs) : '') + (repsMissed ? ` · ${repsMissed} reps missed` : '');
     const ov = openSheet(C.exName(ex), [h('p', { class: 'sub' }, 'Exercise complete.'), h('p', { class: 'sum' }, summary),
       h('div', { class: 'cols' }, field('Minutes', min), field('Exercise RPE', rpe)), field('Note', note),
       btn('Save', () => {
         const minutes = Math.max(0, Math.round(val(min) || 0));
         savePut(r, b, ms, ov, { name: C.exName(ex), minutes, note: note.value.trim().slice(0, 200), sec: exSection(ex), key: exKey(ex), label: exLabel(ex),
-          load: C.fmtLoads(kgs), kgs, rpe: val(rpe), mode: 'hang', sets: climb ? null : { done: done.length, of: rows.length }, repsMissed: repsMissed || null,
+          load: C.fmtLoads(kgs), kgs, rpe: val(rpe), mode: 'hang', sets: climb ? null : series, repsMissed: repsMissed || null,
           rows: rows.map(x => climb ? { grade: x.grade || null, done: x.done } : { side: x.side, reps: x.reps, kg: x.kg, done: x.done }),
           climb: climb && table.surface ? { name: C.exName(ex), surface: table.surface, top, sends: done.length, minutes, grades } : null });
       }, 'pri block'),
       btn('Not done, discard', () => ov.remove(), 'block')]);
+  }
+  /** Serie fatte / previste dalle righe della tabella: le righe L e R della stessa serie contano una volta. */
+  function seriesCount(rows) {
+    if (!rows.some(x => x.side)) return { done: rows.filter(x => x.done).length, of: rows.length };
+    const by = new Map();
+    rows.forEach((x, i) => { const k = x.round || i; by.set(k, (by.get(k) || []).concat(x)); });
+    const g = [...by.values()];
+    return { done: g.filter(list => list.every(x => x.done)).length, of: g.length };
   }
   /** Salva una registrazione (stessa logica della scheda completa). */
   function savePut(r, b, ms, ov, rec) {

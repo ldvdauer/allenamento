@@ -18,9 +18,9 @@ test('import YAML: struttura del piano di esempio', () => {
   const blocks = plan.weeks.flat().flatMap(d => d.sessions.flatMap(s => s.blocks));
   assert.equal(exercises.length, blocks.length); // ogni esercizio di ogni sessione è un'istanza privata
   assert.equal(new Set(blocks.map(b => b.exId)).size, blocks.length);
-  assert.deepEqual(plan.weeks.map(weekMinutes), [95, 95, 95]);
+  assert.deepEqual(plan.weeks.map(weekMinutes), [91, 91, 91]); // Overhead press: 1 serie L+R = 2 min
   assert.deepEqual(plan.weeks[0].map(d => d.sessions.length), [1, 0, 1, 1, 0, 1, 0]);
-  assert.deepEqual(plan.weeks[0][0].sessions[0].blocks.map(b => b.minutes), [7, 30, 4]);
+  assert.deepEqual(plan.weeks[0][0].sessions[0].blocks.map(b => b.minutes), [7, 30, 2]);
 });
 
 test('import YAML: parametri del timer, carico, lati, superficie, nota', () => {
@@ -38,7 +38,7 @@ days:
         load: 82.5% sloper
         note: margine 2-3"
       - name: Pinch block
-        sets: 6
+        sets: 3
         work: 7
         rest: 1'15"
         sides: L/R
@@ -255,8 +255,8 @@ test('analisi: settimane, carico sRPE e aderenza al piano', () => {
   ];
   const wk = C.weeklyStats(logs, sched, '2026-11-16', '2026-11-29');
   assert.deepEqual(wk, [
-    { week: '2026-11-16', sessions: 3, minutes: 150, load: 780, rpe: 7, feel: 3, plannedMinutes: 140, plannedSessions: 5 },
-    { week: '2026-11-23', sessions: 1, minutes: 30, load: 150, rpe: 5, feel: null, plannedMinutes: 95, plannedSessions: 4 },
+    { week: '2026-11-16', sessions: 3, minutes: 150, load: 780, rpe: 7, feel: 3, plannedMinutes: 136, plannedSessions: 5 },
+    { week: '2026-11-23', sessions: 1, minutes: 30, load: 150, rpe: 5, feel: null, plannedMinutes: 91, plannedSessions: 4 },
   ]);
   // al 19 nov erano in programma 4 sessioni (lun, extra di martedì, mer, gio) e 3 hanno una registrazione
   const sum = C.summary(logs, sched, '2026-11-16', '2026-11-29', '2026-11-19');
@@ -617,9 +617,105 @@ test('programma di una sola giornata: finisce quel giorno, non a fine settimana'
 test('stretching della libreria: tenute a tempo, non 5 minuti di durata', () => {
   for (const k of ['butterfly', 'side-split', 'frog']) assert.deepEqual([C.STD[k].interval.rounds, C.STD[k].interval.workSeconds, C.STD[k].interval.restSeconds], [3, 30, 15]);
   const b = C.STD['biceps-stretch'].interval;
-  assert.deepEqual([b.rounds, b.workSeconds, b.cues], [6, 30, ['L', 'R']]);
+  assert.deepEqual([b.rounds, b.workSeconds, b.cues, b.sides], [3, 30, ['L', 'R'], 2]); // 3 serie L+R
   const e = { id: 'x', ...C.stdVariant('biceps-stretch') };
   const st = C.buildSteps([{ exId: 'x', minutes: 4 }], { x: e });
   assert.equal(st.filter(x => x.kind === 'work').length, 6); assert.ok(st.every(x => x.kind !== 'free'), 'nessun timer unico da minuti');
   assert.equal(st.find(x => x.kind === 'work').seconds, 30);
+});
+
+/* ---- Esercizi alternati L/R: una serie = L + cambio lato + R, poi il recupero della serie ---- */
+const sidedYaml = extra => C.importYaml(`title: S
+weeks: 1
+days:
+  - week: 1
+    day: mon
+    exercises:
+      - name: Pinch block
+        sets: 3
+        work: 7s
+        rest: 1min15s
+        sides: L/R
+${extra || ''}`);
+
+test('lati: sets conta le serie L+R, switch predefinito 10 s', () => {
+  const r = sidedYaml();
+  const iv = exMapOf(r)[r.plan.weeks[0][0].sessions[0].blocks[0].exId].interval;
+  assert.equal(iv.rounds, 3); assert.equal(iv.sides, 2); assert.equal(iv.switchSeconds, 10); assert.equal(iv.restSeconds, 75);
+  assert.equal(C.describe({ interval: iv }), '3 × 7" L/R · rest 1\'15"');
+});
+
+test('lati: parsing di switch (valore, formato, solo con sides)', () => {
+  const one = y => { const r = C.importYaml(y); return exMapOf(r)[r.plan.weeks[0][0].sessions[0].blocks[0].exId].interval; };
+  const y = sw => `title: S\nweeks: 1\ndays:\n  - week: 1\n    day: mon\n    exercises:\n      - name: Pinch block\n        sets: 2\n        work: 7s\n        rest: 2min\n        sides: L/R\n        switch: ${sw}\n`;
+  assert.equal(one(y('5s')).switchSeconds, 5);
+  assert.equal(one(y('20')).switchSeconds, 20);
+  assert.equal(one(y('0s')).switchSeconds, 0);
+  assert.throws(() => one(y('tanto')), /switch: "tanto" is not a duration/);
+  assert.throws(() => C.importYaml('title: S\nweeks: 1\ndays:\n  - week: 1\n    day: mon\n    exercises:\n      - name: Max hang\n        sets: 2\n        work: 7s\n        switch: 10s\n'), /switch needs sides/);
+});
+
+test('lati: durata calcolata', () => {
+  const iv = { rounds: 3, workSeconds: 7, restSeconds: 75, cues: ['L', 'R'], sides: 2, switchSeconds: 10 };
+  // 3 × (7 + 10 + 7) + 2 × 75 = 222 s → 4 min
+  assert.equal(C.intervalMinutes(iv), 4);
+  assert.equal(C.intervalMinutes({ ...iv, switchSeconds: 30 }), 5); // 3 × (7 + 30 + 7) + 150 = 282 s
+  assert.equal(C.intervalMinutes({ ...iv, rounds: 1 }), 1); // 24 s
+  // a ripetizioni il lavoro vale 45 s per lato: 2 × (45 + 10 + 45) + 120 = 320 s
+  assert.equal(C.intervalMinutes({ rounds: 2, workSeconds: 45, restSeconds: 120, selfPaced: true, reps: 6, cues: ['L', 'R'], sides: 2, switchSeconds: 10 }), 6);
+});
+
+test('lati: sequenza del timer work L → switch → work R → rest', () => {
+  const ex = { p: { id: 'p', name: 'Pinch', interval: { rounds: 2, workSeconds: 7, restSeconds: 75, cues: ['L', 'R'], sides: 2, switchSeconds: 10 } },
+    r: { id: 'r', name: 'Press', interval: { rounds: 2, workSeconds: 45, restSeconds: 120, selfPaced: true, reps: 6, cues: ['L', 'R'], sides: 2, switchSeconds: 10 } },
+    n: { id: 'n', name: 'Next', interval: null } };
+  const seq = st => st.map(x => (x.prep ? 'prep' : x.switch ? 'switch' : x.kind) + (x.kind === 'work' ? ':' + x.cue : '') + ':' + x.seconds + '@' + x.round + '/' + x.rounds);
+  assert.deepEqual(seq(C.buildSteps([{ exId: 'p' }, { exId: 'n', minutes: 1 }], ex, 10)),
+    ['prep:10@1/2', 'work:L:7@1/2', 'switch:10@1/2', 'work:R:7@1/2', 'rest:75@1/2', 'work:L:7@2/2', 'switch:10@2/2', 'work:R:7@2/2', 'rest:75@2/2', 'free:60@1/1']);
+  // a ripetizioni: dopo il Done di L parte il cambio lato (a tempo), poi R, poi il recupero della serie
+  const r = C.buildSteps([{ exId: 'r' }], ex, 10);
+  assert.deepEqual(seq(r), ['work:L:45@1/2', 'switch:10@1/2', 'work:R:45@1/2', 'rest:120@1/2', 'work:L:45@2/2', 'switch:10@2/2', 'work:R:45@2/2']);
+  assert.ok(r.filter(x => x.kind === 'work').every(x => x.selfPaced && x.reps === 6));
+  assert.ok(!r.find(x => x.switch).selfPaced, 'il cambio lato scorre da solo');
+  // switch 0: niente passo di cambio lato
+  assert.ok(!C.buildSteps([{ exId: 'p' }], { p: { ...ex.p, interval: { ...ex.p.interval, switchSeconds: 0 } } }, 0).some(x => x.switch));
+});
+
+test('lati: migrazione v17 (round = lati → serie), log invariati', () => {
+  const old = { rounds: 6, workSeconds: 7, restSeconds: 75, cues: ['L', 'R'] };
+  assert.deepEqual(C.toSeries(old), { ...old, rounds: 3, sides: 2, switchSeconds: 10 });
+  assert.equal(C.toSeries(C.toSeries(old)).rounds, 3, 'una seconda volta non cambia nulla');
+  const plain = { rounds: 4, workSeconds: 7, restSeconds: 180, cues: [] };
+  assert.equal(C.toSeries(plain), plain);
+  const log = { date: '2026-11-20', blocks: [{ exId: 'a', minutes: 9, sets: { done: 6, of: 6 } }], minutes: 9 };
+  const state = { exercises: { a: { id: 'a', interval: { ...old }, minutes: 16 }, b: { id: 'b', interval: { ...plain } } },
+    plans: [{ weeks: [[{ sessions: [{ blocks: [{ exId: 'a', minutes: 16 }, { exId: 'b', minutes: 10 }] }] }]] }], extras: [{ blocks: [{ exId: 'a', minutes: 16 }] }], logs: [log] };
+  const before = JSON.stringify(state.logs);
+  const done = C.sidesToSeries(state);
+  assert.deepEqual([...done], ['a']);
+  assert.equal(state.exercises.a.interval.rounds, 3); assert.equal(state.exercises.a.interval.switchSeconds, 10);
+  assert.equal(state.exercises.a.minutes, 4);
+  assert.deepEqual(state.plans[0].weeks[0][0].sessions[0].blocks.map(b => b.minutes), [4, 10]);
+  assert.equal(state.extras[0].blocks[0].minutes, 4);
+  assert.equal(JSON.stringify(state.logs), before, 'log non toccati');
+  assert.equal(C.normInterval(state.exercises.a.interval).sides, 2);
+});
+
+test('lati: esportazione YAML con sets = serie e switch solo se diverso da 10 s', () => {
+  const r = sidedYaml();
+  const ex = exMapOf(r);
+  const y = C.exportYaml(r.plan, ex);
+  assert.match(y, /sets: 3\n\s+work: 7s\n\s+rest: 1min15s\n\s+sides: L\/R/);
+  assert.doesNotMatch(y, /switch:/);
+  for (const e of Object.values(ex)) e.interval.switchSeconds = 5;
+  assert.match(C.exportYaml(r.plan, ex), /switch: 5s/);
+  const back = C.importYaml(C.exportYaml(r.plan, ex));
+  assert.equal(Object.values(exMapOf(back))[0].interval.switchSeconds, 5);
+});
+
+test('libreria: esercizi alternati in serie L+R', () => {
+  for (const k of ['pinch-lift', 'block-lift', 'one-arm-hang', 'press', 'lockoff', 'pallof', 'technique', 'biceps-stretch', 'one-arm-pull']) {
+    const iv = C.STD[k].interval;
+    assert.equal(iv.sides, 2, k); assert.equal(iv.switchSeconds, 10, k); assert.equal(iv.rounds, 3, k);
+  }
 });
