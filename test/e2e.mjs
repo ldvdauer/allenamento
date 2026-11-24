@@ -148,12 +148,19 @@ await clickText('Not done', '.sheet');
 // Esercizio per lato: "+ Add set" aggiunge una serie L e una R
 await play('Pinch block'); await sleep(60);
 const pb0 = await pg.$$eval('#p-table .tb-r', r => r.length);
+// fasi: L → cambio lato (10 s) → R → recupero della serie; il conteggio è per serie
+const phase = async () => `${await txt('#p-ph')}|${(await txt('#p-cue')).split(' · ')[0]}|${await txt('#p-round')}`;
+await adv(10500); const ph1 = await phase(); await adv(7500); const ph2 = await phase(); ok((await txt('#p-next')).startsWith('Up next: right · 7 s work (1/'), 'durante il cambio lato: Up next lavoro a destra (' + await txt('#p-next') + ')');
+await adv(10500); const ph3 = await phase(); await adv(7500); const ph4 = await phase();
+ok(ph1 === 'WORK|L|Set 1 of ' + pb0 / 2 && ph2.startsWith('SWITCH SIDE|R|Set 1') && ph3 === 'WORK|R|Set 1 of ' + pb0 / 2 && ph4.startsWith('REST|') && ph4.endsWith('Set 1 of ' + pb0 / 2), 'per lato: L → cambio lato → R → recupero (' + [ph1, ph2, ph3, ph4].join(' / ') + ')');
+const nums = await pg.$$eval('#p-table .tb-r', r => r.map(x => x.querySelector('.tb-n').innerText + (x.querySelector('.tb-side') || {}).innerText));
+ok(nums.slice(0, 4).join() === '1L,1R,2L,2R', 'tabella: righe numerate per serie con il lato (' + nums.join() + ')');
 await pg.evaluate(() => [...document.querySelectorAll('#p-table .linkbtn')].find(b => b.innerText === '+ Add set').click());
 const pb = await pg.$$eval('#p-table .tb-r', r => r.map(x => (x.querySelector('.tb-side') || {}).innerText || ''));
 ok(pb.length === pb0 + 2 && pb.slice(-2).join() === 'L,R', 'per lato: + Add set aggiunge L e R (' + pb.join() + ')');
 let pbW = 0;
 for (let i = 0; i < 60 && !(await pg.$eval('#player', e => e.hidden)); i++) { if ((await txt('#p-ph')) === 'WORK') { await adv(Math.max(1, Number(await txt('#p-clock')) || 0) * 1000 + 600); pbW++; } else await pg.click('#p-done'); }
-ok(pbW === pb0 + 2 && (await txt('.sheet .sum')).startsWith(`${pb0 + 2}/${pb0 + 2} sets`), 'per lato: anche le due serie aggiunte vanno a tempo e si contano (' + pbW + ', ' + await txt('.sheet .sum') + ')');
+ok(pbW === pb0 + 2 - 2 && (await txt('.sheet .sum')).startsWith(`${pb0 / 2 + 1}/${pb0 / 2 + 1} sets`), 'per lato: la serie aggiunta (L+R) va a tempo e conta come una serie (' + pbW + ', ' + await txt('.sheet .sum') + ')');
 await clickText('Not done', '.sheet');
 ok((await pg.$$('#view .play.done')).length === 2, '"Not done": nessuna registrazione');
 
@@ -298,7 +305,7 @@ await go('home');
 ok(!/log session|logged session/i.test(await txt('#view')), 'Home: nessun "Log session"');
 await pg.evaluate(() => [...document.querySelectorAll('#view .blk')].find(r => r.innerText.includes('Pinch block')).click()); await sleep(60);
 await clickText('Log without timer', '.sheet');
-ok((await txt('.sheet')).includes('Sets done (of 6)') && (await pg.$eval('.sheet .cols label:nth-child(1) input', e => e.value)) === '6', 'registrazione senza timer: serie tutte fatte, modificabili');
+ok((await txt('.sheet')).includes('Sets done (of 3)') && (await pg.$eval('.sheet .cols label:nth-child(1) input', e => e.value)) === '3', 'registrazione senza timer: serie (L+R) tutte fatte, modificabili');
 // Esercizio per lato: due campi kg (L e R); il tasto ± per un carico negativo (scaricato)
 const kgIn = await pg.$$('.sheet .kg-in input');
 ok(kgIn.length === 2 && (await txt('.sheet .kg-wrap')).includes('L') && (await txt('.sheet .kg-wrap')).includes('R'), 'carico per lato: due campi L/R');
@@ -371,7 +378,7 @@ ok(await pg.evaluate(n => __app.state.plans.length === n, nPlans), 'import con e
 await pg.evaluate(() => document.querySelectorAll('.overlay').forEach(o => o.remove()));
 await go('analytics');
 const an = await txt('#view'); if (process.env.DBG) console.log(an.slice(0, 1400));
-ok(an.includes('Training time') && an.includes('38min') && an.includes('79%\nclimbing') && !an.includes('session type') && !/on the wall/i.test(an), 'Analisi: totale ore, ciambella con % arrampicata, niente "tipo di sessione"');
+ok(an.includes('Training time') && an.includes('35min') && an.includes('86%\nclimbing') && !an.includes('session type') && !/on the wall/i.test(an), 'Analisi: totale ore, ciambella con % arrampicata, niente "tipo di sessione"');
 ok(an.includes('Progress') && an.includes('Consistency') && an.includes('Planned days trained') && an.includes('Sets completed'), 'Analisi: sezioni Progress e Consistency');
 ok(!an.includes('most time') && !an.includes('Weekly volume'), 'Analisi: niente vecchi grafici');
 ok(await pg.evaluate(() => { const b = document.querySelector('#view .viz-donut-li .c-strength'); return !!b && getComputedStyle(b).backgroundColor === 'rgb(213, 81, 129)'; }), 'Analisi: legenda della ciambella con il colore della categoria (Strength = magenta)');
@@ -443,7 +450,7 @@ await pg.$eval('#view .cd', e => e.click()); await sleep(100);
 ok(/^#trip-/.test(await pg.evaluate(() => location.hash)), 'tocco sul countdown: apre il viaggio');
 await go('trips');
 await pg.reload(); await sleep(400);
-ok(await pg.evaluate(() => __app.state.trips.length === 1 && __app.state.trips[0].projects.length === 2 && __app.state.v === 16), 'viaggi salvati sul dispositivo dopo il riavvio');
+ok(await pg.evaluate(() => __app.state.trips.length === 1 && __app.state.trips[0].projects.length === 2 && __app.state.v === 17), 'viaggi salvati sul dispositivo dopo il riavvio');
 // v14: esercizi registrati con 0 minuti (Analytics a 0) prendono i minuti previsti dalla giornata
 const zero = await pg.evaluate(() => { const st = JSON.parse(localStorage.getItem('allenamento.v1')), l = st.logs.find(x => x.date === '2026-11-25');
   const planned = new Map(); for (const p of st.plans) for (const w of p.weeks) for (const d of w) for (const x of d.sessions) for (const b of x.blocks) planned.set(b.id, b.minutes);
@@ -504,7 +511,7 @@ await pg.evaluate(() => { __app.state.settings.gh = null; });
 
 // Persistenza e migrazione di un backup v2 con due sessioni nello stesso giorno
 await pg.reload();
-ok(await pg.evaluate(() => __app.state.logs.length === 2 && __app.state.extras.length === 1 && __app.state.v === 16), 'i dati sopravvivono al ricaricamento');
+ok(await pg.evaluate(() => __app.state.logs.length === 2 && __app.state.extras.length === 1 && __app.state.v === 17), 'i dati sopravvivono al ricaricamento');
 const mig = await pg.evaluate(async () => {
   const mk = (id, ex) => ({ id, type: 'wall', period: 'base', blocks: [{ id: id + 'b', exId: ex, minutes: 5 }] });
   const old = { v: 2, plans: [{ id: 'p', title: 'Vecchio', startDate: '2026-11-23', weeks: [[{ sessions: [mk('s1', 'e1'), mk('s2', 'e2')] }, ...Array.from({ length: 6 }, () => ({ sessions: [] }))]] }],
@@ -561,12 +568,14 @@ await pg.evaluate(() => {
 });
 await sleep(500);
 const m7 = await pg.evaluate(() => { const s = __app.state; return { v: s.v, trips: s.trips.length, e1: s.exercises.e1.name, cues: s.exercises.e2.interval.cues.join(), e3: s.exercises.e3.name, defs: s.testDefs.map(d => d.name).join('|'), surf: s.surfaces.map(x => x.name).join('|'), sides: s.logs[0].blocks[0].kgs.map(k => k.side).join(), title: s.extras[0].title, note: s.extras[0].blocks[0].note, mins: s.extras[0].blocks.map(b => b.minutes).join(), nx: s.extras.length, lb: s.logs[0].blocks[1].name + '|' + s.logs[0].loads[0].name, nb: s.extras[0].blocks.length, e4: !!s.exercises.e4, secs: s.logs[0].blocks.map(b => b.sec).join(), e3s: s.exercises.e3.section }; });
-ok(m7.v === 16 && m7.trips === 0 && m7.e1 === 'Wrist curl' && m7.cues === 'L,R' && m7.defs === 'Body weight|Pinch block L|Pinch block R' && m7.surf === 'Indoor (gym)|Pannello di casa|Lead (gym)|Lead (rock)' && m7.sides === 'L,R', 'dati v6 in italiano: nomi predefiniti, superfici e lati SX/DX passano all\'inglese');
+ok(m7.v === 17 && m7.trips === 0 && m7.e1 === 'Wrist curl' && m7.cues === 'L,R' && m7.defs === 'Body weight|Pinch block L|Pinch block R' && m7.surf === 'Indoor (gym)|Pannello di casa|Lead (gym)|Lead (rock)' && m7.sides === 'L,R', 'dati v6 in italiano: nomi predefiniti, superfici e lati SX/DX passano all\'inglese');
 ok(m7.lb === 'Wrist curl|Wrist curl', 'migrazione v10: le registrazioni passate prendono il nome della libreria');
+const m17 = await pg.evaluate(() => { const s = __app.state, iv = s.exercises.e2.interval; return { r: iv.rounds, sides: iv.sides, sw: iv.switchSeconds, log: JSON.stringify(s.logs[0].blocks[0].kgs) }; });
+ok(m17.r === 3 && m17.sides === 2 && m17.sw === 10 && m17.log === '[{"side":"L","kg":15},{"side":"R","kg":18}]', 'migrazione v17: Pinch block da 6 lati a 3 serie L+R con cambio lato 10 s, log invariato (' + JSON.stringify(m17) + ')');
 ok(m7.nb === 3 && !m7.e4, 'migrazione v11: il riscaldamento esce dalle giornate e dai dati');
 ok(m7.secs === 'fingers,conditioning,strength' && m7.e3s === 'conditioning', 'migrazione v11: registrazioni ed esercizi personali nelle nuove categorie');
 ok(m7.nx === 1, 'migrazione v9: le giornate senza esercizi spariscono');
-ok(m7.mins === '7,7,5', 'migrazione v8: con un timer i minuti diventano quelli calcolati (8 → 7), senza timer restano');
+ok(m7.mins === '7,4,5', 'migrazioni v8 + v17: con un timer i minuti sono quelli calcolati (Pinch 8 → 7 → 4 in serie L+R), senza timer restano (' + m7.mins + ')');
 ok(m7.e3 === 'Sospensioni di Leo' && m7.title === 'Dita a casa' && m7.note === 'lento', 'nomi, titoli e note scritti dall\'utente restano come sono');
 await go('home');
 ok((await txt('#view')).includes('L 15 kg · R 18 kg') && (await txt('#view')).includes('Wrist curl') && (await txt('#view')).includes('Sospensioni di Leo'), 'dopo la migrazione i kg per lato si calcolano ancora dai massimali');
