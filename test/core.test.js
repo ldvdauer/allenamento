@@ -719,3 +719,62 @@ test('libreria: esercizi alternati in serie L+R', () => {
     assert.equal(iv.sides, 2, k); assert.equal(iv.switchSeconds, 10, k); assert.equal(iv.rounds, 3, k);
   }
 });
+
+/* ---- Eliminare un programma non toglie mai ciò che è registrato (bug del 24 nov) ---- */
+const mkState = () => {
+  const ex = { a: { id: 'a', std: 'max-hang', name: 'Max hang', load: { ref: 'hc' } }, b: { id: 'b', std: 'pullup', name: 'Pull-ups', load: null } };
+  const day = (sid, ids) => ({ sessions: [{ id: sid, type: 'wall', title: '', blocks: ids.map((e, i) => ({ id: sid + '-b' + i, exId: e, minutes: 10 })) }] });
+  const rest = () => ({ sessions: [] });
+  const plan = { id: 'P', title: 'Karma', startDate: '2026-11-23', weeks: [[day('s1', ['a', 'b']), day('s2', ['a']), rest(), day('s4', ['b']), rest(), rest(), rest()]] };
+  const logs = [{ id: 'L1', date: '2026-11-23', sid: 's1', blocks: [{ bid: 's1-b0', key: C.exKey(ex.a), minutes: 10 }, { bid: 's1-b1', key: C.exKey(ex.b), minutes: 8 }] },
+    { id: 'L2', date: '2026-11-24', sid: 's2', blocks: [{ bid: 's2-b0', key: C.exKey(ex.a), minutes: 12 }] }];
+  return { plans: [plan], activePlan: 'P', exercises: ex, logs, tests: [{ id: 'T1', date: '2026-11-24' }], extras: [] };
+};
+
+test('eliminare un programma: le giornate registrate restano (giornate singole, log collegati), le altre spariscono', () => {
+  const s = mkState(), logs = JSON.stringify(s.logs);
+  assert.equal(C.deletePlan(s, s.plans[0]), 2);
+  assert.equal(s.plans.length, 0); assert.equal(s.activePlan, null);
+  assert.deepEqual(s.extras.map(x => [x.id, x.date, x.blocks.length, !!x.kept]), [['s1', '2026-11-23', 2, true], ['s2', '2026-11-24', 1, true]]);
+  assert.equal(JSON.stringify(s.logs), logs, 'log invariati');
+  const sd = C.sessionDates(s);
+  assert.ok(s.logs.every(l => sd.get(l.sid) && sd.get(l.sid).date === l.date), 'ogni log ha la sua giornata');
+  assert.equal(C.relinkLogs(s), 0, 'senza un programma nuovo non cambia nulla');
+});
+
+test('programma eliminato e reimportato: i log tornano sulle sue giornate e le copie tenute spariscono', () => {
+  const s = mkState(), plan = JSON.parse(JSON.stringify(s.plans[0]));
+  C.deletePlan(s, s.plans[0]);
+  // reimport: nuovi id per giornate, blocchi ed esercizi (come fa l'import)
+  plan.id = 'P2';
+  plan.weeks.flat().forEach(d => d.sessions.forEach(x => { x.id = 'n' + x.id; x.blocks.forEach(b => { b.id = 'n' + b.id; s.exercises['n' + b.exId] = { ...s.exercises[b.exId], id: 'n' + b.exId }; b.exId = 'n' + b.exId; }); }));
+  s.plans.push(plan);
+  assert.equal(C.relinkLogs(s), 2);
+  assert.deepEqual(s.logs.map(l => l.sid), ['ns1', 'ns2']);
+  assert.deepEqual(s.logs[0].blocks.map(b => b.bid), ['ns1-b0', 'ns1-b1']);
+  assert.equal(s.extras.length, 0, 'le copie tenute non servono più');
+  assert.equal(C.relinkLogs(s), 0, 'idempotente');
+});
+
+test('registrazione senza giornata: si ricollega alla giornata della stessa data solo se ha tutti gli esercizi', () => {
+  const s = mkState();
+  s.logs[1].sid = 'sparito';
+  assert.equal(C.relinkLogs(s), 1); assert.equal(s.logs[1].sid, 's2');
+  const t = mkState();
+  t.logs[1].sid = 'sparito'; t.logs[1].blocks.push({ bid: 'x', key: 'altro|', minutes: 1 });
+  assert.equal(C.relinkLogs(t), 0, 'esercizio registrato che la giornata non ha: non si forza');
+  assert.equal(t.logs[1].sid, 'sparito');
+});
+
+test('ripristino da backup: si aggiunge solo ciò che manca, la giornata originale torna dal backup', () => {
+  const backup = mkState();
+  const s = mkState();
+  s.plans = []; s.logs = [s.logs[0]]; s.tests = []; s.activePlan = null; s.exercises = {}; // situazione dopo il bug: programma e log di oggi spariti
+  const r = C.mergeLogs(s, backup);
+  assert.deepEqual([r.logs, r.tests], [1, 1]);
+  assert.equal(r.relinked, 2, 'entrambi i log tornano visibili con la giornata del backup');
+  const sd = C.sessionDates(s);
+  assert.ok(s.logs.every(l => sd.get(l.sid) && sd.get(l.sid).date === l.date));
+  assert.ok(s.exercises.a && s.exercises.b, 'esercizi della giornata copiati dal backup');
+  assert.deepEqual(C.mergeLogs(s, backup), { logs: 0, tests: 0, relinked: 0 }, 'una seconda volta non aggiunge nulla');
+});
