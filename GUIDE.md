@@ -3,7 +3,7 @@
 ## First time
 1. Open the app in Safari → Share → **Add to Home Screen**. From then on, always open it from the Home Screen.
 2. **More → Diagnostics → Run the checks**: verifies audio, screen on, offline use and storage on your phone.
-3. **Analytics → Tests and maxes**: enter the maxes you know (for hangs, the weight added). Percentages apply to them: 85% of +35 kg is +30 kg.
+3. **Analytics → Tests and maxes**: enter your body weight and the maxes you know. They are used to compute kg.
 4. **More → Automatic backup**: connect a private GitHub repository, or use "Save backup" every now and then.
 
 ## Every day
@@ -16,7 +16,7 @@
 
 ## Planning
 - **Calendar**: tap a day to see or change its exercises (+ Exercise, + Test). Drag "≡" to reorder them. A day with no exercises is a rest day: there is nothing to create or delete. Each day shows one dot per category, in the category colour, longest first: a ring is planned, a filled dot is done; "+" means more than three categories.
-  While an exercise runs, a table under the timer is filled in as you go (inspired by Lattice): one row per set with reps and added kg (L and R rows with the same set number for exercises per side), or one row per climb with its grade (−/+, in the scale of the surface chosen above the table). The current row is highlighted and turns green when done; **Skip set/climb** jumps to the next one, **+ Add set/climb** adds a row. At the end a short confirmation shows the summary with minutes, exercise RPE and note. Tests and stretching keep the plain timer.
+  While an exercise runs, a table under the timer is filled in as you go (inspired by Lattice): one row per set with reps and kg over body weight (L and R rows with the same set number for exercises per side), or one row per climb with its grade (−/+, in the scale of the surface chosen above the table). The current row is highlighted and turns green when done; **Skip set/climb** jumps to the next one, **+ Add set/climb** adds a row. At the end a short confirmation shows the summary with minutes, exercise RPE and note. Tests and stretching keep the plain timer.
   What you logged appears under each exercise (minutes, load, RPE, sets, grade, note; yellow if sets or reps were missed). Tap it to edit or delete it; tapping the exercise also shows **Edit log** and **Delete log** (the exercise stays in the day). When an exercise ends: **Save**, **Mark as done, no details** (logs it with the time only) or **Not done, discard** (logs nothing).
 - **Edit day** on a day: title, move it to another date (days you created), **Copy** its exercises to another date, or clear it.
 - Tap an exercise to set its parameters *on that day*: rounds, seconds or reps, rests, L/R, reference test and %, surface, note; for Fingers exercises also grip, edge (mm) and one or two hands. With a timer the duration is calculated; minutes are typed only for "Duration only" exercises.

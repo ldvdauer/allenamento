@@ -14,11 +14,12 @@
 
   /* ---------- Stato e persistenza ---------- */
   // Primo avvio: nessun piano precaricato, ogni utente importa o crea i propri.
-  const fresh = () => migrate({ v: 18, plans: [], activePlan: null, exercises: {}, logs: [], tests: [] });
-  /** I test da cui dipendono i kg degli esercizi devono esistere nella sezione Test. */
+  const fresh = () => migrate({ v: 17, plans: [], activePlan: null, exercises: {}, logs: [], tests: [] });
+  /** I test da cui dipendono i kg degli esercizi (e il peso corporeo) devono esistere nella sezione Test. */
   function ensureTests(s) {
-    const need = new Set(Object.values(s.exercises).filter(e => e.load).flatMap(e => C.refKeys(e.load.ref)));
+    const need = new Set(['bw'].concat(Object.values(s.exercises).filter(e => e.load).flatMap(e => C.refKeys(e.load.ref))));
     for (const t of C.TEST_TEMPLATES) if (need.has(t.key) && !s.testDefs.some(d => d.key === t.key)) s.testDefs.push({ ...t });
+    s.testDefs.sort((a, b) => (b.key === 'bw') - (a.key === 'bw'));
   }
   /** Ogni esercizio di una sessione è un'istanza privata con i suoi parametri: niente è condiviso tra sessioni.
       Dal testo libero ereditato da un import resta solo ciò che non è un parametro, come nota del blocco. */
@@ -168,9 +169,7 @@
     // v17: negli esercizi alternati L/R una serie è L + R (cambio lato di 10 s, poi il recupero della serie): i round salvati
     // contavano i lati, quindi si dimezzano. I log restano com'erano.
     if (fromV < 17) C.sidesToSeries(s);
-    // v18: niente peso corporeo (le % delle sospensioni sono sul solo peso aggiunto): il test Body weight sparisce se non ha valori
-    if (fromV < 18) s.testDefs = s.testDefs.filter(d => d.key !== 'bw' || s.tests.some(t => t.key === 'bw'));
-    s.v = 18;
+    s.v = 17;
     return s;
   }
   let rescued = false;
@@ -417,7 +416,12 @@
     const m = maxes(), out = [];
     for (const c of cues) {
       const kg = C.loadKg(ex.load, c, m);
-      if (kg == null) { const k = C.loadKey(ex.load, c); return `kg: add ${(S.testDefs.find(t => t.key === k) || { name: k }).name} in Tests`; } // quale massimale manca
+      if (kg == null) {
+        // dire quale valore manca: per le sospensioni serve anche il peso corporeo (nota del 24 nov: "massimale mancante" con l'open hand appena testata)
+        const need = [C.loadKey(ex.load, c)].concat(ex.load.mode === 'lift' ? [] : ['bw']).filter(k => m[k] == null || isNaN(m[k]));
+        const names = [...new Set(need.map(k => (S.testDefs.find(t => t.key === k) || { name: k }).name))];
+        return `kg: add ${names.join(' and ')} in Tests`;
+      }
       const side = C.PAIRS[ex.load.ref] ? (/^\s*(DX|R\b)/i.test(c) ? 'R ' : 'L ') : '';
       const s = side + (ex.load.mode === 'hang' ? C.fmtKg(kg) : dec(kg) + ' kg');
       if (!out.includes(s)) out.push(s);
@@ -1011,7 +1015,7 @@
     return out;
   }
 
-  const MODES = [['hang', 'Added weight'], ['lift', 'Load lifted'], ['value', 'Free value (seconds, kg…)']];
+  const MODES = [['hang', 'Weight added to body weight'], ['lift', 'Load lifted'], ['value', 'Free value (seconds, kg…)']];
   const testUsed = key => Object.values(S.exercises).some(e => e.load && C.refKeys(e.load.ref).includes(key));
   function testDefSheet(def) {
     const isNew = !def; def = def || { key: 'c-' + C.uid().slice(0, 8), name: '', unit: 'kg', mode: 'hang', hands: 2 };
@@ -1526,7 +1530,7 @@
     const withKg = !climb && P.rows.some(x => x.kg !== undefined), withReps = !climb && P.rows.some(x => x.plan != null);
     const head = climb
       ? h('div', { class: 'tb-h' }, h('span', {}, route ? 'Route' : 'Climb'), h('span', { class: 'grow' }), opts(surfOpts(), P.surface, { onchange: e => { P.surface = e.target.value; drawTable(); } }))
-      : h('div', { class: 'tb-h' }, h('span', {}, 'Set'), withReps ? h('span', { class: 'c-reps' }, 'Reps') : null, withKg ? h('span', { class: 'c-kg' }, 'Added kg') : null);
+      : h('div', { class: 'tb-h' }, h('span', {}, 'Set'), withReps ? h('span', { class: 'c-reps' }, 'Reps') : null, withKg ? h('span', { class: 'c-kg' }, 'kg over body weight') : null);
     const rows = P.rows.map((x, i) => {
       const set = (k, v) => { x[k] = v; drawTable(); };
       let cells;
@@ -1616,7 +1620,7 @@
     const prevKg = side => { const k = prev && (prev.kgs || []).find(x => (x.side || null) === side); return k ? k.kg : prev ? null : plannedKg(side); };
     const kgInp = side => { const i = numInp(prevKg(side), { placeholder: '0' });
       return h('div', { class: 'kg-in' }, side ? h('span', { class: 'kg-side' }, side) : null, i, h('span', { class: 'kg-u' }, 'kg'),
-        h('button', { type: 'button', class: 'btn sm kg-sign', 'aria-label': 'Change sign (negative = assisted)', onclick: () => { const v = val(i); i.value = v == null ? '-' : dec(-v); } }, '±')); };
+        h('button', { type: 'button', class: 'btn sm kg-sign', 'aria-label': 'Change sign (assisted, less than body weight)', onclick: () => { const v = val(i); i.value = v == null ? '-' : dec(-v); } }, '±')); };
     const withLoad = !isTest && (ex.load || ex.slot === 'strength');
     const kgBoxes = withLoad ? (sided ? [['L', kgInp('L')], ['R', kgInp('R')]] : [[null, kgInp(null)]]) : [];
     const load = withLoad ? h('div', { class: 'kg-wrap' }, kgBoxes.map(x => x[1])) : null;
@@ -1652,7 +1656,7 @@
       sets ? h('div', { class: 'cols' }, field(`Sets done (of ${of})`, setsDone), repsMissed ? field('Reps missed (total)', repsMissed) : field('Minutes', min)) : field('Minutes', min),
       sets && repsMissed ? field('Minutes', min) : null,
       tests.length ? [tests.map(x => field(`Result: ${x.def.name} (${x.def.unit})`, x.inp)), h('p', { class: 'sub' }, 'On save, the result immediately updates the max in the Tests section.')] : null,
-      load ? [field('Added load (kg)', load), field('Exercise RPE', rpe)] : null,
+      load ? [field('Added load (kg over body weight)', load), field('Exercise RPE', rpe)] : null,
       isClimb ? [h('div', { class: 'cols' }, field('Surface', sf), field('Top grade sent', gr)), sentF] : null,
       field('Note', note),
       btn('Save', () => {
