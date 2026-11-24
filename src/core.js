@@ -368,6 +368,80 @@ review|other|Attempt review|10|`.split('\n').map(line => {
     return { w: Math.floor(n / 7), d: n % 7 };
   }
   const dateOf = (plan, w, d) => addDays(plan.startDate, w * 7 + d);
+  /** Chiave di un esercizio nei log (stessa definizione dell'app): standard o nome, test di riferimento, presa. */
+  const exKey = e => (e.std || e.name) + '|' + (e.load ? e.load.ref : '') + (e.grip ? '|' + [e.grip.type || '', e.grip.edge || '', e.grip.hands || ''].join('/') : '');
+  /** Tutte le giornate (programmi e giornate singole): sid → { s, date }. `all`: anche i giorni nascosti dei programmi. */
+  function sessionDates(state, all) {
+    const m = new Map();
+    for (const p of state.plans || []) p.weeks.forEach((wk, w) => wk.forEach((d, di) => {
+      const date = dateOf(p, w, di);
+      if (all || inWindow(p, date)) for (const x of d.sessions) m.set(x.id, { s: x, date });
+    }));
+    for (const x of state.extras || []) m.set(x.id, { s: x, date: x.date });
+    return m;
+  }
+  /** Elimina un programma senza perdere niente di registrato: le giornate con qualcosa di registrato restano nel calendario
+      come giornate singole, con lo stesso id (i log restano collegati ai loro esercizi). Le altre giornate spariscono.
+      Restituisce il numero di giornate tenute. (Bug del 24 nov: la giornata di oggi, già registrata, spariva dalla Home.) */
+  function deletePlan(state, plan) {
+    const logged = new Set((state.logs || []).map(l => l.sid + '|' + l.date));
+    const keep = [];
+    plan.weeks.forEach((wk, w) => wk.forEach((d, di) => {
+      const date = dateOf(plan, w, di);
+      for (const x of d.sessions) if (logged.has(x.id + '|' + date)) keep.push({ ...JSON.parse(JSON.stringify(x)), date, kept: plan.title || true });
+    }));
+    state.extras = (state.extras || []).concat(keep);
+    state.plans = state.plans.filter(p => p !== plan);
+    if (state.activePlan === plan.id) state.activePlan = state.plans[0] ? state.plans[0].id : null;
+    return keep.length;
+  }
+  /** Ricollega le registrazioni rimaste senza giornata (es. programma eliminato e reimportato):
+      1) alla giornata della stessa data che ha tutti gli esercizi registrati (`keyOf`: chiave di un esercizio, come nei log);
+         vale anche per le giornate tenute da un programma eliminato (`kept`): se lo si reimporta, i log tornano sulle sue giornate
+         e la copia tenuta sparisce;
+      2) altrimenti, se c'è un backup, la giornata originale del backup torna come giornata singola (con i suoi esercizi).
+      Non cancella e non modifica nient'altro. Restituisce il numero di registrazioni ricollegate. */
+  function relinkLogs(state, keyOf = exKey, backup = null) {
+    const have = sessionDates(state), used = new Set((state.logs || []).map(l => l.sid + '|' + l.date));
+    const src = backup ? sessionDates(backup, true) : null;
+    let n = 0;
+    const keptOf = l => { const x = have.get(l.sid); return x && x.s.kept && x.date === l.date ? x.s : null; };
+    for (const l of state.logs || []) {
+      const kept = keptOf(l), own = have.get(l.sid);
+      if (own && own.date === l.date && !kept) continue; // al suo posto
+      const lb = l.blocks || [];
+      let done = false;
+      for (const [id, x] of have) {
+        if (x.date !== l.date || x.s.kept || used.has(id + '|' + l.date) || !lb.length) continue;
+        const free = x.s.blocks.map(b => ({ b, k: state.exercises[b.exId] ? keyOf(state.exercises[b.exId]) : null }));
+        const map = lb.map(r => { const i = free.findIndex(f => f.k && f.k === r.key); return i < 0 ? null : free.splice(i, 1)[0].b.id; });
+        if (map.some(v => v == null)) continue;
+        lb.forEach((r, i) => { r.bid = map[i]; });
+        l.sid = id; used.add(id + '|' + l.date); done = true;
+        if (kept && !state.logs.some(o => o.sid === kept.id && o.date === l.date)) { state.extras = state.extras.filter(e => e !== kept); have.delete(kept.id); }
+        break;
+      }
+      if (kept) { if (done) n++; continue; }
+      if (!done && src && src.has(l.sid) && !have.has(l.sid)) {
+        const x = JSON.parse(JSON.stringify(src.get(l.sid).s));
+        for (const b of x.blocks) if (!state.exercises[b.exId] && backup.exercises[b.exId]) state.exercises[b.exId] = JSON.parse(JSON.stringify(backup.exercises[b.exId]));
+        x.blocks = x.blocks.filter(b => state.exercises[b.exId]);
+        state.extras = (state.extras || []).concat({ ...x, date: l.date });
+        have.set(x.id, { s: x, date: l.date }); done = true;
+      }
+      if (done) n++;
+    }
+    return n;
+  }
+  /** Da un backup aggiunge solo ciò che manca (registrazioni e test, per id) e ricollega le registrazioni. Nulla viene sostituito. */
+  function mergeLogs(state, backup, keyOf = exKey) {
+    const ids = new Set((state.logs || []).map(l => l.id)), tids = new Set((state.tests || []).map(t => t.id));
+    const logs = (backup.logs || []).filter(l => !ids.has(l.id)).map(l => JSON.parse(JSON.stringify(l)));
+    const tests = (backup.tests || []).filter(t => !tids.has(t.id)).map(t => JSON.parse(JSON.stringify(t)));
+    state.logs = (state.logs || []).concat(logs); state.tests = (state.tests || []).concat(tests);
+    const relinked = relinkLogs(state, keyOf, backup);
+    return { logs: logs.length, tests: tests.length, relinked };
+  }
   /** Giorni tra l'inizio del programma e la sua prima sessione (i programmi spesso aprono con un giorno di riposo). */
   const firstOffset = plan => { for (let i = 0; i < plan.weeks.length * 7; i++) if (plan.weeks[Math.floor(i / 7)][i % 7].sessions.length) return i; return 0; };
   /** Data della prima sessione, e l'inizio che la fa cadere su `iso`. L'inizio può essere un giorno qualsiasi:
@@ -912,7 +986,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
   return {
     CLIMBING, LEGACY_SECTION, slotOf, blockSection, timeBySection, weeklyGroups, describe, leftoverNote, splitCues, fmtRest, PAIRS, refKeys, LEGACY_NAMES, normSide, firstOffset, firstSessionDate, planEnd, planShownStart, inWindow, overlapping, lastSession, startForFirst, recordsOf, lastRecord, nextLoad, TEST_TEMPLATES, testLabel, SECTIONS, LIBRARY, STD, stdVariant, matchStd, exName, GRIPS, gripKey, gripText,
     DAY_TYPES, PERIODS, SLOTS, fmtLoads, GRADES, ROUTE_GRADES, gradeList, GRADE_SCALES, gradeIdx, fmtGrade, DEFAULT_SURFACES, inferSurface, validISO, uid, toISO, fromISO, todayISO, addDays, diffDays, mondayOf,
-    inferLoad, loadKey, loadKg, latestMaxes, fmtKg, cycle, cueAt, intervalMinutes, buildSteps, normInterval, isSided, switchOf, toSeries, sidesToSeries, SWITCH_DEFAULT,
+    inferLoad, loadKey, loadKg, latestMaxes, fmtKg, cycle, cueAt, intervalMinutes, buildSteps, normInterval, isSided, switchOf, toSeries, sidesToSeries, SWITCH_DEFAULT, sessionDates, deletePlan, relinkLogs, mergeLogs, exKey,
     importYaml, exportYaml, parseDuration, parseWeeks, fmtWeeks, testExercise, YAML_REFS, locate, dateOf, sessionMinutes, cloneSession, validState,
     niceRange, scheduled, weeklyStats, summary, parseLoads, loadSeries, surfaceStats, weeklyTopGrades, dailyGroups, setsCompletion, testProgress, gradeProgress,
     TRIP_STATUS, PROJECT_STATUS, STYLES, tripDate, tripFirst, tripLast, cleanTrips, tripProgress, tripPhase, daysTo, tripCountdown, nextTrip, groupTrips,

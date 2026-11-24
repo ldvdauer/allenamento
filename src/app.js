@@ -201,6 +201,8 @@
     }
   }
   let S = load();
+  // Registrazioni rimaste senza giornata (es. programma eliminato e poi reimportato): si ricollegano alla giornata della stessa data
+  try { C.relinkLogs(S); } catch (e) { console.warn('[store] relink failed', e); } // si salva con la prossima modifica; ad ogni avvio si rifà (idempotente)
 
   /* ---------- Backup automatico su un repository GitHub privato ----------
      Il token resta solo su questo dispositivo: non entra mai nei file di backup, né in quelli caricati né in quelli esportati. */
@@ -403,7 +405,7 @@
   const pairsPresent = () => Object.keys(C.PAIRS).filter(k => C.refKeys(k).every(x => S.testDefs.some(t => t.key === x)));
   const inPair = (key, pairs) => pairs.some(k => C.refKeys(k).includes(key));
   // Chiave della serie dei carichi: esercizio, riferimento e presa (Max hang 20 mm half crimp ≠ Max hang 20 mm open hand)
-  const exKey = e => (e.std || e.name) + '|' + (e.load ? e.load.ref : '') + (e.grip ? '|' + [e.grip.type || '', e.grip.edge || '', e.grip.hands || ''].join('/') : '');
+  const exKey = C.exKey;
   function exLabel(e) {
     const base = e.std && C.STD[e.std] ? C.STD[e.std].name : e.name, d = e.load && !C.PAIRS[e.load.ref] ? S.testDefs.find(t => t.key === e.load.ref) : null;
     return [d ? `${base} · ${d.name}` : base, C.gripText(e)].filter(Boolean).join(' · ');
@@ -620,13 +622,21 @@
 
   /* ---------- Programmi: insiemi di sessioni importati, visibili solo nel calendario ---------- */
   function planSheet(p) {
-    const title = h('input', { value: p.title }), start = h('input', { type: 'date', value: C.firstSessionDate(p) });
+    // Con giornate già registrate la data di inizio non si sposta: le registrazioni resterebbero senza giornata
+    const logged = S.logs.filter(l => { const x = C.sessionDates({ plans: [p] }, true).get(l.sid); return x && x.date === l.date; }).length;
+    const title = h('input', { value: p.title }), start = h('input', { type: 'date', value: C.firstSessionDate(p), disabled: logged > 0 });
     const done = () => { save(); ov.remove(); render(); };
     const ov = openSheet('Programme', [field('Name', title), field('First training day on', start),
+      logged ? h('p', { class: 'sub' }, 'Already started: the first day cannot be moved, so what you logged stays on its days.') : null,
       h('p', { class: 'sub' }, `${p.weeks.length} weeks · until ${fmtDate(C.dateOf(p, p.weeks.length - 1, 6))}. Days are edited from the calendar.`),
-      btn('Save', () => { p.title = title.value.trim().slice(0, 80) || p.title; if (C.validISO(start.value)) { p.startDate = C.startForFirst(p, start.value); if (p.shownFrom && p.startDate >= p.shownFrom) delete p.shownFrom; } done(); }, 'pri block'),
+      btn('Save', () => { p.title = title.value.trim().slice(0, 80) || p.title; if (!logged && C.validISO(start.value)) { p.startDate = C.startForFirst(p, start.value); if (p.shownFrom && p.startDate >= p.shownFrom) delete p.shownFrom; } done(); }, 'pri block'),
       h('div', { class: 'btns' }, btn('Export .yaml', () => exportSheet('Export programme', p.title.replace(/[^\w+-]+/g, '_') + '.yaml', C.exportYaml(p, S.exercises)), 'sm'),
-        btn('Delete programme', async () => { if (await confirmDlg(`Delete "${p.title}"? Its days disappear from the calendar, logged exercises stay.`, 'Delete')) { S.plans = S.plans.filter(x => x !== p); done(); } }, 'sm danger'))]);
+        btn('Delete programme', async () => {
+          // Le giornate già registrate restano nel calendario (come giornate singole): eliminare un programma non toglie mai nulla di fatto
+          const n = S.logs.filter(l => { const x = C.sessionDates({ plans: [p] }, true).get(l.sid); return x && x.date === l.date; }).length;
+          const msg = n ? `Delete "${p.title}"? ${n > 1 ? `The ${n} days you already logged stay` : 'The day you already logged stays'} in the calendar with everything you logged; the other days are removed.` : `Delete "${p.title}"? Its days are removed from the calendar.`;
+          if (await confirmDlg(msg, 'Delete')) { const kept = C.deletePlan(S, p); done(); if (kept) toast(`Programme deleted. ${kept} logged day${kept > 1 ? 's' : ''} kept.`); }
+        }, 'sm danger'))]);
   }
 
   function fileBtn(label, after) {
@@ -637,6 +647,23 @@
       catch (e) { console.warn('[import] failed', e); importErrors(e); }
     } });
     return h('span', {}, inp, btn(label, () => inp.click(), 'sm'));
+  }
+  /** Backup scelto: di default si aggiungono solo le registrazioni e i test che mancano (niente viene sostituito);
+      sostituire tutto è una scelta esplicita e separata. */
+  function backupSheet(obj) {
+    const b = migrate(JSON.parse(JSON.stringify(obj)));
+    const ids = new Set(S.logs.map(l => l.id)), miss = b.logs.filter(l => !ids.has(l.id)), dates = [...new Set(miss.map(l => l.date))].sort();
+    const ov = openSheet('Backup file', [
+      h('p', { class: 'sub' }, miss.length ? `It has ${miss.length} logged day${miss.length > 1 ? 's' : ''} that ${miss.length > 1 ? 'are' : 'is'} not in the app (${dates.slice(-3).map(fmtDate).join(', ')}${dates.length > 3 ? '…' : ''}).` : 'Everything logged in this backup is already in the app.'),
+      btn('Add what is missing', () => {
+        const r = C.mergeLogs(S, b); save(); ov.remove(); render();
+        toast(r.logs || r.tests ? `Added ${r.logs} logged day${r.logs === 1 ? '' : 's'} and ${r.tests} test${r.tests === 1 ? '' : 's'}.` : 'Nothing to add.'); log('import', 'backup merged ' + JSON.stringify(r));
+      }, 'pri block'),
+      h('p', { class: 'sub' }, 'Adds logged exercises and tests that are missing, and puts them back on their days. Nothing in the app is replaced or deleted.'),
+      btn('Replace all data with the backup', async () => {
+        if (!await confirmDlg('Replace ALL current data with this backup? Anything done after the backup is lost.', 'Replace')) return;
+        S = b; calSel = calMonth = null; save(); ov.remove(); render(); toast('Backup restored.'); log('import', 'backup restored');
+      }, 'danger block')]);
   }
   /** Errori di un file di programma: tutti, in un foglio, così si correggono in una volta sola. */
   function importErrors(e) {
@@ -649,11 +676,7 @@
     // Un backup è JSON con lo stato completo; tutto il resto si legge come programma YAML (anche il JSON lo è).
     let obj = null;
     try { obj = JSON.parse(text); } catch (_) { /* non è JSON: è YAML */ }
-    if (obj && C.validState(obj)) {
-      if (!await confirmDlg('This is a full backup: replace ALL current data?', 'Replace')) return;
-      S = migrate(obj); calSel = calMonth = null; save(); render(); toast('Backup restored.'); log('import', 'backup restored');
-      return;
-    }
+    if (obj && C.validState(obj)) { backupSheet(obj); return; }
     const r = C.importYaml(text, { surfaces: S.surfaces, testDefs: S.testDefs }); // lancia con tutti gli errori: lo stato non viene toccato
     const title = h('input', { value: r.plan.title }), start = h('input', { type: 'date', value: r.firstSession || C.todayISO() });
     const ov = openSheet('Import programme', [h('p', { class: 'sub' }, `${r.plan.weeks.length} weeks. Choose when it starts: its days appear in the calendar.`),
@@ -670,7 +693,13 @@
           for (const e of r.exercises) S.exercises[e.id] = e; // già un'istanza per ogni esercizio di ogni sessione
           ensureTests(S);
           S.plans.push(r.plan);
+          // giornate tenute da un programma eliminato: se il nuovo ha la stessa giornata, le registrazioni tornano lì
+          const relinked = C.relinkLogs(S);
+          // una giornata già registrata rimasta da un programma eliminato (esercizi diversi): il nuovo parte dal giorno dopo, niente doppioni
+          const keptDays = S.extras.filter(x => x.kept && x.date >= C.planShownStart(r.plan) && x.date <= C.planEnd(r.plan)).map(x => x.date).sort();
+          if (keptDays.length) r.plan.shownFrom = C.addDays(keptDays[keptDays.length - 1], 1);
           save(); ov.remove();
+          if (relinked) log('import', 'logs moved to the imported days', relinked);
           toast(`Imported ${r.plan.title}.`); log('import', 'programme imported', { title: r.plan.title, weeks: r.plan.weeks.length, exercises: r.exercises.length, overlap: how || 'none' });
           go('calendar-' + (r.plan.shownFrom && r.plan.shownFrom > C.firstSessionDate(r.plan) ? r.plan.shownFrom : C.firstSessionDate(r.plan)));
         };
@@ -681,21 +710,25 @@
   }
   /** Il nuovo programma si sovrappone a uno già presente: sostituirne i giorni rimasti o partire dopo la sua fine.
       In nessun caso si toccano registrazioni, test o giorni passati. */
+  /** Il programma importato ha giorni in comune con uno già nel calendario: due scelte chiare, con le date
+      (nota di Leo del 24 nov: la domanda era ambigua). Le registrazioni non si toccano mai. */
   function overlapSheet(plan, over, today, commit) {
-    const names = over.map(p => `“${p.title}” (${fmtDate(C.planShownStart(p))} – ${fmtDate(C.lastSession(p) || C.planEnd(p))})`).join(', ');
+    const q = t => `“${t}”`, one = over.length === 1;
+    const span = p => `${fmtDate(C.planShownStart(p) > C.firstSessionDate(p) ? C.planShownStart(p) : C.firstSessionDate(p))} – ${fmtDate(C.lastSession(p) || C.planEnd(p))}`;
     // Un giorno di oggi già iniziato (qualcosa registrato) resta al programma vecchio
     const sids = new Set(over.flatMap(p => p.weeks.flatMap(w => w.flatMap(d => d.sessions.map(x => x.id)))));
     const startedToday = S.logs.some(l => l.date === today && sids.has(l.sid));
     const from = startedToday ? C.addDays(today, 1) : today;
     const lastEnd = over.map(p => C.lastSession(p) || C.planEnd(p)).sort().pop(), after = C.addDays(lastEnd, 1);
-    const ov = openSheet('Overlapping programme', [h('p', {}, `“${plan.title}” overlaps with ${names}.`),
-      h('p', { class: 'sub' }, 'Logged exercises, tests and past days are never changed.'),
-      btn(`Replace its days from ${fmtDate(from)}`, () => {
+    const ov = openSheet('Programmes overlap', [
+      h('p', {}, `You are importing ${q(plan.title)}. ${one ? 'The current programme' : 'The current programmes'} ${over.map(p => `${q(p.title)} (${span(p)})`).join(' and ')} ${one ? 'is' : 'are'} already in the calendar on some of the same days. Which one do you want to follow?`),
+      btn(`Use the new one from ${fmtDate(from)}`, () => {
         for (const p of over) p.shownUntil = C.addDays(from, -1);
         if (plan.startDate < from) plan.shownFrom = from;
         ov.remove(); commit('replace');
       }, 'pri block'),
-      btn(`Start after it ends (${fmtDate(after)})`, () => {
+      h('p', { class: 'sub' }, `The current ${one ? 'one stops' : 'ones stop'} on ${fmtDate(C.addDays(from, -1))}${startedToday ? ' (today stays as you logged it)' : ''}; from ${fmtDate(from)} the calendar shows the new one.`),
+      btn(`Keep the current one, start the new one on ${fmtDate(after)}`, () => {
         // la prima giornata del nuovo cade il giorno dopo la fine dell'ultimo programma sovrapposto; se ne tocca un altro, si sposta ancora
         let d = after;
         delete plan.shownFrom;
@@ -707,7 +740,9 @@
         }
         ov.remove(); commit('after');
       }, 'block'),
-      btn('Cancel', () => ov.remove(), 'block')]);
+      h('p', { class: 'sub' }, `The current ${one ? 'one stays' : 'ones stay'} as ${one ? 'it is' : 'they are'}; the new one begins the day after ${one ? 'its' : 'their'} last session.`),
+      h('p', { class: 'sub' }, 'Whatever you choose, what you already logged is never changed or deleted.'),
+      btn('Don\'t import', () => ov.remove(), 'block')]);
   }
 
 

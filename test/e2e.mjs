@@ -329,8 +329,13 @@ await go('more'); ok((await txt('#more-programmes')).includes('1 in progress · 
 await pg.evaluate(() => { __app.state.plans = __app.state.plans.filter(p => p.id !== 'old' && p.id !== 'next'); });
 // Programmi: gestione da Altro, spostare la data di inizio sposta le sessioni nel calendario
 await go('programmes'); await clickText('Karma 8A+', '#view', true);
+const startBefore = await pg.evaluate(() => __app.state.plans[0].startDate);
+ok(await pg.$eval('.sheet input[type=date]', e => e.disabled) && (await txt('.sheet')).includes('cannot be moved'), 'programma già iniziato: la data di inizio non si sposta (le registrazioni resterebbero senza giornata)');
 await setVal('.sheet input[type=date]', '2026-11-25'); await clickText('Save', '.sheet');
-ok(await pg.evaluate(() => __app.state.plans[0].startDate === '2026-11-25'), 'programma: la prima sessione cade nel giorno scelto, anche se non è lunedì');
+ok(await pg.evaluate(s0 => __app.state.plans[0].startDate === s0, startBefore), 'Save non sposta un programma iniziato');
+// (prova della data scelta su un programma senza registrazioni: come se fosse stato spostato prima di iniziare)
+await pg.evaluate(() => { const p = __app.state.plans[0]; p.startDate = Core.startForFirst(p, '2026-11-25'); });
+ok(await pg.evaluate(() => Core.firstSessionDate(__app.state.plans[0]) === '2026-11-25'), 'programma: la prima sessione cade nel giorno scelto, anche se non è lunedì');
 await shot('9-altro');
 // Export YAML: il programma esce come testo leggibile, che l'app rilegge uguale
 await go('programmes'); await clickText('Karma 8A+', '#view', true); await clickText('Export .yaml', '.sheet');
@@ -345,12 +350,13 @@ const importOv = async date => { await go('programmes'); await (await pg.$('#vie
   await pg.evaluate(d => { document.querySelector('.sheet input[type=date]').value = d; }, date); await clickText('Import', '.sheet'); await sleep(150); };
 await importOv('2026-11-20');
 let ovt = await txt('.sheet');
-ok(ovt.includes('Overlapping programme') && ovt.includes('overlaps with “Karma 8A+”') && ovt.includes('never changed') && ovt.includes('Replace its days from 26 Nov'), 'import sovrapposto: avviso con le due scelte (oggi è già iniziato: si sostituisce da domani)');
-await clickText('Cancel', '.sheet'); await sleep(80);
-ok(await pg.evaluate(n => __app.state.plans.length === n, nPlansOv) && await snapOv() === before3, 'Cancel: niente importato');
+ok(ovt.includes('Programmes overlap') && ovt.includes('You are importing “Karma 8A+”. The current programme “Karma 8A+”') && ovt.includes('never changed') && ovt.includes('Use the new one from 26 Nov') && ovt.includes('stops on 25 Nov (today stays as you logged it)') && /Keep the current one, start the new one on \d+ \w+/.test(ovt), 'import sovrapposto: avviso con le due scelte (oggi è già iniziato: si sostituisce da domani)');
+await shot('9b-sovrapposti');
+await clickText('Don\'t import', '.sheet'); await sleep(80);
+ok(await pg.evaluate(n => __app.state.plans.length === n, nPlansOv) && await snapOv() === before3, 'Don\'t import: niente importato');
 await pg.evaluate(() => document.querySelectorAll('.overlay').forEach(o => o.remove()));
 await importOv('2026-11-20');
-await clickText('Replace its days from', '.sheet'); await sleep(200);
+await clickText('Use the new one from', '.sheet'); await sleep(200);
 const rep = await pg.evaluate(id => { const st = __app.state, old = st.plans.find(p => p.id === id), nw = st.plans[st.plans.length - 1];
   return { until: old.shownUntil, from: nw.shownFrom, n: st.plans.length }; }, oldId);
 ok(rep.until === '2026-11-25' && rep.from === '2026-11-26' && rep.n === nPlansOv + 1 && await snapOv() === before3, 'Replace: il vecchio programma finisce oggi (già iniziato), il nuovo parte domani; registrazioni, test e viaggi identici');
@@ -361,7 +367,7 @@ ok((await txt('#view')).includes('Sloper hang: +6 kg'), 'le registrazioni di ogg
 // Ripristino e prova di "Start after it ends"
 await pg.evaluate(id => { const st = __app.state; st.plans = st.plans.filter((p, i) => i < st.plans.length - 1); delete st.plans.find(p => p.id === id).shownUntil; }, oldId);
 await importOv('2026-11-20');
-await clickText('Start after it ends', '.sheet'); await sleep(200);
+await clickText('Keep the current one', '.sheet'); await sleep(200);
 const aft = await pg.evaluate(id => { const st = __app.state, old = st.plans.find(p => p.id === id), nw = st.plans[st.plans.length - 1];
   return { oldEnd: Core.planEnd(old), after: Core.addDays(Core.lastSession(old), 1), first: Core.firstSessionDate(nw), until: old.shownUntil || null, from: nw.shownFrom || null }; }, oldId);
 ok(aft.until === null && aft.from === null && aft.first === aft.after && await snapOv() === before3, 'Start after: il nuovo parte il giorno dopo la fine del vecchio, che resta intatto');
