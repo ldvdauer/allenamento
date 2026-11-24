@@ -109,7 +109,7 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
 #player .nx{text-align:center;color:var(--mu);font-size:14px;margin:8px 0 14px;min-height:20px}
 /* Tasti: tre secondari uguali, Done largo sotto, End exercise come link (occupa sempre il suo spazio, così i tasti non si spostano) */
 #player .ctl{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
-#player #p-done{width:100%;margin-top:12px;min-height:62px;font-size:19px;font-weight:700}
+#player #p-done{grid-column:1/-1;margin-top:2px;min-height:62px;font-size:19px;font-weight:700}
 #player .linkbtn{background:none;border:0;color:var(--mu);font-size:15px;min-height:44px;margin-top:4px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
 #player #p-quit[hidden]{display:block!important;visibility:hidden}
 #player .btn{min-height:54px;font-size:17px}
@@ -236,6 +236,21 @@ h2 .cnt{color:var(--mu);font-weight:400;font-size:.85em}
 #p-table .stp-in{background:none;border:0;color:var(--tx);width:56px;padding:0;margin:0}
 #p-table .tb-f{display:flex;justify-content:space-between;padding:4px 4px 10px}
 .sheet .sum{font-size:18px;font-weight:700;margin:0 0 8px}
+
+/* Timer con tabella, compatto come Lattice (nota del 24 nov): intestazione e numero più piccoli, comandi su una riga
+   (Back · Done/Skip largo · Pause · +30 s), la tabella prende il resto dello schermo, End exercise in fondo */
+#player.tbl{padding-top:calc(var(--st) + 8px)}
+#player.tbl .ph{margin-top:10px;font-size:13px}#player.tbl .nm{font-size:20px}#player.tbl .rd{font-size:13px}
+#player.tbl .clock{font-size:min(17vw,84px);margin:2px 0;line-height:1}
+#player.tbl .clock.reps{font-size:min(15vw,72px)}
+#player.tbl .unit{font-size:14px;margin-top:0;min-height:0}
+#player.tbl .cue{font-size:16px;min-height:0}#player.tbl .kg{font-size:19px;min-height:0}#player.tbl .pnote{font-size:13px;min-height:0;margin-top:2px}
+#player.tbl .nx{margin:4px 0 8px;font-size:13px}
+#player.tbl .ctl{grid-template-columns:auto 1fr auto auto;gap:8px}
+#player.tbl .ctl .btn{min-height:48px;font-size:15px;padding:0 12px}
+#player.tbl #p-done{grid-column:2;grid-row:1;margin:0;min-height:48px;font-size:17px}
+#player.tbl #p-table{order:50;margin-top:10px}
+#player.tbl #p-quit{order:99;margin-top:6px;border:1px solid var(--line);border-radius:14px;text-decoration:none;color:var(--tx);min-height:46px}
 </style>
 </head>
 <body>
@@ -263,8 +278,8 @@ h2 .cnt{color:var(--mu);font-weight:400;font-size:.85em}
     <button class="btn" id="p-back" type="button">‹ Back</button>
     <button class="btn" id="p-pause" type="button">Pause</button>
     <button class="btn" id="p-plus" type="button">+30 s</button>
+    <button class="btn pri" id="p-done" type="button">Done</button>
   </div>
-  <button class="btn pri" id="p-done" type="button">Done</button>
   <button class="linkbtn" id="p-quit" type="button">End exercise</button>
   <div id="p-table"></div>
 </section>
@@ -1739,7 +1754,12 @@ review|other|Attempt review|10|`.split('\n').map(line => {
   // `map`: oggetto o lista di coppie [valore, etichetta]. La lista serve quando l'ordine conta: le chiavi numeriche di un oggetto vengono riordinate.
   const opts = (map, value, extra) => h('select', { value, ...(extra || {}) }, (Array.isArray(map) ? map : Object.entries(map)).map(([k, v]) => h('option', { value: k }, v)));
   // testo + inputmode decimale: i campi number perdono la virgola su alcune tastiere
-  const numInp = (value, extra) => h('input', { type: 'text', inputmode: 'decimal', autocomplete: 'off', value: value == null ? '' : dec(value), ...(extra || {}) });
+  // Al tocco il valore è tutto selezionato: si scrive sopra (prima restava lo 0 davanti, "016"; nota del 24 nov)
+  const selAll = e => {
+    const el = e.target, v = el.value, sel = () => { try { el.setSelectionRange(0, el.value.length); } catch (x) { /* non selezionabile */ } };
+    sel(); setTimeout(() => { if (el.value === v && document.activeElement === el) sel(); }, 0); // iOS deseleziona dopo il focus: si riprova solo se non si è già scritto
+  };
+  const numInp = (value, extra) => { const i = h('input', { type: 'text', inputmode: 'decimal', autocomplete: 'off', value: value == null ? '' : dec(value), ...(extra || {}) }); i.addEventListener('focus', selAll); return i; };
   const val = el => { const n = parseFloat(String(el.value).replace(',', '.')); return Number.isFinite(n) ? n : null; };
   const seg = (items, cur, onpick) => h('div', { class: 'seg' }, items.map(([k, label]) =>
     h('button', { type: 'button', class: k === cur ? 'on' : '', 'aria-pressed': k === cur ? 'true' : 'false', onclick: () => onpick(k) }, label)));
@@ -2481,7 +2501,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
         cloudOn() ? [btn('Restore from GitHub', cloudRestore, 'sm'), btn('Disconnect', async () => { if (await confirmDlg('Disconnect GitHub? The token is deleted from this device; backups already uploaded stay in the repository.', 'Disconnect')) { S.settings.gh = null; clearTimeout(cloudTimer); save(); render(); } }, 'sm danger')] : null));
   }
   /* ---------- Taccuino: note al volo durante la prova dell'app, con il contesto per poterle riprodurre ---------- */
-  const VERSION = '20261123.1816';
+  const VERSION = '20261124.1740';
   function noteSheet() {
     const text = h('textarea', { class: 'inp', placeholder: 'What is wrong, or what would you like to be different?' });
     const where = P ? 'timer: ' + P.steps[P.idx].name : (location.hash.slice(1) || 'home');
@@ -2918,7 +2938,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
         cells = [stepper(x.grade, g => (g ? fmtG(g) : '—'), d => set('grade', list[Math.max(0, Math.min(list.length - 1, gi < 0 ? start() : gi + d))]))];
       } else {
         const kgIn = x.kg === undefined ? null : numInp(x.kg, { class: 'stp-in', 'aria-label': 'kg' });
-        if (kgIn) kgIn.addEventListener('change', () => { const v = val(kgIn); x.kg = v == null ? 0 : v; });
+        if (kgIn) ['input', 'change'].forEach(t => kgIn.addEventListener(t, () => { const v = val(kgIn); x.kg = v == null ? 0 : v; })); // subito: un ridisegno non perde quello che si sta scrivendo
         cells = [x.plan != null ? stepper(x.reps, v => String(v), d => set('reps', Math.max(0, (x.reps || 0) + d))) : null,
           kgIn ? stepper(x.kg, null, d => set('kg', Math.round(((x.kg || 0) + d) * 2) / 2), kgIn) : null];
       }
@@ -2931,7 +2951,31 @@ review|other|Attempt review|10|`.split('\n').map(line => {
       const j = P.steps.findIndex((st, k) => k > P.idx && st.row != null && st.row > c);
       if (j < 0) endBlock(); else enter(j);
     };
-    const add = () => { const last = P.rows[P.rows.length - 1]; P.rows.push(last ? { ...last, done: true, skipped: false, added: true, round: (last.round || 0) + 1 } : { grade: '', done: true, added: true }); drawTable(); };
+    // Aggiungere: per i blocchi una riga già fatta (si compila il grado); per le serie una serie vera in coda al timer
+    // (recupero + lavoro, entrambi i lati se l'esercizio è per lato), registrata come le altre
+    const add = () => {
+      const last = P.rows[P.rows.length - 1];
+      if (climb || !last) { P.rows.push(last ? { ...last, done: true, skipped: false, added: true, round: (last.round || 0) + 1 } : { grade: '', done: true, added: true }); drawTable(); return; }
+      // Modello: l'ultima serie (L+R se per lato), ripetendo il recupero che la precedeva
+      const wi = P.steps.map((st, k) => (st.kind === 'work' ? k : -1)).filter(k => k >= 0);
+      const lastI = wi[wi.length - 1], lastW = P.steps[lastI], prevW = P.steps[wi[wi.length - 2]];
+      const sided = /^[LR]$/.test(lastW.cue || '') && prevW && /^[LR]$/.test(prevW.cue || '') && prevW.cue !== lastW.cue;
+      const tplI = sided ? wi.slice(-2) : [lastI];
+      const restBefore = k => { const r = P.steps[k - 1]; return r && r.kind === 'rest' && !r.prep ? r.seconds : (ex.interval || {}).restSeconds || 60; };
+      const rounds = lastW.rounds + tplI.length, extra = [];
+      tplI.forEach((k, n) => {
+        const w = P.steps[k], round = lastW.round + n + 1, row = P.rows.length, src = P.rows[w.row] || last;
+        extra.push({ ...w, kind: 'rest', prep: false, selfPaced: false, afterBlock: false, row: undefined, seconds: restBefore(k), cue: w.cue, round: round - 1 });
+        P.rows.push({ side: src.side, plan: src.plan, reps: src.plan, kg: src.kg, done: false, round, added: true });
+        extra.push({ ...w, round, row });
+      });
+      P.steps.forEach(st => { st.rounds = rounds; });
+      extra.forEach(st => { st.rounds = rounds; });
+      // dopo l'ultimo passo di lavoro, mai prima del passo in corso
+      const at = Math.max(lastI + 1, P.idx + 1);
+      P.steps.splice(at, 0, ...extra);
+      draw();
+    };
     box.replaceChildren(head, ...rows, h('div', { class: 'tb-f' },
       cur >= 0 ? h('button', { type: 'button', class: 'linkbtn', onclick: skip }, climb ? 'Skip climb' : 'Skip set') : h('span'),
       h('button', { type: 'button', class: 'linkbtn', onclick: add }, climb ? '+ Add climb' : '+ Add set')));

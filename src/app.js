@@ -310,7 +310,12 @@
   // `map`: oggetto o lista di coppie [valore, etichetta]. La lista serve quando l'ordine conta: le chiavi numeriche di un oggetto vengono riordinate.
   const opts = (map, value, extra) => h('select', { value, ...(extra || {}) }, (Array.isArray(map) ? map : Object.entries(map)).map(([k, v]) => h('option', { value: k }, v)));
   // testo + inputmode decimale: i campi number perdono la virgola su alcune tastiere
-  const numInp = (value, extra) => h('input', { type: 'text', inputmode: 'decimal', autocomplete: 'off', value: value == null ? '' : dec(value), ...(extra || {}) });
+  // Al tocco il valore è tutto selezionato: si scrive sopra (prima restava lo 0 davanti, "016"; nota del 24 nov)
+  const selAll = e => {
+    const el = e.target, v = el.value, sel = () => { try { el.setSelectionRange(0, el.value.length); } catch (x) { /* non selezionabile */ } };
+    sel(); setTimeout(() => { if (el.value === v && document.activeElement === el) sel(); }, 0); // iOS deseleziona dopo il focus: si riprova solo se non si è già scritto
+  };
+  const numInp = (value, extra) => { const i = h('input', { type: 'text', inputmode: 'decimal', autocomplete: 'off', value: value == null ? '' : dec(value), ...(extra || {}) }); i.addEventListener('focus', selAll); return i; };
   const val = el => { const n = parseFloat(String(el.value).replace(',', '.')); return Number.isFinite(n) ? n : null; };
   const seg = (items, cur, onpick) => h('div', { class: 'seg' }, items.map(([k, label]) =>
     h('button', { type: 'button', class: k === cur ? 'on' : '', 'aria-pressed': k === cur ? 'true' : 'false', onclick: () => onpick(k) }, label)));
@@ -1489,7 +1494,7 @@
         cells = [stepper(x.grade, g => (g ? fmtG(g) : '—'), d => set('grade', list[Math.max(0, Math.min(list.length - 1, gi < 0 ? start() : gi + d))]))];
       } else {
         const kgIn = x.kg === undefined ? null : numInp(x.kg, { class: 'stp-in', 'aria-label': 'kg' });
-        if (kgIn) kgIn.addEventListener('change', () => { const v = val(kgIn); x.kg = v == null ? 0 : v; });
+        if (kgIn) ['input', 'change'].forEach(t => kgIn.addEventListener(t, () => { const v = val(kgIn); x.kg = v == null ? 0 : v; })); // subito: un ridisegno non perde quello che si sta scrivendo
         cells = [x.plan != null ? stepper(x.reps, v => String(v), d => set('reps', Math.max(0, (x.reps || 0) + d))) : null,
           kgIn ? stepper(x.kg, null, d => set('kg', Math.round(((x.kg || 0) + d) * 2) / 2), kgIn) : null];
       }
@@ -1502,7 +1507,31 @@
       const j = P.steps.findIndex((st, k) => k > P.idx && st.row != null && st.row > c);
       if (j < 0) endBlock(); else enter(j);
     };
-    const add = () => { const last = P.rows[P.rows.length - 1]; P.rows.push(last ? { ...last, done: true, skipped: false, added: true, round: (last.round || 0) + 1 } : { grade: '', done: true, added: true }); drawTable(); };
+    // Aggiungere: per i blocchi una riga già fatta (si compila il grado); per le serie una serie vera in coda al timer
+    // (recupero + lavoro, entrambi i lati se l'esercizio è per lato), registrata come le altre
+    const add = () => {
+      const last = P.rows[P.rows.length - 1];
+      if (climb || !last) { P.rows.push(last ? { ...last, done: true, skipped: false, added: true, round: (last.round || 0) + 1 } : { grade: '', done: true, added: true }); drawTable(); return; }
+      // Modello: l'ultima serie (L+R se per lato), ripetendo il recupero che la precedeva
+      const wi = P.steps.map((st, k) => (st.kind === 'work' ? k : -1)).filter(k => k >= 0);
+      const lastI = wi[wi.length - 1], lastW = P.steps[lastI], prevW = P.steps[wi[wi.length - 2]];
+      const sided = /^[LR]$/.test(lastW.cue || '') && prevW && /^[LR]$/.test(prevW.cue || '') && prevW.cue !== lastW.cue;
+      const tplI = sided ? wi.slice(-2) : [lastI];
+      const restBefore = k => { const r = P.steps[k - 1]; return r && r.kind === 'rest' && !r.prep ? r.seconds : (ex.interval || {}).restSeconds || 60; };
+      const rounds = lastW.rounds + tplI.length, extra = [];
+      tplI.forEach((k, n) => {
+        const w = P.steps[k], round = lastW.round + n + 1, row = P.rows.length, src = P.rows[w.row] || last;
+        extra.push({ ...w, kind: 'rest', prep: false, selfPaced: false, afterBlock: false, row: undefined, seconds: restBefore(k), cue: w.cue, round: round - 1 });
+        P.rows.push({ side: src.side, plan: src.plan, reps: src.plan, kg: src.kg, done: false, round, added: true });
+        extra.push({ ...w, round, row });
+      });
+      P.steps.forEach(st => { st.rounds = rounds; });
+      extra.forEach(st => { st.rounds = rounds; });
+      // dopo l'ultimo passo di lavoro, mai prima del passo in corso
+      const at = Math.max(lastI + 1, P.idx + 1);
+      P.steps.splice(at, 0, ...extra);
+      draw();
+    };
     box.replaceChildren(head, ...rows, h('div', { class: 'tb-f' },
       cur >= 0 ? h('button', { type: 'button', class: 'linkbtn', onclick: skip }, climb ? 'Skip climb' : 'Skip set') : h('span'),
       h('button', { type: 'button', class: 'linkbtn', onclick: add }, climb ? '+ Add climb' : '+ Add set')));

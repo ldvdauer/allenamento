@@ -98,7 +98,7 @@ textarea{min-height:84px;resize:vertical}.cols{display:grid;grid-template-column
 #player .nx{text-align:center;color:var(--mu);font-size:14px;margin:8px 0 14px;min-height:20px}
 /* Tasti: tre secondari uguali, Done largo sotto, End exercise come link (occupa sempre il suo spazio, così i tasti non si spostano) */
 #player .ctl{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
-#player #p-done{width:100%;margin-top:12px;min-height:62px;font-size:19px;font-weight:700}
+#player #p-done{grid-column:1/-1;margin-top:2px;min-height:62px;font-size:19px;font-weight:700}
 #player .linkbtn{background:none;border:0;color:var(--mu);font-size:15px;min-height:44px;margin-top:4px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
 #player #p-quit[hidden]{display:block!important;visibility:hidden}
 #player .btn{min-height:54px;font-size:17px}
@@ -225,3 +225,18 @@ h2 .cnt{color:var(--mu);font-weight:400;font-size:.85em}
 #p-table .stp-in{background:none;border:0;color:var(--tx);width:56px;padding:0;margin:0}
 #p-table .tb-f{display:flex;justify-content:space-between;padding:4px 4px 10px}
 .sheet .sum{font-size:18px;font-weight:700;margin:0 0 8px}
+
+/* Timer con tabella, compatto come Lattice (nota del 24 nov): intestazione e numero più piccoli, comandi su una riga
+   (Back · Done/Skip largo · Pause · +30 s), la tabella prende il resto dello schermo, End exercise in fondo */
+#player.tbl{padding-top:calc(var(--st) + 8px)}
+#player.tbl .ph{margin-top:10px;font-size:13px}#player.tbl .nm{font-size:20px}#player.tbl .rd{font-size:13px}
+#player.tbl .clock{font-size:min(17vw,84px);margin:2px 0;line-height:1}
+#player.tbl .clock.reps{font-size:min(15vw,72px)}
+#player.tbl .unit{font-size:14px;margin-top:0;min-height:0}
+#player.tbl .cue{font-size:16px;min-height:0}#player.tbl .kg{font-size:19px;min-height:0}#player.tbl .pnote{font-size:13px;min-height:0;margin-top:2px}
+#player.tbl .nx{margin:4px 0 8px;font-size:13px}
+#player.tbl .ctl{grid-template-columns:auto 1fr auto auto;gap:8px}
+#player.tbl .ctl .btn{min-height:48px;font-size:15px;padding:0 12px}
+#player.tbl #p-done{grid-column:2;grid-row:1;margin:0;min-height:48px;font-size:17px}
+#player.tbl #p-table{order:50;margin-top:10px}
+#player.tbl #p-quit{order:99;margin-top:6px;border:1px solid var(--line);border-radius:14px;text-decoration:none;color:var(--tx);min-height:46px}
