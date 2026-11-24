@@ -9,10 +9,11 @@
   const DAY_TYPES = { wall: 'Wall', strength: 'Off the wall', skills: 'Technique', activeRest: 'Active rest', setting: 'Setting', rest: 'Rest' };
   const PERIODS = { base: 'Base', strength: 'Strength', power: 'Power', powerEndurance: 'Power endurance', endurance: 'Endurance', performance: 'Performance', deload: 'Deload' };
   const SLOTS = { warmup: 'Warm-up', strength: 'Strength', wall: 'On the wall', mobility: 'Mobility' };
-  /* Test: ogni test ha i suoi parametri. `mode`: hang = peso aggiunto (zavorra), lift = carico sollevato,
-     value = valore libero (secondi…). L'ultimo risultato è il massimale usato per calcolare i kg.
-     Il peso corporeo non si usa: anche per le sospensioni la % si applica al solo peso aggiunto (scelta di Leo del 24 nov). */
+  // Massimali/test predefiniti. `mode: hang` = zavorra aggiunta al peso corporeo, `lift` = carico sollevato.
+  /* Test: ogni test ha i suoi parametri. `mode`: hang = zavorra aggiunta al peso corporeo, lift = carico sollevato,
+     value = valore libero (secondi, kg di peso corporeo…). L'ultimo risultato è il massimale usato per calcolare i kg. */
   const TEST_TEMPLATES = [
+    { key: 'bw', name: 'Body weight', unit: 'kg', mode: 'value' },
     { key: 'oh', name: 'Open hand', unit: 'kg', mode: 'hang', edge: 20, seconds: 7, hands: 2 },
     { key: 'hc', name: 'Half-crimp', unit: 'kg', mode: 'hang', edge: 20, seconds: 7, hands: 2 },
     { key: 'sl', name: 'Sloper', unit: 'kg', mode: 'hang', seconds: 7, hands: 2 },
@@ -206,12 +207,14 @@ review|other|Attempt review|10|`.split('\n').map(line => {
     if (!PAIRS[load.ref]) return load.ref;
     return load.ref + (/^\s*(DX|R\b|right)/i.test(cue || '') ? 'R' : 'L');
   }
-  /** Carico in kg arrotondato a 0,5: % del massimale, per le sospensioni sul solo peso aggiunto (zavorra), per i lift sul carico sollevato. */
+  /** Carico in kg arrotondato a 0,5: zavorra (può essere negativa = scarico) o carico sollevato. */
   function loadKg(load, cue, maxes) {
     if (!load || load.pct == null) return null;
     const max = maxes[loadKey(load, cue)];
     if (max == null || isNaN(max)) return null;
-    return Math.round(max * load.pct / 100 * 2) / 2;
+    if (load.mode === 'lift') return Math.round(max * load.pct / 100 * 2) / 2;
+    if (maxes.bw == null || isNaN(maxes.bw)) return null;
+    return Math.round(((maxes.bw + max) * load.pct / 100 - maxes.bw) * 2) / 2;
   }
   /** Ultimo valore registrato per ogni test = massimale corrente. */
   function latestMaxes(tests) {
