@@ -416,7 +416,12 @@
     const m = maxes(), out = [];
     for (const c of cues) {
       const kg = C.loadKg(ex.load, c, m);
-      if (kg == null) return 'kg: maxes missing';
+      if (kg == null) {
+        // dire quale valore manca: per le sospensioni serve anche il peso corporeo (nota del 24 nov: "massimale mancante" con l'open hand appena testata)
+        const need = [C.loadKey(ex.load, c)].concat(ex.load.mode === 'lift' ? [] : ['bw']).filter(k => m[k] == null || isNaN(m[k]));
+        const names = [...new Set(need.map(k => (S.testDefs.find(t => t.key === k) || { name: k }).name))];
+        return `kg: add ${names.join(' and ')} in Tests`;
+      }
       const side = C.PAIRS[ex.load.ref] ? (/^\s*(DX|R\b)/i.test(c) ? 'R ' : 'L ') : '';
       const s = side + (ex.load.mode === 'hang' ? C.fmtKg(kg) : dec(kg) + ' kg');
       if (!out.includes(s)) out.push(s);
@@ -1607,7 +1612,7 @@
     if (table) return confirmSheet(r, b, ms, table);
     const ex = S.exercises[b.exId], m = maxes(), isClimb = ex.slot === 'wall' || !!ex.surface;
     const min = numInp(Math.round(ms / 60000)), note = h('input', { placeholder: 'Optional', value: prev && prev.note || '' });
-    const isTest = !!(ex.load && ex.load.test), planned = loadHint(ex).replace('kg: maxes missing', '');
+    const isTest = !!(ex.load && ex.load.test), planned = loadHint(ex).replace(/^kg: add .* in Tests$/, '');
     // Carico e RPE per ogni esercizio di forza: sono lo storico da cui nasce la proposta della volta dopo.
     // Carico: sempre kg in più rispetto al peso corporeo (nota di Leo del 23 nov); due campi se l'esercizio è per lato
     const sided = !!(ex.interval && C.splitCues(ex.interval.cues).sided) || !!(ex.load && C.PAIRS[ex.load.ref]);
