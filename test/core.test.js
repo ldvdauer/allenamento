@@ -154,24 +154,25 @@ test('date: posizione nel piano, prima sessione in un giorno qualsiasi', () => {
   assert.equal(C.startForFirst(rest, '2026-11-18'), '2026-11-17'); // prima sessione mercoledì 18
 });
 
-test('carichi: formula del foglio Google', () => {
-  const maxes = { bw: 70, oh: 30, pinchL: 20, pinchR: 24, wrist: 22 };
+test('carichi: % del massimale, per le sospensioni sul solo peso aggiunto', () => {
+  const maxes = { oh: 30, pinchL: 20, pinchR: 24, wrist: 22 };
   const oh = C.inferLoad('Open hand 20 mm 7"', '4 × 7" · 85% max · margine 2-3"');
   assert.deepEqual(oh, { ref: 'oh', mode: 'hang', pct: 85, test: false });
-  assert.equal(C.loadKg(oh, '85% max', maxes), 15); // (70+30)*0.85-70
+  assert.equal(C.loadKg(oh, '85% max', maxes), 25.5); // 30 × 0.85 = 25.5
   const sl = C.inferLoad('Sloper BM2000 7"', '4 × 7" · 82,5% max');
   assert.equal(sl.pct, 82.5);
   assert.equal(C.loadKg(sl, '', maxes), null); // massimale sloper mancante
   const pinch = C.inferLoad('Pinch block 7"', '3 × 7" per mano · 75% max');
   assert.equal(C.loadKg(pinch, 'SX · 75% max', maxes), 15);
   assert.equal(C.loadKg(pinch, 'DX · 75% max', maxes), 18);
-  const low = C.loadKg({ ref: 'oh', mode: 'hang', pct: 60 }, '', maxes);
-  assert.equal(low, -10); // sotto il peso corporeo: scarico
-  assert.equal(C.fmtKg(low), '-10 kg');
+  assert.equal(C.loadKg({ ref: 'oh', mode: 'hang', pct: 85 }, '', { oh: 35 }), 30); // 29.75 → 30
+  assert.equal(C.loadKg({ ref: 'oh', mode: 'hang', pct: 80 }, '', { oh: -10 }), -8); // massimale con scarico: resta in scala
+  assert.equal(C.fmtKg(-10), '-10 kg');
   assert.equal(C.fmtKg(12.5), '+12.5 kg');
   assert.equal(C.inferLoad('TEST open hand 20 mm 7"', 'TEST · Carico crescente').test, true);
   assert.equal(C.inferLoad('Nordic curl', '2 × 4'), null);
-  assert.equal(C.loadKg(oh, '', { oh: 30 }), null); // senza peso corporeo
+  assert.equal(C.loadKg(oh, '', { oh: 30 }), 25.5, 'il peso corporeo non serve');
+  assert.ok(!C.TEST_TEMPLATES.some(t => t.key === 'bw'), 'nessun test del peso corporeo');
 });
 
 test('massimali: vale l\'ultimo test per data', () => {
