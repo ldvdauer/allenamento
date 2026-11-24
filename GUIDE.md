@@ -3,7 +3,7 @@
 ## First time
 1. Open the app in Safari → Share → **Add to Home Screen**. From then on, always open it from the Home Screen.
 2. **More → Diagnostics → Run the checks**: verifies audio, screen on, offline use and storage on your phone.
-3. **Analytics → Tests and maxes**: enter your body weight and the maxes you know. They are used to compute kg.
+3. **More → Profile**: enter your body weight (also height and ape index, for reference). **Analytics → Tests and maxes**: enter the maxes you know. Body weight and maxes are used to compute kg.
 4. **More → Automatic backup**: connect a private GitHub repository, or use "Save backup" every now and then.
 
 ## Every day

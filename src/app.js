@@ -142,6 +142,8 @@
       pruneEmpty(s); prune(s); // e gli esercizi rimasti senza giornata
     }
     if (fromV < 12) delete s.live; // v12: niente più sessione in corso: ogni esercizio si avvia dalla giornata
+    // Profilo (dati fisici): altezza e ape index in cm, solo informativi; il peso corporeo resta lo storico del test "bw"
+    s.profile = { height: Number.isFinite(s.profile && s.profile.height) ? s.profile.height : null, ape: Number.isFinite(s.profile && s.profile.ape) ? s.profile.ape : null };
     s.trips = C.cleanTrips(s.trips, C.todayISO()); // v13: viaggi e progetti (sezione a sé); un backup precedente non li ha
     // v14: esercizi registrati con 0 minuti (nota di Leo del 19 nov: Analytics a 0 min) prendono i minuti previsti dalla giornata
     if (fromV < 14) {
@@ -419,8 +421,9 @@
       if (kg == null) {
         // dire quale valore manca: per le sospensioni serve anche il peso corporeo (nota del 24 nov: "massimale mancante" con l'open hand appena testata)
         const need = [C.loadKey(ex.load, c)].concat(ex.load.mode === 'lift' ? [] : ['bw']).filter(k => m[k] == null || isNaN(m[k]));
-        const names = [...new Set(need.map(k => (S.testDefs.find(t => t.key === k) || { name: k }).name))];
-        return `kg: add ${names.join(' and ')} in Tests`;
+        const names = [...new Set(need.filter(k => k !== 'bw').map(k => (S.testDefs.find(t => t.key === k) || { name: k }).name))];
+        // il peso corporeo si inserisce nel profilo (More → Profile), i massimali nei Test
+        return 'kg: add ' + [names.length ? `${names.join(' and ')} in Tests` : '', need.includes('bw') ? 'body weight in More → Profile' : ''].filter(Boolean).join(', ');
       }
       const side = C.PAIRS[ex.load.ref] ? (/^\s*(DX|R\b)/i.test(c) ? 'R ' : 'L ') : '';
       const s = side + (ex.load.mode === 'hang' ? C.fmtKg(kg) : dec(kg) + ' kg');
@@ -1049,7 +1052,7 @@
   function viewProgress() {
     const missing = C.TEST_TEMPLATES.filter(t => !S.testDefs.some(d => d.key === t.key));
     return [anHead('tests'), h('div', { class: 'sub' }, 'The latest result of each test is the max used to compute kg. A test can also be added to a day: the result lands here when the exercise ends.'),
-      S.testDefs.map(def => {
+      S.testDefs.filter(def => def.key !== 'bw').map(def => { // il peso corporeo sta nel profilo
         const hist = S.tests.filter(t => t.key === def.key).sort((a, b) => (a.date < b.date ? -1 : 1)), last = hist[hist.length - 1];
         return h('div', { class: 'card tap row', onclick: () => testSheet(def) },
           h('div', { class: 'grow' }, h('div', { class: 'n', style: 'font-weight:600' }, def.name), C.testLabel(def) ? h('div', { class: 'sub' }, C.testLabel(def)) : null,
@@ -1198,10 +1201,46 @@
       sec('In progress', g.now, 'In progress', 'ts-confirmed'), sec('Upcoming', g.next, 'Upcoming', 'ts-idea'), sec('Past', g.past, 'Past', 'ts-done'),
       !S.plans.length ? h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin:0' }, 'No programmes yet.')) : null];
   }
+  /** Dati fisici attuali: peso = ultimo valore del test "bw" (con la data), altezza e ape index dal profilo. */
+  function profileNow() {
+    const w = S.tests.filter(t => t.key === 'bw').sort((a, b) => (a.date < b.date ? -1 : 1)).pop();
+    return { weight: w ? w.value : null, weightDate: w ? w.date : null, height: S.profile.height, ape: S.profile.ape };
+  }
+  /** More → Profile: peso corporeo (usato per i kg delle sospensioni, con lo storico), altezza e ape index (informativi). */
+  function viewProfile() {
+    const p = profileNow(), weight = numInp(p.weight, { placeholder: 'kg' }), height = numInp(p.height, { placeholder: 'cm' }), ape = numInp(p.ape, { placeholder: 'cm, e.g. +4 or -2' });
+    const hist = S.tests.filter(t => t.key === 'bw').sort((a, b) => (a.date < b.date ? 1 : -1));
+    const saveP = () => {
+      const w = val(weight), hh = val(height), a = val(ape);
+      if (w != null && !(w > 20 && w < 300)) return toast('Body weight: a number in kg, e.g. 70.');
+      if (hh != null && !(hh > 80 && hh < 260)) return toast('Height: a number in cm, e.g. 178.');
+      if (a != null && !(Math.abs(a) <= 40)) return toast('Ape index: arm span minus height, in cm (e.g. +4).');
+      if (w != null && w !== p.weight) {
+        // un valore al giorno: oggi si aggiorna, altrimenti si aggiunge allo storico
+        const t = C.todayISO(), cur = S.tests.find(x => x.key === 'bw' && x.date === t);
+        if (cur) cur.value = w; else S.tests.push({ id: C.uid(), key: 'bw', date: t, value: w });
+        if (!S.testDefs.some(d => d.key === 'bw')) S.testDefs.unshift({ ...C.TEST_TEMPLATES.find(d => d.key === 'bw') });
+      }
+      S.profile.height = hh; S.profile.ape = a;
+      save(); render(); toast('Saved.');
+    };
+    return [h('div', { class: 'row' }, btn('‹ More', () => go('more'), 'sm')), h('h1', {}, 'Profile'),
+      h('div', { class: 'card' },
+        field('Body weight (kg)', weight),
+        h('p', { class: 'sub', style: 'margin-top:-4px' }, p.weight != null ? `Last value on ${fmtDate(p.weightDate)}. Used to compute the kg of hangs.` : 'Used to compute the kg of hangs: without it they cannot be calculated.'),
+        h('div', { class: 'cols' }, field('Height (cm)', height), field('Ape index (cm)', h('div', { class: 'kg-in' }, ape, h('button', { type: 'button', class: 'btn sm kg-sign', 'aria-label': 'Change sign', onclick: () => { const v = val(ape); ape.value = v == null ? '-' : dec(-v); } }, '±')))),
+        h('p', { class: 'sub' }, 'Ape index = arm span minus height. Height and ape index are for your reference only.'),
+        btn('Save', saveP, 'pri block')),
+      hist.length ? [h('h2', {}, 'Body weight history'), h('div', { class: 'card' }, hist.slice(0, 12).map(t => h('div', { class: 'blk' }, h('div', { class: 'grow' }, `${fmtDate(t.date)} ${t.date.slice(0, 4)}`), h('div', { class: 'n' }, dec(t.value) + ' kg'),
+        btn('✕', async () => { if (await confirmDlg(`Delete ${dec(t.value)} kg of ${fmtDate(t.date)}?`, 'Delete')) { S.tests = S.tests.filter(x => x !== t); save(); render(); } }, 'sm'))))] : null];
+  }
   function viewMore() {
     const prep = numInp(S.settings.prep), sound = h('input', { type: 'checkbox', checked: S.settings.sound, onchange: () => { S.settings.sound = sound.checked; save(); } });
     const sfNew = h('input', { class: 'inp', style: 'margin:0', placeholder: 'New surface' });
+    const pr = profileNow();
     return [h('h1', {}, 'More'),
+      h('div', { class: 'card tap row', id: 'more-profile', onclick: () => go('profile') }, h('div', { class: 'grow' }, h('div', { class: 'n', style: 'font-weight:600' }, 'Profile'),
+        h('div', { class: 'sub' }, [pr.weight != null ? dec(pr.weight) + ' kg' : 'Body weight missing', pr.height != null ? pr.height + ' cm' : '', pr.ape != null ? 'ape index ' + (pr.ape > 0 ? '+' : '') + pr.ape + ' cm' : ''].filter(Boolean).join(' · '))), h('span', { class: 'sub' }, '›')),
       // Strumento della prova d'uso (prima stava nella barra): sparirà nella versione definitiva
       h('div', { class: 'card tap row', id: 'more-note', onclick: noteSheet }, h('div', { class: 'grow' }, h('div', { class: 'n', style: 'font-weight:600' }, 'Note'), h('div', { class: 'sub' }, 'Write down what is wrong while you use the app')), '+'),
       h('div', { class: 'card tap row', onclick: () => { location.hash = 'library'; } }, h('div', { class: 'grow' }, h('div', { class: 'n', style: 'font-weight:600' }, 'Exercise library'), h('div', { class: 'sub' }, (C.LIBRARY.length + S.custom.length) + ' exercises')), '›'),
@@ -1612,7 +1651,7 @@
     if (table) return confirmSheet(r, b, ms, table);
     const ex = S.exercises[b.exId], m = maxes(), isClimb = ex.slot === 'wall' || !!ex.surface;
     const min = numInp(Math.round(ms / 60000)), note = h('input', { placeholder: 'Optional', value: prev && prev.note || '' });
-    const isTest = !!(ex.load && ex.load.test), planned = loadHint(ex).replace(/^kg: add .* in Tests$/, '');
+    const isTest = !!(ex.load && ex.load.test), planned = /^kg: add /.test(loadHint(ex)) ? '' : loadHint(ex);
     // Carico e RPE per ogni esercizio di forza: sono lo storico da cui nasce la proposta della volta dopo.
     // Carico: sempre kg in più rispetto al peso corporeo (nota di Leo del 23 nov); due campi se l'esercizio è per lato
     const sided = !!(ex.interval && C.splitCues(ex.interval.cues).sided) || !!(ex.load && C.PAIRS[ex.load.ref]);
@@ -1732,7 +1771,7 @@
   }
 
   /* ---------- Router ---------- */
-  const VIEWS = { home: viewHome, calendar: viewCalendar, trips: viewTrips, trip: viewTrip, analytics: viewAnalytics, tests: viewProgress, more: viewMore, programmes: viewPrograms, library: viewLibrary, notebook: viewNotes, diagnostics: viewDiag };
+  const VIEWS = { home: viewHome, calendar: viewCalendar, trips: viewTrips, trip: viewTrip, analytics: viewAnalytics, tests: viewProgress, more: viewMore, profile: viewProfile, programmes: viewPrograms, library: viewLibrary, notebook: viewNotes, diagnostics: viewDiag };
   function render() {
     const [name, ...args] = (location.hash.slice(1) || 'home').split('-');
     const fn = VIEWS[name] || viewHome;
@@ -1740,7 +1779,7 @@
     try { nodes = fn(args); }
     catch (e) { console.error('[ui] error in view ' + name, e); nodes = [h('h1', {}, 'Something went wrong'), h('p', { class: 'sub' }, String(e.message || e)), btn('Back to Home', () => go('home'))]; }
     $('view').replaceChildren(...[nodes].flat(Infinity).filter(n => n != null && n !== false));
-    const tab = { library: 'more', programmes: 'more', notebook: 'more', diagnostics: 'more', tests: 'analytics', trip: 'trips' }[name] || (VIEWS[name] ? name : 'home');
+    const tab = { library: 'more', profile: 'more', programmes: 'more', notebook: 'more', diagnostics: 'more', tests: 'analytics', trip: 'trips' }[name] || (VIEWS[name] ? name : 'home');
     for (const el of document.querySelectorAll('#tabs a')) el.classList.toggle('on', el.getAttribute('href') === '#' + tab);
   }
   let lastView = (location.hash.slice(1) || 'home').split('-')[0];

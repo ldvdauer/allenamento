@@ -65,7 +65,22 @@ await shot('1-calendario');
 await go('tests');
 let tests = await txt('#view');
 ok(!/zavorra max|· max/.test(tests) && tests.includes('20 mm · 7" · added weight') && tests.includes('Open hand') && (await pg.evaluate(() => __app.state.testDefs.map(d => d.key).join())) === 'bw,oh,hc,sl,pinchL,pinchR,wrist', 'Test: solo quelli usati dal programma, parametri accanto al nome, niente "zavorra max"');
-for (const [name, v] of [['Body weight', '70'], ['Sloper', '20'], ['Pinch block L', '20'], ['Pinch block R', '24'], ['Wrist curl', '22,5']]) {
+ok(!tests.includes('Body weight'), 'Test: il peso corporeo non è tra i test (sta nel profilo)');
+await go('home'); { const v = await txt('#view'); ok(v.includes('body weight in More → Profile'), 'senza peso corporeo: il messaggio rimanda al profilo (' + (v.match(/kg: .*/g) || []).join(' / ') + ')'); }
+// Profilo: peso corporeo (usato per i kg), altezza e ape index (negativo con ±)
+await go('more'); ok((await txt('#more-profile')).includes('Body weight missing'), 'More: voce Profile, peso mancante');
+await pg.click('#more-profile'); await sleep(150);
+const pin = await pg.$$('#view input');
+await pin[0].type('70'); await pin[1].type('178'); await pin[2].type('3'); await clickText('±', '#view'); await clickText('Save', '#view'); await sleep(100);
+const prof = await pg.evaluate(() => ({ p: __app.state.profile, bw: __app.state.tests.filter(t => t.key === 'bw').map(t => t.value + '@' + t.date) }));
+ok(prof.p.height === 178 && prof.p.ape === -3 && prof.bw.join() === '70@2026-11-25', 'Profile: peso salvato nello storico (oggi), altezza 178, ape index -3 (' + JSON.stringify(prof) + ')');
+await go('more'); ok((await txt('#more-profile')).includes('70 kg · 178 cm · ape index -3 cm'), 'More: riepilogo del profilo');
+await shot('9c-profilo');
+await go('profile'); await shot('9d-profilo-pagina'); const pin2 = await pg.$$('#view input'); await pin2[0].click({ clickCount: 3 }); await pin2[0].type('71,5'); await clickText('Save', '#view'); await sleep(100);
+ok(await pg.evaluate(() => __app.state.tests.filter(t => t.key === 'bw').map(t => t.value).join() === '71.5'), 'stesso giorno: il peso si aggiorna, niente doppioni');
+await pg.evaluate(() => { __app.state.tests.find(t => t.key === 'bw').value = 70; });
+await go('tests');
+for (const [name, v] of [['Sloper', '20'], ['Pinch block L', '20'], ['Pinch block R', '24'], ['Wrist curl', '22,5']]) {
   await clickText(name, '#view');
   await pg.type('.sheet .cols label:nth-child(2) input', v);
   await clickText('Add result');
