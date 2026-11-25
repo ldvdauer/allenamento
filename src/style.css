@@ -256,3 +256,11 @@ h2 .cnt{color:var(--mu);font-weight:400;font-size:.85em}
 .wk-s{margin:8px 0 0 24px}.wk-st{font-size:13px;color:var(--mu);margin-bottom:2px}
 .wk-ex{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:15px}.wk-ex .m{color:var(--mu);font-size:13px;white-space:nowrap}
 .wk-ex.ok .m{color:var(--ac);font-weight:700}
+.wk-ex.tap{cursor:pointer;border-radius:8px}.wk-ex.tap:active{background:#22262b}
+.wk-h.tap{cursor:pointer}
+.wk-add{display:flex;gap:8px;margin:8px 0 0 24px}.wk-add .btn{min-height:32px;font-size:13px;padding:0 10px;background:none;border:1px dashed var(--line);color:var(--mu)}
+/* Sposta in un altro giorno */
+.mv-wk{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin:6px 0}
+.mv-d{display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 0;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--tx);cursor:pointer;font:inherit}
+.mv-d span{font-size:11px;color:var(--mu);font-weight:700}.mv-d b{font-size:16px}.mv-d small{font-size:10px;color:var(--mu)}
+.mv-d.cur{opacity:.4}.mv-d.past b{color:var(--mu)}
