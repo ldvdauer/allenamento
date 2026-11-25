@@ -83,7 +83,24 @@ ok(await pg.evaluate(() => location.hash === '#week') && (await pg.$$('.wk-cal .
 await clickText('›', '.wk'); await sleep(100);
 ok(await pg.evaluate(() => location.hash === '#week-2026-11-30') && (await txt('.wk')).includes('Today'), 'Week: settimana dopo e tasto Today');
 await clickText('Today', '.wk'); await sleep(100);
-await pg.click('.wk-day.now'); await sleep(100);
+// modificare dalla Week: tocco su un esercizio non registrato di domani → Move to… → giovedì
+const nameMv = await pg.evaluate(() => { const x = [...document.querySelectorAll('#wd-2026-11-26 .wk-ex')][0]; x.click(); return x.querySelector('.grow').innerText; }); await sleep(150);
+await clickText('Move to…', '.sheet'); await sleep(150);
+ok((await txt('.sheet')).includes('Move to another day') && (await pg.$$('.sheet .mv-d')).length === 14, 'Move to…: i giorni di questa settimana e della prossima');
+await pg.evaluate(() => [...document.querySelectorAll('.sheet .mv-d')][4].click()); await sleep(150); // venerdì 27
+const mv = await pg.evaluate(n => ({ thu: [...document.querySelectorAll('#wd-2026-11-26 .wk-ex .grow')].map(x => x.innerText), fri: [...document.querySelectorAll('#wd-2026-11-27 .wk-ex .grow')].map(x => x.innerText) }), nameMv);
+ok(!mv.thu.includes(nameMv) && mv.fri[mv.fri.length - 1] === nameMv && await pg.evaluate(() => location.hash === '#week'), 'Week: esercizio spostato da giovedì a venerdì, in fondo (' + nameMv + ')');
+// + Exercise su un giorno di riposo
+const restIso = await pg.evaluate(() => [...document.querySelectorAll('.wk-day')].find(d => !d.querySelector('.wk-ex')).id.slice(3));
+await pg.evaluate(iso => [...document.querySelectorAll('#wd-' + iso + ' .wk-add button')][0].click(), restIso); await sleep(200);
+await pg.evaluate(() => [...document.querySelectorAll('.sheet .blk, .sheet button')].find(x => /Hip mobility|Max hang|Limit/.test(x.innerText)).click()); await sleep(200);
+ok(await pg.evaluate(iso => document.querySelectorAll('#wd-' + iso + ' .wk-ex').length === 1, restIso), 'Week: + Exercise su un giorno di riposo (' + restIso + ')');
+// rimuovere dalla Week
+await pg.evaluate(iso => document.querySelector('#wd-' + iso + ' .wk-ex').click(), restIso); await sleep(150);
+await clickText('Remove', '.sheet'); await sleep(150);
+ok(await pg.evaluate(iso => !document.querySelector('#wd-' + iso + ' .wk-ex'), restIso), 'Week: esercizio rimosso, il giorno torna di riposo');
+await shot('9e-week-modifica');
+await pg.click('.wk-day.now .wk-h'); await sleep(100);
 ok(await pg.evaluate(() => location.hash === '#calendar-2026-11-25'), 'Week: un giorno si apre nel calendario');
 await go('home');
 await go('profile'); await shot('9d-profilo-pagina'); const pin2 = await pg.$$('#view input'); await pin2[0].click({ clickCount: 3 }); await pin2[0].type('71,5'); await clickText('Save', '#view'); await sleep(100);

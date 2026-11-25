@@ -593,16 +593,18 @@
       const sessions = refs.map(r => {
         const s = sessOf(r), l = iso <= t ? dayLog(r, false) : null, ids = new Set(l ? l.blocks.map(x => x.bid) : []);
         return h('div', { class: 'wk-s' }, s.title ? h('div', { class: 'wk-st' }, s.title) : null,
-          s.blocks.map(b => { const ex = S.exercises[b.exId], ok = ids.has(b.id);
-            return h('div', { class: 'wk-ex' + (ok ? ' ok' : '') }, catBar(exSection(ex)), h('span', { class: 'grow' }, ex ? C.exName(ex) : '—'), h('span', { class: 'm' }, ok ? '✓' : b.minutes + ' min')); }));
+          s.blocks.map((b, bi) => { const ex = S.exercises[b.exId], ok = ids.has(b.id);
+            // tocco: parametri, sostituisci, sposta, rimuovi (la stessa scheda del calendario)
+            return h('div', { class: 'wk-ex tap' + (ok ? ' ok' : ''), role: 'button', onclick: () => blockSheet(r, bi) }, catBar(exSection(ex)), h('span', { class: 'grow' }, ex ? C.exName(ex) : '—'), h('span', { class: 'm' }, ok ? '✓' : b.minutes + ' min')); }));
       });
       const min = refs.reduce((a, r) => a + C.sessionMinutes(sessOf(r)), 0), done = refs.length && refs.every(r => isDone(r));
       const lead = cats[0];
-      return h('div', { class: 'wk-day tap' + (iso === t ? ' now' : ''), id: 'wd-' + iso, role: 'link', onclick: () => go('calendar-' + iso) },
-        h('div', { class: 'wk-h' }, h('i', { class: 'wk-dia' + (lead ? ' c-' + lead.sec + (lead.done ? ' ok' : '') : ''), 'aria-hidden': 'true' }),
+      return h('div', { class: 'wk-day' + (iso === t ? ' now' : ''), id: 'wd-' + iso },
+        h('div', { class: 'wk-h tap', role: 'link', 'aria-label': 'Open in the calendar', onclick: () => go('calendar-' + iso) }, h('i', { class: 'wk-dia' + (lead ? ' c-' + lead.sec + (lead.done ? ' ok' : '') : ''), 'aria-hidden': 'true' }),
           h('span', { class: 'grow' }, WD_FULL[wdIdx(iso)], h('span', { class: 'sub' }, ' ' + d.getDate() + ' ' + MONTHS[d.getMonth()] + (iso === t ? ' · today' : ''))),
           refs.length ? (done ? h('span', { class: 'tag ok' }, 'Done') : h('span', { class: 'tag' }, min + ' min')) : h('span', { class: 'sub' }, 'Rest')),
-        sessions);
+        sessions,
+        h('div', { class: 'wk-add' }, btn('+ Exercise', () => pickExercise(tpl => addToDay(iso, tpl)), 'sm'), btn('+ Test', () => pickTest(tpl => addToDay(iso, tpl)), 'sm')));
     };
     return [homeHead(t, 'week'),
       h('div', { class: 'card wk' },
@@ -628,6 +630,26 @@
       h('div', { class: 'grow' }, h('div', { class: 'cd-k' }, h('i', { class: 'cd-dot ' + trip.status, 'aria-hidden': 'true' }), (cd.now ? 'On trip' : 'Next trip') + ' · ' + TRIP_ST[trip.status]), h('div', { class: 'cd-n' }, trip.name),
         h('div', { class: 'sub' }, [trip.place, fmtTrip(trip)].filter(Boolean).join(' · ')),
         pr.total ? h('div', { class: 'cd-p' }, `${pr.sent}/${pr.total} sent`) : null), h('div', { class: 'm' }, '›'));
+  }
+
+  /** Sposta un esercizio in un altro giorno: i giorni della sua settimana (e di quella dopo) a portata di tocco, o una data qualsiasi.
+      Va in fondo alla giornata di quel giorno; se il giorno è vuoto diventa una giornata nuova. */
+  function moveSheet(r, bi) {
+    const s = sessOf(r), b = s.blocks[bi], from = dayOf(r), e = S.exercises[b.exId];
+    const move = iso => {
+      if (!C.validISO(iso) || iso === from) return toast('Pick another day.');
+      s.blocks.splice(bi, 1); mergeIntoDay(iso, [b], ''); save(); ov.remove(); render();
+      toast(`${e ? C.exName(e) : 'Exercise'} moved to ${WD_FULL[wdIdx(iso)]} ${fmtDate(iso)}.`);
+    };
+    const week = mon => h('div', { class: 'mv-wk' }, [0, 1, 2, 3, 4, 5, 6].map(i => {
+      const iso = C.addDays(mon, i), d = C.fromISO(iso), n = refsOn(iso).reduce((a, x) => a + sessOf(x).blocks.length, 0);
+      return h('button', { type: 'button', class: 'mv-d' + (iso === from ? ' cur' : '') + (iso < C.todayISO() ? ' past' : ''), disabled: iso === from, onclick: () => move(iso) },
+        h('span', {}, WD_FULL[i].slice(0, 3)), h('b', {}, d.getDate()), h('small', {}, iso === from ? 'here' : n ? n + ' ex' : 'rest'));
+    }));
+    const mon = C.mondayOf(from), date = h('input', { type: 'date', value: from });
+    const ov = openSheet('Move to another day', [h('p', { class: 'sub' }, `${e ? C.exName(e) : 'Exercise'}, now on ${WD_FULL[wdIdx(from)]} ${fmtDate(from)}. It goes at the end of the chosen day.`),
+      h('div', { class: 'sub' }, 'This week'), week(mon), h('div', { class: 'sub', style: 'margin-top:10px' }, 'Next week'), week(C.addDays(mon, 7)),
+      h('div', { class: 'row', style: 'margin-top:12px;align-items:flex-end' }, h('div', { class: 'grow' }, field('Another date', date)), btn('Move', () => move(date.value), 'pri'))]);
   }
 
   /* ---------- Sessioni extra e calendario ---------- */
@@ -874,7 +896,10 @@
       // Già registrato: si modifica o si cancella la registrazione, l'esercizio resta nella giornata
       logged ? [btn('Edit log', () => { ov.remove(); editRecord(r, b, logged); }, 'block'), btn('Delete log', () => { ov.remove(); deleteRecord(dayLog(r), logged); }, 'danger block')]
         : dayOf(r) <= C.todayISO() ? btn('Log without timer', () => { ov.remove(); recordSheet(r, b, (b.minutes || 0) * 60000, e.interval && e.interval.rounds ? { done: e.interval.rounds, of: e.interval.rounds } : null); }, 'block') : null,
-      h('div', { class: 'btns' }, btn('Replace', () => pickExercise(tpl => { s.blocks.splice(bi, 1); addBlock(s, tpl); s.blocks.splice(bi, 0, s.blocks.pop()); close(); }), 'sm'), btn('Remove', () => { s.blocks.splice(bi, 1); close(); }, 'sm danger'))]);
+      h('div', { class: 'btns' }, btn('Replace', () => pickExercise(tpl => { s.blocks.splice(bi, 1); addBlock(s, tpl); s.blocks.splice(bi, 0, s.blocks.pop()); close(); }), 'sm'),
+        // spostare: solo se non è registrato (la registrazione è legata a questo giorno)
+        logged ? null : btn('Move to…', () => { ov.remove(); moveSheet(r, bi); }, 'sm'),
+        btn('Remove', () => { s.blocks.splice(bi, 1); close(); }, 'sm danger'))]);
     sync();
   }
 
