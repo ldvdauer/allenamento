@@ -76,6 +76,16 @@ const prof = await pg.evaluate(() => ({ p: __app.state.profile, bw: __app.state.
 ok(prof.p.height === 178 && prof.p.ape === -3 && prof.bw.join() === '70@2026-11-25', 'Profile: peso salvato nello storico (oggi), altezza 178, ape index -3 (' + JSON.stringify(prof) + ')');
 await go('more'); ok((await txt('#more-profile')).includes('70 kg · 178 cm · ape index -3 cm'), 'More: riepilogo del profilo');
 await shot('9c-profilo');
+// Home → Week: striscia di 7 giorni, ogni giorno con i suoi esercizi, frecce per cambiare settimana
+await go('home'); await clickText('Week', '.seg'); await sleep(150);
+let wk = await txt('#view');
+ok(await pg.evaluate(() => location.hash === '#week') && (await pg.$$('.wk-cal .wk-d')).length === 7 && (await pg.$$('.wk-day')).length === 7 && wk.includes('Wednesday 25 Nov · today') && wk.includes('Sloper hang'), 'Home → Week: 7 giorni con i loro esercizi, oggi evidenziato');
+await clickText('›', '.wk'); await sleep(100);
+ok(await pg.evaluate(() => location.hash === '#week-2026-11-30') && (await txt('.wk')).includes('Today'), 'Week: settimana dopo e tasto Today');
+await clickText('Today', '.wk'); await sleep(100);
+await pg.click('.wk-day.now'); await sleep(100);
+ok(await pg.evaluate(() => location.hash === '#calendar-2026-11-25'), 'Week: un giorno si apre nel calendario');
+await go('home');
 await go('profile'); await shot('9d-profilo-pagina'); const pin2 = await pg.$$('#view input'); await pin2[0].click({ clickCount: 3 }); await pin2[0].type('71,5'); await clickText('Save', '#view'); await sleep(100);
 ok(await pg.evaluate(() => __app.state.tests.filter(t => t.key === 'bw').map(t => t.value).join() === '71.5'), 'stesso giorno: il peso si aggiorna, niente doppioni');
 await pg.evaluate(() => { __app.state.tests.find(t => t.key === 'bw').value = 70; });

@@ -551,8 +551,11 @@
     l.notes ? h('div', { class: 'sub', style: 'margin-top:4px;color:var(--tx)' }, l.notes) : null);
 
   /* ---------- Home ---------- */
+  // Home: Today | Week (come Lattice); la scelta resta finché non si cambia
+  const homeHead = (t, cur) => [h('div', { class: 'sub', style: 'text-transform:capitalize' }, `${WD_FULL[wdIdx(t)]} ${fmtDate(t)}`), h('h1', {}, 'Home'),
+    seg([['home', 'Today'], ['week', 'Week']], cur, k => { try { localStorage.setItem(KEY + '.homeTab', k); } catch (e) { /* solo comodità */ } location.hash = k; })];
   function viewHome() {
-    const t = C.todayISO(), refs = refsOn(t), out = [h('div', { class: 'sub', style: 'text-transform:capitalize' }, `${WD_FULL[wdIdx(t)]} ${fmtDate(t)}`), h('h1', {}, 'Home')];
+    const t = C.todayISO(), refs = refsOn(t), out = homeHead(t, 'home');
     if (rescued) out.push(h('div', { class: 'card' }, h('div', { class: 'sub' }, 'The saved data could not be read, so the app started empty. A copy of the old data was kept: export it and send it to whoever develops the app.'),
       h('div', { class: 'btns' }, btn('Export old data', () => { const k = Object.keys(localStorage).filter(x => x.startsWith(KEY + '.rescue-')).sort().pop(); if (k) exportSheet('Old data', 'allenamento-rescue.json', localStorage.getItem(k)); }, 'sm'),
         btn('Hide', () => { rescued = false; render(); }, 'sm'))));
@@ -567,6 +570,47 @@
     const next = C.nextTrip(S.trips, t);
     if (next) out.push(countdownCard(next, t)); // uno solo, il più vicino; dopo la giornata di oggi, che resta il contenuto principale
     return out;
+  }
+
+  /** Home → Week: settimana da lunedì a domenica con i pallini per categoria e, sotto, ogni giorno con i suoi esercizi.
+      Si scorre di settimana in settimana; un giorno si apre nel calendario, dove si modifica. */
+  function viewWeek(args) {
+    const t = C.todayISO(), mon = C.mondayOf(C.validISO(args.join('-')) || t), days = [0, 1, 2, 3, 4, 5, 6].map(i => C.addDays(mon, i));
+    const goWeek = iso => { location.hash = iso === C.mondayOf(t) ? 'week' : 'week-' + iso; };
+    // Programma della settimana: "Karma - Fase 1 · Week 2 of 4" (il primo che ha giorni visibili in questa settimana)
+    const plan = S.plans.map(p => ({ p, pos: days.map(d => C.locate(p, d)).find(Boolean) })).find(x => x.pos);
+    const m0 = C.fromISO(mon), m6 = C.fromISO(days[6]);
+    const month = m0.getMonth() === m6.getMonth() ? MONTHS_FULL[m0.getMonth()] : `${MONTHS_FULL[m0.getMonth()]} – ${MONTHS_FULL[m6.getMonth()]}`;
+    const cell = iso => {
+      const cats = dayCategories(iso, refsOn(iso)), d = C.fromISO(iso);
+      return h('button', { type: 'button', class: 'cal-d wk-d' + (iso === t ? ' today' : ''), 'aria-label': `${WD_FULL[wdIdx(iso)]} ${d.getDate()}`,
+        onclick: () => { const el = document.getElementById('wd-' + iso); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); } },
+        h('span', { class: 'wk-wd' }, WD_FULL[wdIdx(iso)].slice(0, 3)), h('b', {}, d.getDate()),
+        h('span', { class: 'dots' }, cats.slice(0, 3).map(c => h('i', { class: 'cat c-' + c.sec + (c.done ? ' ok' : '') }))));
+    };
+    const dayRow = iso => {
+      const refs = refsOn(iso), cats = dayCategories(iso, refs), d = C.fromISO(iso);
+      const sessions = refs.map(r => {
+        const s = sessOf(r), l = iso <= t ? dayLog(r, false) : null, ids = new Set(l ? l.blocks.map(x => x.bid) : []);
+        return h('div', { class: 'wk-s' }, s.title ? h('div', { class: 'wk-st' }, s.title) : null,
+          s.blocks.map(b => { const ex = S.exercises[b.exId], ok = ids.has(b.id);
+            return h('div', { class: 'wk-ex' + (ok ? ' ok' : '') }, catBar(exSection(ex)), h('span', { class: 'grow' }, ex ? C.exName(ex) : '—'), h('span', { class: 'm' }, ok ? '✓' : b.minutes + ' min')); }));
+      });
+      const min = refs.reduce((a, r) => a + C.sessionMinutes(sessOf(r)), 0), done = refs.length && refs.every(r => isDone(r));
+      const lead = cats[0];
+      return h('div', { class: 'wk-day tap' + (iso === t ? ' now' : ''), id: 'wd-' + iso, role: 'link', onclick: () => go('calendar-' + iso) },
+        h('div', { class: 'wk-h' }, h('i', { class: 'wk-dia' + (lead ? ' c-' + lead.sec + (lead.done ? ' ok' : '') : ''), 'aria-hidden': 'true' }),
+          h('span', { class: 'grow' }, WD_FULL[wdIdx(iso)], h('span', { class: 'sub' }, ' ' + d.getDate() + ' ' + MONTHS[d.getMonth()] + (iso === t ? ' · today' : ''))),
+          refs.length ? (done ? h('span', { class: 'tag ok' }, 'Done') : h('span', { class: 'tag' }, min + ' min')) : h('span', { class: 'sub' }, 'Rest')),
+        sessions);
+    };
+    return [homeHead(t, 'week'),
+      h('div', { class: 'card wk' },
+        h('div', { class: 'row' }, h('div', { class: 'grow' }, h('div', { class: 'sub' }, plan ? `${plan.p.title} · Week ${plan.pos.w + 1} of ${plan.p.weeks.length}` : 'No plan'),
+          h('div', { class: 'big', style: 'font-size:19px' }, month)),
+          btn('‹', () => goWeek(C.addDays(mon, -7)), 'sm'), mon === C.mondayOf(t) ? null : btn('Today', () => goWeek(C.mondayOf(t)), 'sm'), btn('›', () => goWeek(C.addDays(mon, 7)), 'sm')),
+        h('div', { class: 'cal wk-cal' }, days.map(cell))),
+      days.map(dayRow)];
   }
 
   /** Countdown del prossimo viaggio (confermato o idea con date, pallino verde o giallo): anello che si riempie verso la partenza, come la ciambella di Analytics. */
@@ -1771,15 +1815,17 @@
   }
 
   /* ---------- Router ---------- */
-  const VIEWS = { home: viewHome, calendar: viewCalendar, trips: viewTrips, trip: viewTrip, analytics: viewAnalytics, tests: viewProgress, more: viewMore, profile: viewProfile, programmes: viewPrograms, library: viewLibrary, notebook: viewNotes, diagnostics: viewDiag };
+  const VIEWS = { home: viewHome, week: viewWeek, calendar: viewCalendar, trips: viewTrips, trip: viewTrip, analytics: viewAnalytics, tests: viewProgress, more: viewMore, profile: viewProfile, programmes: viewPrograms, library: viewLibrary, notebook: viewNotes, diagnostics: viewDiag };
   function render() {
-    const [name, ...args] = (location.hash.slice(1) || 'home').split('-');
+    let start = 'home';
+    try { if (!location.hash && localStorage.getItem(KEY + '.homeTab') === 'week') start = 'week'; } catch (e) { /* storage non disponibile */ } // all'avvio: l'ultima vista scelta in Home
+    const [name, ...args] = (location.hash.slice(1) || start).split('-');
     const fn = VIEWS[name] || viewHome;
     let nodes;
     try { nodes = fn(args); }
     catch (e) { console.error('[ui] error in view ' + name, e); nodes = [h('h1', {}, 'Something went wrong'), h('p', { class: 'sub' }, String(e.message || e)), btn('Back to Home', () => go('home'))]; }
     $('view').replaceChildren(...[nodes].flat(Infinity).filter(n => n != null && n !== false));
-    const tab = { library: 'more', profile: 'more', programmes: 'more', notebook: 'more', diagnostics: 'more', tests: 'analytics', trip: 'trips' }[name] || (VIEWS[name] ? name : 'home');
+    const tab = { week: 'home', library: 'more', profile: 'more', programmes: 'more', notebook: 'more', diagnostics: 'more', tests: 'analytics', trip: 'trips' }[name] || (VIEWS[name] ? name : 'home');
     for (const el of document.querySelectorAll('#tabs a')) el.classList.toggle('on', el.getAttribute('href') === '#' + tab);
   }
   let lastView = (location.hash.slice(1) || 'home').split('-')[0];
