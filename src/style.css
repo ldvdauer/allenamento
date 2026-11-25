@@ -240,3 +240,19 @@ h2 .cnt{color:var(--mu);font-weight:400;font-size:.85em}
 #player.tbl #p-done{grid-column:2;grid-row:1;margin:0;min-height:48px;font-size:17px}
 #player.tbl #p-table{order:50;margin-top:10px}
 #player.tbl #p-quit{order:99;margin-top:6px;border:1px solid var(--line);border-radius:14px;text-decoration:none;color:var(--tx);min-height:46px}
+
+/* Home → Week (ispirata a Lattice): striscia di 7 giorni e, sotto, ogni giorno con i suoi esercizi */
+.wk .row{align-items:center;gap:6px}
+.wk-cal{margin-top:12px}
+.wk-d{min-height:66px;gap:3px;background:none}.wk-d b{font-size:17px;font-weight:600;width:32px;height:32px;line-height:32px;border-radius:50%}
+.wk-d.today{border-color:transparent}.wk-d.today b{background:var(--tx);color:#0d0f12}
+.wk-wd{font-size:11px;color:var(--mu);font-weight:700}
+.wk-day{padding:14px 2px 10px;border-bottom:1px solid var(--line);scroll-margin-top:12px}
+.wk-day.now .wk-h>.grow{color:var(--ac)}
+.wk-h{display:flex;align-items:center;gap:12px;font-size:19px;font-weight:600}
+.wk-h .sub{font-size:13px;font-weight:400}
+.wk-dia{width:12px;height:12px;transform:rotate(45deg);flex:none;background:transparent;box-shadow:inset 0 0 0 2px var(--c,#6b7480);border-radius:2px}
+.wk-dia.ok{background:var(--c)}
+.wk-s{margin:8px 0 0 24px}.wk-st{font-size:13px;color:var(--mu);margin-bottom:2px}
+.wk-ex{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:15px}.wk-ex .m{color:var(--mu);font-size:13px;white-space:nowrap}
+.wk-ex.ok .m{color:var(--ac);font-weight:700}
