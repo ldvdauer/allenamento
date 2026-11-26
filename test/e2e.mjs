@@ -203,6 +203,8 @@ await pg.evaluate(() => [...document.querySelectorAll('#p-table .tb-r')][0].quer
 ok(await pg.evaluate(() => [...document.querySelectorAll('#p-table .tb-r')][0].querySelector('.stp-v').innerText) === '5', '− sulle ripetizioni');
 await pg.click('#p-quit');
 ok((await txt('.sheet')).includes('Exercise complete') && (await txt('.sheet')).includes('0/'), 'a ripetizioni: conferma breve');
+{ const mv = await pg.evaluate(() => [...document.querySelectorAll('.sheet label')].find(l => l.innerText.startsWith('Minutes')).querySelector('input').value);
+  ok(Number(mv) > 0, 'chiuso subito: i minuti proposti sono quelli previsti, non 0 (' + mv + ')'); }
 await clickText('Not done', '.sheet');
 // Esercizio per lato: "+ Add set" aggiunge una serie L e una R
 await play('Pinch block'); await sleep(60);
@@ -443,7 +445,7 @@ ok(await pg.evaluate(n => __app.state.plans.length === n, nPlans), 'import con e
 await pg.evaluate(() => document.querySelectorAll('.overlay').forEach(o => o.remove()));
 await go('analytics');
 const an = await txt('#view'); if (process.env.DBG) console.log(an.slice(0, 1400));
-ok(an.includes('Training time') && an.includes('35min') && an.includes('86%\nclimbing') && !an.includes('session type') && !/on the wall/i.test(an), 'Analisi: totale ore, ciambella con % arrampicata, niente "tipo di sessione"');
+ok(an.includes('Training time') && an.includes('45min') && an.includes('67%\nclimbing') && !an.includes('session type') && !/on the wall/i.test(an), 'Analisi: totale ore, ciambella con % arrampicata, niente "tipo di sessione"');
 ok(an.includes('Progress') && !an.includes('Consistency') && !an.includes('Planned days trained'), 'Analisi: Progress, senza il riquadro Consistency');
 ok(!an.includes('most time') && !an.includes('Weekly volume'), 'Analisi: niente vecchi grafici');
 ok(await pg.evaluate(() => { const b = document.querySelector('#view .viz-donut-li .c-strength'); return !!b && getComputedStyle(b).backgroundColor === 'rgb(213, 81, 129)'; }), 'Analisi: legenda della ciambella con il colore della categoria (Strength = magenta)');
