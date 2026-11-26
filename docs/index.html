@@ -1590,7 +1590,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
 
   /* ---------- Stato e persistenza ---------- */
   // Primo avvio: nessun piano precaricato, ogni utente importa o crea i propri.
-  const fresh = () => migrate({ v: 17, plans: [], activePlan: null, exercises: {}, logs: [], tests: [] });
+  const fresh = () => migrate({ v: 18, plans: [], activePlan: null, exercises: {}, logs: [], tests: [] });
   /** I test da cui dipendono i kg degli esercizi (e il peso corporeo) devono esistere nella sezione Test. */
   function ensureTests(s) {
     const need = new Set(['bw'].concat(Object.values(s.exercises).filter(e => e.load).flatMap(e => C.refKeys(e.load.ref))));
@@ -1628,7 +1628,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
     const fromV = s.v || 1;
     s.extras = Array.isArray(s.extras) ? s.extras : [];
     s.surfaces = Array.isArray(s.surfaces) && s.surfaces.length ? s.surfaces : C.DEFAULT_SURFACES.map(x => ({ ...x }));
-    s.settings = Object.assign({ prep: 10, sound: true, audioMode: 'mix', gradeScale: 'font', lastBackup: null }, s.settings);
+    s.settings = Object.assign({ prep: 10, sound: true, audioMode: 'duck', gradeScale: 'font', lastBackup: null }, s.settings);
     delete s.settings.prog; // proposta del carico tolta il 22 nov (scelta di Leo)
     if (!s.plans.some(p => p.id === s.activePlan)) s.activePlan = s.plans[0] ? s.plans[0].id : null;
     for (const p of s.plans) for (const w of p.weeks) for (const d of w) for (const x of d.sessions) if (!x.id) x.id = C.uid();
@@ -1747,7 +1747,10 @@ review|other|Attempt review|10|`.split('\n').map(line => {
     // v17: negli esercizi alternati L/R una serie è L + R (cambio lato di 10 s, poi il recupero della serie): i round salvati
     // contavano i lati, quindi si dimezzano. I log restano com'erano.
     if (fromV < 17) C.sidesToSeries(s);
-    s.v = 17;
+    // v18: i bip devono sentirsi sempre col volume alzato, anche in silenzioso (Leo, 26 nov): chi aveva il predefinito
+    // della #10 ("mix", muto in silenzioso) passa a "duck" (segnali sempre udibili, la musica si interrompe solo durante i bip)
+    if (fromV < 18 && s.settings.audioMode === 'mix') s.settings.audioMode = 'duck';
+    s.v = 18;
     return s;
   }
   let rescued = false;
@@ -2750,7 +2753,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
         cloudOn() ? [btn('Restore from GitHub', cloudRestore, 'sm'), btn('Disconnect', async () => { if (await confirmDlg('Disconnect GitHub? The token is deleted from this device; backups already uploaded stay in the repository.', 'Disconnect')) { S.settings.gh = null; clearTimeout(cloudTimer); save(); render(); } }, 'sm danger')] : null));
   }
   /* ---------- Taccuino: note al volo durante la prova dell'app, con il contesto per poterle riprodurre ---------- */
-  const VERSION = '20261126.1316';
+  const VERSION = '20261126.1431';
   function noteSheet() {
     const text = h('textarea', { class: 'inp', placeholder: 'What is wrong, or what would you like to be different?' });
     const where = P ? 'timer: ' + P.steps[P.idx].name : (location.hash.slice(1) || 'home');
@@ -2792,7 +2795,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
       const reg = 'serviceWorker' in navigator ? await navigator.serviceWorker.getRegistration() : null, hit = reg && window.caches ? await caches.match('./') : null;
       add('Offline use', reg && hit ? true : reg ? null : false, reg && hit ? 'a copy of the app is stored on the device' : reg ? 'getting ready: reopen the app once while online' : 'not available in this mode');
     } catch (e) { add('Offline use', false, 'check failed'); }
-    try { audioInit(); SOUND.setEnd(); add('Sound signals', ac && ac.state === 'running' ? true : null, ac && ac.state === 'running' ? (S.settings.audioMode === 'solo' ? 'a signal was just played (mode: pause the music)' : 'a signal was just played over any music: if you did not hear it, check the volume and that the switch is on ring') : 'audio not started: try again by tapping "Run the checks"'); }
+    try { audioInit(); SOUND.setEnd(); add('Sound signals', ac && ac.state === 'running' ? true : null, ac && ac.state === 'running' ? `a signal was just played (${AUDIO_MODES.find(m => m[0] === audioMode())[1].toLowerCase()})` + (audioMode() === 'mix' ? ': if you did not hear it, the phone may be in silent mode; see Sound test below' : '') : 'audio not started: try again by tapping "Run the checks"'); }
     catch (e) { add('Sound signals', false, 'audio not available'); }
     try {
       if (navigator.wakeLock) { const l = await navigator.wakeLock.request('screen'); await l.release(); add('Screen stays on while a timer runs', true, 'granted'); }
@@ -2810,6 +2813,11 @@ review|other|Attempt review|10|`.split('\n').map(line => {
       h('div', { class: 'btns' }, btn('Run the checks', runDiag, 'pri'), diag ? btn('Copy report', () => exportSheet('Report', 'allenamento-diagnostics.txt', report()), '') : null),
       diag ? h('div', { class: 'card' }, diag.map(x => h('div', { class: 'blk' }, h('span', { class: 'tag ' + (x.ok === true ? 'ok' : x.ok === false ? 'bad' : 'ac') }, x.ok === true ? 'OK' : x.ok === false ? 'No' : 'Warning'),
         h('div', { class: 'grow' }, h('div', { class: 'n' }, x.name), h('div', { class: 'p' }, x.detail))))) : null,
+      // Prova dei suoni con la musica: si fa partire Spotify, si prova ogni modo e si sceglie quello che funziona
+      h('h2', {}, 'Sound test'), h('div', { class: 'card', id: 'sound-test' },
+        h('p', { class: 'sub', style: 'margin-top:0' }, 'Start some music (e.g. Spotify), then try each mode: you hear 3 short beeps and a long one, as in the timer. Also try with the phone in silent mode. Choose the one that works for you.'),
+        AUDIO_MODES.map(m => h('div', { class: 'blk' }, h('div', { class: 'grow' }, h('div', { class: 'n' }, m[1] + (audioMode() === m[0] ? ' · in use' : '')), h('div', { class: 'p' }, m[2])),
+          h('div', { class: 'm', style: 'flex-direction:row;gap:6px' }, btn('▶ Try', () => soundTest(m[0]), 'sm'), audioMode() === m[0] ? null : btn('Use', () => { S.settings.audioMode = m[0]; save(); render(); toast('Sounds: ' + m[1] + '.'); }, 'sm pri'))))),
       h('div', { class: 'sub', style: 'margin-top:14px' }, 'Version ' + VERSION)];
   }
   /** Aggiornamenti: confronta la versione in uso con quella pubblicata (solo con rete; in anteprima il file non c'è). */
@@ -2881,8 +2889,8 @@ review|other|Attempt review|10|`.split('\n').map(line => {
   }
   function viewMore() {
     const prep = numInp(S.settings.prep), sound = h('input', { type: 'checkbox', checked: S.settings.sound, onchange: () => { S.settings.sound = sound.checked; save(); } });
-    const audioMode = opts([['mix', 'Play over the music'], ['solo', 'Pause the music']], S.settings.audioMode, { onchange: () => { S.settings.audioMode = audioMode.value; save(); audioHelp.textContent = audioHelpText(); } });
-    const audioHelpText = () => (S.settings.audioMode === 'solo' ? 'Signals are heard even in silent mode, but music from other apps (Spotify) stops while the timer runs.' : 'Signals play over Spotify without stopping it. On iPhone the ring/silent switch must be on ring, otherwise they are muted.');
+    const audioSel = opts(AUDIO_MODES.map(m => [m[0], m[1]]), audioMode(), { onchange: () => { S.settings.audioMode = audioSel.value; save(); audioHelp.textContent = audioHelpText(); } });
+    const audioHelpText = () => AUDIO_MODES.find(m => m[0] === audioMode())[2] + ' Try them in Diagnostics → Sound test.';
     const audioHelp = h('p', { class: 'sub' }, audioHelpText());
     const sfNew = h('input', { class: 'inp', style: 'margin:0', placeholder: 'New surface' });
     const pr = profileNow();
@@ -2903,7 +2911,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
         h('div', { class: 'row', style: 'margin-top:10px' }, h('div', { class: 'grow' }, sfNew), btn('Add', () => { const n = sfNew.value.trim().slice(0, 40); if (!n) return toast('Type a name.'); addSurface(n); save(); render(); }, 'sm')),
         h('p', { class: 'sub', style: 'margin-bottom:0' }, `Grade scale: ${C.GRADE_SCALES[S.settings.gradeScale] || 'Font'}. Other scales will be selectable here.`)),
       h('h2', {}, 'Timer'), h('div', { class: 'card' }, h('div', { class: 'cols' }, field('Get-ready time before a hang (s)', prep), h('label', { class: 'f' }, 'Sound signals', h('div', { style: 'margin-top:12px' }, sound, ' on'))),
-        field('Sounds with music', audioMode), audioHelp,
+        field('Sounds with music', audioSel), audioHelp,
         btn('Save', () => { S.settings.prep = Math.min(60, Math.max(0, Math.round(val(prep) || 0))); save(); toast('Saved.'); }, 'sm')),
       h('h2', {}, 'Automatic backup'), cloudCard(),
       h('h2', {}, 'Data'), h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin-top:0' }, (cloudOn() ? 'Automatic backup to GitHub is active. ' : 'Data stays on this device only. "Save backup" opens the share sheet: choose "Save to Files" to put it in iCloud Drive.') + (S.settings.lastBackup ? ` Last backup: ${fmtDate(S.settings.lastBackup)}.` : ' No backup yet.')),
@@ -3064,14 +3072,27 @@ review|other|Attempt review|10|`.split('\n').map(line => {
 
   /* ---------- Player ---------- */
   let P = null, ac = null, wl = null;
-  /* Suoni. Audio Session API (Safari 17+), due modi (impostazione "Sounds with music"):
-     - "mix" (predefinito, nota di Leo del 26 nov): tipo "transient", i segnali suonano sopra la musica di Spotify
-       senza fermarla; su iPhone seguono l'interruttore silenzioso (in modalità silenziosa non si sentono).
-     - "solo": tipo "playback", come un'app di musica: suonano anche in modalità silenziosa ma fermano la musica.
+  /* Suoni. Audio Session API (Safari 17+). Tre modi (More → Timer → "Sounds with music", provabili in Diagnostics):
+     - "mix": tipo "transient" sempre: i segnali si mescolano alla musica senza fermarla; su iPhone seguono
+       l'interruttore silenzioso (in modalità silenziosa sono muti anche col volume alto).
+     - "duck": "ambient" quando tace, "playback" solo mentre suonano i segnali, poi di nuovo "ambient": suonano anche in
+       modalità silenziosa; la musica si interrompe durante il segnale e riparte se l'app di musica lo consente.
+     - "solo": "playback" sempre: suonano anche in silenzioso, la musica resta ferma finché il timer è aperto.
      Il contesto audio si crea e si sblocca solo dentro un tocco dell'utente, con un suono muto; a fine esercizio si sospende. */
-  const audioType = () => (S.settings.audioMode === 'solo' ? 'playback' : 'transient');
+  const audioMode = () => (['mix', 'duck', 'solo'].includes(S.settings.audioMode) ? S.settings.audioMode : 'duck');
+  const setSession = t => { try { if (navigator.audioSession && navigator.audioSession.type !== t) navigator.audioSession.type = t; } catch (e) { /* API non disponibile */ } };
+  const idleType = () => ({ mix: 'transient', duck: 'ambient', solo: 'playback' }[audioMode()]);
+  let holdUntil = 0, holdTimer = null;
+  /** Modo "duck": sessione "playback" solo per la durata dei segnali (+ un margine), poi si torna ad "ambient". */
+  function holdAudio(sec) {
+    if (audioMode() !== 'duck') return;
+    setSession('playback');
+    holdUntil = Math.max(holdUntil, Date.now() + sec * 1000 + 1500); // margine: i bip del conto alla rovescia (uno al secondo) restano in un'unica interruzione
+    clearTimeout(holdTimer);
+    holdTimer = setTimeout(function rel() { if (Date.now() < holdUntil) { holdTimer = setTimeout(rel, holdUntil - Date.now()); return; } setSession('ambient'); }, holdUntil - Date.now());
+  }
   function audioInit() {
-    try { if (navigator.audioSession) navigator.audioSession.type = audioType(); } catch (e) { /* API non disponibile */ }
+    setSession(idleType());
     try {
       if (!ac) {
         ac = new (window.AudioContext || window.webkitAudioContext)();
@@ -3080,14 +3101,28 @@ review|other|Attempt review|10|`.split('\n').map(line => {
       if (ac.state !== 'running') ac.resume();
     } catch (e) { ac = null; }
   }
+  const AUDIO_MODES = [
+    ['duck', 'Interrupt the music briefly', 'Signals are always heard when the volume is up, also in silent mode; the music stops while a signal plays and restarts after it, if the music app allows it.'],
+    ['mix', 'Play over the music', 'Signals play over Spotify without stopping it. On iPhone they are muted in silent mode, even with the volume up.'],
+    ['solo', 'Pause the music', 'Signals are heard even in silent mode; music from other apps stays paused while the timer runs.']];
+  /** Diagnostics → Sound test: prova un modo con un conto alla rovescia (3 bip + suono lungo), come nel timer. */
+  function soundTest(mode) {
+    const was = S.settings.audioMode, wasSound = S.settings.sound;
+    S.settings.audioMode = mode; S.settings.sound = true;
+    audioInit();
+    [0, 1, 2].forEach(i => setTimeout(() => SOUND.count(), i * 1000)); setTimeout(() => SOUND.setEnd(), 3000);
+    setTimeout(() => { S.settings.audioMode = was; S.settings.sound = wasSound; if (!P) audioRelease(); }, 4200);
+  }
   /** Timer chiuso: dopo l'ultimo segnale si sospende l'audio, così l'app non trattiene l'uscita audio del telefono. */
   function audioRelease() {
-    setTimeout(() => { if (P || !ac) return; try { ac.suspend(); } catch (e) { /* già sospeso */ } }, 2500);
+    setTimeout(() => { if (P || !ac) return; try { ac.suspend(); } catch (e) { /* già sospeso */ } if (audioMode() !== 'mix') setSession('ambient'); }, 2500);
   }
   function beep(freq, dur, at = 0) {
     if (!S.settings.sound || !ac) return;
     try {
-      const o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime + at;
+      holdAudio(at + dur);
+      if (ac.state !== 'running') ac.resume();
+      const o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime + at + (audioMode() === 'duck' ? 0.08 : 0); // "duck": un attimo per attivare la sessione
       o.type = 'square'; o.frequency.value = freq; o.connect(g); g.connect(ac.destination); // onda quadra: si sente meglio dell'onda sinusoidale in palestra
       g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.35, t + 0.01);
       g.gain.setValueAtTime(0.35, t + Math.max(0.02, dur - 0.05)); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
