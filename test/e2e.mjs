@@ -82,7 +82,16 @@ const audioType = async () => { await go('diagnostics'); await clickText('Run th
 ok(await audioType() === 'transient' && await pg.evaluate(() => __app.state.settings.audioMode === 'mix'), 'audio: di default i segnali suonano sopra la musica (transient)');
 await go('more'); await pg.evaluate(() => { const s = [...document.querySelectorAll('#view select')].find(x => [...x.options].some(o => o.value === 'solo')); s.value = 'solo'; s.dispatchEvent(new Event('change')); }); await sleep(100);
 ok((await txt('#view')).includes('even in silent mode') && await audioType() === 'playback', 'audio: "Pause the music" → playback');
-await go('more'); await pg.evaluate(() => { const s = [...document.querySelectorAll('#view select')].find(x => [...x.options].some(o => o.value === 'solo')); s.value = 'mix'; s.dispatchEvent(new Event('change')); });
+// "Interrupt the music briefly": playback solo durante i segnali, poi ambient (prova da Diagnostics → Sound test)
+await pg.evaluate(() => { const types = []; let t = 'auto'; Object.defineProperty(navigator, 'audioSession', { value: { get type() { return t; }, set type(v) { t = v; types.push(v); } }, configurable: true }); window.__types = types; });
+await go('diagnostics');
+ok((await pg.$$('#sound-test .blk')).length === 3, 'Diagnostics: Sound test con i tre modi');
+await pg.evaluate(() => [...document.querySelectorAll('#sound-test .blk')][1].querySelector('button').click());
+await sleep(500); const mid = await pg.evaluate(() => navigator.audioSession.type);
+await sleep(6500); const seq = await pg.evaluate(() => window.__types.join('>'));
+ok(mid === 'playback' && seq === 'ambient>playback>ambient' && await pg.evaluate(() => __app.state.settings.audioMode) === 'solo', 'duck: ambient → playback durante i bip → ambient dopo; la prova non cambia il modo scelto (' + seq + ')');
+await pg.evaluate(() => [...document.querySelectorAll('#sound-test .blk')][0].querySelector('button.pri').click()); await sleep(100);
+ok(await pg.evaluate(() => __app.state.settings.audioMode) === 'mix' && (await txt('#sound-test')).includes('Play over the music · in use'), 'Sound test: "Use" sceglie il modo');
 // Home → Week: striscia di 7 giorni, ogni giorno con i suoi esercizi, frecce per cambiare settimana
 await go('home'); await clickText('Week', '.seg'); await sleep(150);
 let wk = await txt('#view');
