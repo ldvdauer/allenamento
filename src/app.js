@@ -14,7 +14,7 @@
 
   /* ---------- Stato e persistenza ---------- */
   // Primo avvio: nessun piano precaricato, ogni utente importa o crea i propri.
-  const fresh = () => migrate({ v: 17, plans: [], activePlan: null, exercises: {}, logs: [], tests: [] });
+  const fresh = () => migrate({ v: 18, plans: [], activePlan: null, exercises: {}, logs: [], tests: [] });
   /** I test da cui dipendono i kg degli esercizi (e il peso corporeo) devono esistere nella sezione Test. */
   function ensureTests(s) {
     const need = new Set(['bw'].concat(Object.values(s.exercises).filter(e => e.load).flatMap(e => C.refKeys(e.load.ref))));
@@ -52,7 +52,7 @@
     const fromV = s.v || 1;
     s.extras = Array.isArray(s.extras) ? s.extras : [];
     s.surfaces = Array.isArray(s.surfaces) && s.surfaces.length ? s.surfaces : C.DEFAULT_SURFACES.map(x => ({ ...x }));
-    s.settings = Object.assign({ prep: 10, sound: true, audioMode: 'mix', gradeScale: 'font', lastBackup: null }, s.settings);
+    s.settings = Object.assign({ prep: 10, sound: true, audioMode: 'duck', gradeScale: 'font', lastBackup: null }, s.settings);
     delete s.settings.prog; // proposta del carico tolta il 22 nov (scelta di Leo)
     if (!s.plans.some(p => p.id === s.activePlan)) s.activePlan = s.plans[0] ? s.plans[0].id : null;
     for (const p of s.plans) for (const w of p.weeks) for (const d of w) for (const x of d.sessions) if (!x.id) x.id = C.uid();
@@ -171,7 +171,10 @@
     // v17: negli esercizi alternati L/R una serie è L + R (cambio lato di 10 s, poi il recupero della serie): i round salvati
     // contavano i lati, quindi si dimezzano. I log restano com'erano.
     if (fromV < 17) C.sidesToSeries(s);
-    s.v = 17;
+    // v18: i bip devono sentirsi sempre col volume alzato, anche in silenzioso (Leo, 26 nov): chi aveva il predefinito
+    // della #10 ("mix", muto in silenzioso) passa a "duck" (segnali sempre udibili, la musica si interrompe solo durante i bip)
+    if (fromV < 18 && s.settings.audioMode === 'mix') s.settings.audioMode = 'duck';
+    s.v = 18;
     return s;
   }
   let rescued = false;
@@ -1500,7 +1503,7 @@
        modalità silenziosa; la musica si interrompe durante il segnale e riparte se l'app di musica lo consente.
      - "solo": "playback" sempre: suonano anche in silenzioso, la musica resta ferma finché il timer è aperto.
      Il contesto audio si crea e si sblocca solo dentro un tocco dell'utente, con un suono muto; a fine esercizio si sospende. */
-  const audioMode = () => (['mix', 'duck', 'solo'].includes(S.settings.audioMode) ? S.settings.audioMode : 'mix');
+  const audioMode = () => (['mix', 'duck', 'solo'].includes(S.settings.audioMode) ? S.settings.audioMode : 'duck');
   const setSession = t => { try { if (navigator.audioSession && navigator.audioSession.type !== t) navigator.audioSession.type = t; } catch (e) { /* API non disponibile */ } };
   const idleType = () => ({ mix: 'transient', duck: 'ambient', solo: 'playback' }[audioMode()]);
   let holdUntil = 0, holdTimer = null;
@@ -1523,8 +1526,8 @@
     } catch (e) { ac = null; }
   }
   const AUDIO_MODES = [
+    ['duck', 'Interrupt the music briefly', 'Signals are always heard when the volume is up, also in silent mode; the music stops while a signal plays and restarts after it, if the music app allows it.'],
     ['mix', 'Play over the music', 'Signals play over Spotify without stopping it. On iPhone they are muted in silent mode, even with the volume up.'],
-    ['duck', 'Interrupt the music briefly', 'Signals are heard even in silent mode; the music stops while a signal plays and restarts after it, if the music app allows it.'],
     ['solo', 'Pause the music', 'Signals are heard even in silent mode; music from other apps stays paused while the timer runs.']];
   /** Diagnostics → Sound test: prova un modo con un conto alla rovescia (3 bip + suono lungo), come nel timer. */
   function soundTest(mode) {

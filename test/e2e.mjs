@@ -76,21 +76,22 @@ const prof = await pg.evaluate(() => ({ p: __app.state.profile, bw: __app.state.
 ok(prof.p.height === 178 && prof.p.ape === -3 && prof.bw.join() === '70@2026-11-25', 'Profile: peso salvato nello storico (oggi), altezza 178, ape index -3 (' + JSON.stringify(prof) + ')');
 await go('more'); ok((await txt('#more-profile')).includes('70 kg · 178 cm · ape index -3 cm'), 'More: riepilogo del profilo');
 await shot('9c-profilo');
-// Suoni con la musica (26 nov): di default "transient" (sopra Spotify senza fermarlo), "playback" solo se scelto
+// Suoni (26 nov): di default "duck" (bip sempre udibili col volume alzato, anche in silenzioso): ambient a riposo, playback durante i bip
 await pg.evaluate(() => { Object.defineProperty(navigator, 'audioSession', { value: { type: 'auto' }, configurable: true }); });
 const audioType = async () => { await go('diagnostics'); await clickText('Run the checks', '#view'); await sleep(300); return pg.evaluate(() => navigator.audioSession.type); };
-ok(await audioType() === 'transient' && await pg.evaluate(() => __app.state.settings.audioMode === 'mix'), 'audio: di default i segnali suonano sopra la musica (transient)');
+{ const during = await audioType(); await sleep(2700); const after = await pg.evaluate(() => navigator.audioSession.type);
+  ok(during === 'playback' && after === 'ambient' && await pg.evaluate(() => __app.state.settings.audioMode === 'duck'), 'audio: di default "Interrupt the music briefly": playback durante il bip (udibile anche in silenzioso), poi ambient (' + during + ' → ' + after + ')'); }
 await go('more'); await pg.evaluate(() => { const s = [...document.querySelectorAll('#view select')].find(x => [...x.options].some(o => o.value === 'solo')); s.value = 'solo'; s.dispatchEvent(new Event('change')); }); await sleep(100);
 ok((await txt('#view')).includes('even in silent mode') && await audioType() === 'playback', 'audio: "Pause the music" → playback');
 // "Interrupt the music briefly": playback solo durante i segnali, poi ambient (prova da Diagnostics → Sound test)
 await pg.evaluate(() => { const types = []; let t = 'auto'; Object.defineProperty(navigator, 'audioSession', { value: { get type() { return t; }, set type(v) { t = v; types.push(v); } }, configurable: true }); window.__types = types; });
 await go('diagnostics');
 ok((await pg.$$('#sound-test .blk')).length === 3, 'Diagnostics: Sound test con i tre modi');
-await pg.evaluate(() => [...document.querySelectorAll('#sound-test .blk')][1].querySelector('button').click());
+await pg.evaluate(() => [...document.querySelectorAll('#sound-test .blk')][0].querySelector('button').click());
 await sleep(500); const mid = await pg.evaluate(() => navigator.audioSession.type);
 await sleep(6500); const seq = await pg.evaluate(() => window.__types.join('>'));
 ok(mid === 'playback' && seq === 'ambient>playback>ambient' && await pg.evaluate(() => __app.state.settings.audioMode) === 'solo', 'duck: ambient → playback durante i bip → ambient dopo; la prova non cambia il modo scelto (' + seq + ')');
-await pg.evaluate(() => [...document.querySelectorAll('#sound-test .blk')][0].querySelector('button.pri').click()); await sleep(100);
+await pg.evaluate(() => [...document.querySelectorAll('#sound-test .blk')][1].querySelector('button.pri').click()); await sleep(100);
 ok(await pg.evaluate(() => __app.state.settings.audioMode) === 'mix' && (await txt('#sound-test')).includes('Play over the music · in use'), 'Sound test: "Use" sceglie il modo');
 // Home → Week: striscia di 7 giorni, ogni giorno con i suoi esercizi, frecce per cambiare settimana
 await go('home'); await clickText('Week', '.seg'); await sleep(150);
@@ -514,7 +515,7 @@ await pg.$eval('#view .cd', e => e.click()); await sleep(100);
 ok(/^#trip-/.test(await pg.evaluate(() => location.hash)), 'tocco sul countdown: apre il viaggio');
 await go('trips');
 await pg.reload(); await sleep(400);
-ok(await pg.evaluate(() => __app.state.trips.length === 1 && __app.state.trips[0].projects.length === 2 && __app.state.v === 17), 'viaggi salvati sul dispositivo dopo il riavvio');
+ok(await pg.evaluate(() => __app.state.trips.length === 1 && __app.state.trips[0].projects.length === 2 && __app.state.v === 18), 'viaggi salvati sul dispositivo dopo il riavvio');
 // v14: esercizi registrati con 0 minuti (Analytics a 0) prendono i minuti previsti dalla giornata
 const zero = await pg.evaluate(() => { const st = JSON.parse(localStorage.getItem('allenamento.v1')), l = st.logs.find(x => x.date === '2026-11-25');
   const planned = new Map(); for (const p of st.plans) for (const w of p.weeks) for (const d of w) for (const x of d.sessions) for (const b of x.blocks) planned.set(b.id, b.minutes);
@@ -575,7 +576,7 @@ await pg.evaluate(() => { __app.state.settings.gh = null; });
 
 // Persistenza e migrazione di un backup v2 con due sessioni nello stesso giorno
 await pg.reload();
-ok(await pg.evaluate(() => __app.state.logs.length === 2 && __app.state.extras.length === 1 && __app.state.v === 17), 'i dati sopravvivono al ricaricamento');
+ok(await pg.evaluate(() => __app.state.logs.length === 2 && __app.state.extras.length === 1 && __app.state.v === 18), 'i dati sopravvivono al ricaricamento');
 const mig = await pg.evaluate(async () => {
   const mk = (id, ex) => ({ id, type: 'wall', period: 'base', blocks: [{ id: id + 'b', exId: ex, minutes: 5 }] });
   const old = { v: 2, plans: [{ id: 'p', title: 'Vecchio', startDate: '2026-11-23', weeks: [[{ sessions: [mk('s1', 'e1'), mk('s2', 'e2')] }, ...Array.from({ length: 6 }, () => ({ sessions: [] }))]] }],
@@ -632,7 +633,7 @@ await pg.evaluate(() => {
 });
 await sleep(500);
 const m7 = await pg.evaluate(() => { const s = __app.state; return { v: s.v, trips: s.trips.length, e1: s.exercises.e1.name, cues: s.exercises.e2.interval.cues.join(), e3: s.exercises.e3.name, defs: s.testDefs.map(d => d.name).join('|'), surf: s.surfaces.map(x => x.name).join('|'), sides: s.logs[0].blocks[0].kgs.map(k => k.side).join(), title: s.extras[0].title, note: s.extras[0].blocks[0].note, mins: s.extras[0].blocks.map(b => b.minutes).join(), nx: s.extras.length, lb: s.logs[0].blocks[1].name + '|' + s.logs[0].loads[0].name, nb: s.extras[0].blocks.length, e4: !!s.exercises.e4, secs: s.logs[0].blocks.map(b => b.sec).join(), e3s: s.exercises.e3.section }; });
-ok(m7.v === 17 && m7.trips === 0 && m7.e1 === 'Wrist curl' && m7.cues === 'L,R' && m7.defs === 'Body weight|Pinch block L|Pinch block R' && m7.surf === 'Indoor (gym)|Pannello di casa|Lead (gym)|Lead (rock)' && m7.sides === 'L,R', 'dati v6 in italiano: nomi predefiniti, superfici e lati SX/DX passano all\'inglese');
+ok(m7.v === 18 && m7.trips === 0 && m7.e1 === 'Wrist curl' && m7.cues === 'L,R' && m7.defs === 'Body weight|Pinch block L|Pinch block R' && m7.surf === 'Indoor (gym)|Pannello di casa|Lead (gym)|Lead (rock)' && m7.sides === 'L,R', 'dati v6 in italiano: nomi predefiniti, superfici e lati SX/DX passano all\'inglese');
 ok(m7.lb === 'Wrist curl|Wrist curl', 'migrazione v10: le registrazioni passate prendono il nome della libreria');
 const m17 = await pg.evaluate(() => { const s = __app.state, iv = s.exercises.e2.interval; return { r: iv.rounds, sides: iv.sides, sw: iv.switchSeconds, log: JSON.stringify(s.logs[0].blocks[0].kgs) }; });
 ok(m17.r === 3 && m17.sides === 2 && m17.sw === 10 && m17.log === '[{"side":"L","kg":15},{"side":"R","kg":18}]', 'migrazione v17: Pinch block da 6 lati a 3 serie L+R con cambio lato 10 s, log invariato (' + JSON.stringify(m17) + ')');
