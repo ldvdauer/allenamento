@@ -2746,7 +2746,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
         cloudOn() ? [btn('Restore from GitHub', cloudRestore, 'sm'), btn('Disconnect', async () => { if (await confirmDlg('Disconnect GitHub? The token is deleted from this device; backups already uploaded stay in the repository.', 'Disconnect')) { S.settings.gh = null; clearTimeout(cloudTimer); save(); render(); } }, 'sm danger')] : null));
   }
   /* ---------- Taccuino: note al volo durante la prova dell'app, con il contesto per poterle riprodurre ---------- */
-  const VERSION = '20261126.1915';
+  const VERSION = '20261126.2025';
   function noteSheet() {
     const text = h('textarea', { class: 'inp', placeholder: 'What is wrong, or what would you like to be different?' });
     const where = P ? 'timer: ' + P.steps[P.idx].name : (location.hash.slice(1) || 'home');
@@ -3332,10 +3332,13 @@ review|other|Attempt review|10|`.split('\n').map(line => {
     if (rows) return recordSheet(r, b, ms, null, null, { rows, surface });
     recordSheet(r, b, ms, works ? { done: completed, of: works } : null);
   }
+  /** Minuti proposti nella registrazione: il tempo del timer se è stato usato davvero (almeno mezzo minuto),
+      altrimenti quelli previsti nei parametri dell'esercizio (nota di Leo del 26 nov: prima proponeva 0). */
+  const defMinutes = (ms, b) => (ms >= 30000 ? Math.max(1, Math.round(ms / 60000)) : b.minutes || 0);
   function recordSheet(r, b, ms, sets, prev, table) {
     if (table) return confirmSheet(r, b, ms, table);
     const ex = S.exercises[b.exId], m = maxes(), isClimb = ex.slot === 'wall' || !!ex.surface;
-    const min = numInp(Math.round(ms / 60000)), note = h('input', { placeholder: 'Optional', value: prev && prev.note || '' });
+    const min = numInp(prev ? Math.round(ms / 60000) : defMinutes(ms, b)), note = h('input', { placeholder: 'Optional', value: prev && prev.note || '' });
     const isTest = !!(ex.load && ex.load.test), planned = /^kg: add /.test(loadHint(ex)) ? '' : loadHint(ex);
     // Carico e RPE per ogni esercizio di forza: sono lo storico da cui nasce la proposta della volta dopo.
     // Carico: sempre kg in più rispetto al peso corporeo (nota di Leo del 23 nov); due campi se l'esercizio è per lato
@@ -3393,13 +3396,13 @@ review|other|Attempt review|10|`.split('\n').map(line => {
           tests: tests.map(x => ({ key: x.def.key, value: val(x.inp) })).filter(x => x.value != null),
           climb: isClimb && sf.value ? { name: C.exName(ex), surface: sf.value, top: gr.value || null, sends: val(sends) == null ? null : Math.max(0, Math.round(val(sends))), minutes: Math.max(0, Math.round(val(min) || 0)) } : null });
       }, 'pri block'),
-      prev ? btn('Delete this log', () => deleteRecord(dayLog(r), prev, ov), 'danger block') : btn('Mark as done, no details', () => put({ name: C.exName(ex), minutes: Math.round(ms / 60000), sec: exSection(ex), key: exKey(ex), label: exLabel(ex) }), 'block'),
+      prev ? btn('Delete this log', () => deleteRecord(dayLog(r), prev, ov), 'danger block') : btn('Mark as done, no details', () => put({ name: C.exName(ex), minutes: defMinutes(ms, b), sec: exSection(ex), key: exKey(ex), label: exLabel(ex) }), 'block'),
       btn(prev ? 'Cancel' : 'Not done, discard', () => ov.remove(), 'block')]);
   }
   /** Fine esercizio con la tabella già compilata: conferma breve (riepilogo, minuti, RPE, nota). */
   function confirmSheet(r, b, ms, table) {
     const ex = S.exercises[b.exId], climb = isClimbEx(ex), rows = table.rows, done = rows.filter(x => x.done);
-    const min = numInp(Math.round(ms / 60000)), note = h('input', { placeholder: 'Optional' }), rpe = numInp(null, { placeholder: '1-10' });
+    const min = numInp(defMinutes(ms, b)), note = h('input', { placeholder: 'Optional' }), rpe = numInp(null, { placeholder: '1-10' });
     // kg per lato: il massimo delle serie fatte (è il valore che conta per lo storico dei carichi)
     const kgs = climb ? [] : [...new Set(done.filter(x => x.kg !== undefined).map(x => x.side || null))].map(side => ({ side, kg: Math.max(...done.filter(x => (x.side || null) === side && x.kg !== undefined).map(x => x.kg)) }));
     const grades = climb ? done.map(x => x.grade).filter(Boolean) : [];
