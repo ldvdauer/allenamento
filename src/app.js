@@ -52,7 +52,7 @@
     const fromV = s.v || 1;
     s.extras = Array.isArray(s.extras) ? s.extras : [];
     s.surfaces = Array.isArray(s.surfaces) && s.surfaces.length ? s.surfaces : C.DEFAULT_SURFACES.map(x => ({ ...x }));
-    s.settings = Object.assign({ prep: 10, sound: true, gradeScale: 'font', lastBackup: null }, s.settings);
+    s.settings = Object.assign({ prep: 10, sound: true, audioMode: 'mix', gradeScale: 'font', lastBackup: null }, s.settings);
     delete s.settings.prog; // proposta del carico tolta il 22 nov (scelta di Leo)
     if (!s.plans.some(p => p.id === s.activePlan)) s.activePlan = s.plans[0] ? s.plans[0].id : null;
     for (const p of s.plans) for (const w of p.weeks) for (const d of w) for (const x of d.sessions) if (!x.id) x.id = C.uid();
@@ -1216,7 +1216,7 @@
       const reg = 'serviceWorker' in navigator ? await navigator.serviceWorker.getRegistration() : null, hit = reg && window.caches ? await caches.match('./') : null;
       add('Offline use', reg && hit ? true : reg ? null : false, reg && hit ? 'a copy of the app is stored on the device' : reg ? 'getting ready: reopen the app once while online' : 'not available in this mode');
     } catch (e) { add('Offline use', false, 'check failed'); }
-    try { audioInit(); SOUND.setEnd(); add('Sound signals', ac && ac.state === 'running' ? true : null, ac && ac.state === 'running' ? 'a signal was just played: if you did not hear it, check the volume and the silent switch' : 'audio not started: try again by tapping "Run the checks"'); }
+    try { audioInit(); SOUND.setEnd(); add('Sound signals', ac && ac.state === 'running' ? true : null, ac && ac.state === 'running' ? (S.settings.audioMode === 'solo' ? 'a signal was just played (mode: pause the music)' : 'a signal was just played over any music: if you did not hear it, check the volume and that the switch is on ring') : 'audio not started: try again by tapping "Run the checks"'); }
     catch (e) { add('Sound signals', false, 'audio not available'); }
     try {
       if (navigator.wakeLock) { const l = await navigator.wakeLock.request('screen'); await l.release(); add('Screen stays on while a timer runs', true, 'granted'); }
@@ -1305,6 +1305,9 @@
   }
   function viewMore() {
     const prep = numInp(S.settings.prep), sound = h('input', { type: 'checkbox', checked: S.settings.sound, onchange: () => { S.settings.sound = sound.checked; save(); } });
+    const audioMode = opts([['mix', 'Play over the music'], ['solo', 'Pause the music']], S.settings.audioMode, { onchange: () => { S.settings.audioMode = audioMode.value; save(); audioHelp.textContent = audioHelpText(); } });
+    const audioHelpText = () => (S.settings.audioMode === 'solo' ? 'Signals are heard even in silent mode, but music from other apps (Spotify) stops while the timer runs.' : 'Signals play over Spotify without stopping it. On iPhone the ring/silent switch must be on ring, otherwise they are muted.');
+    const audioHelp = h('p', { class: 'sub' }, audioHelpText());
     const sfNew = h('input', { class: 'inp', style: 'margin:0', placeholder: 'New surface' });
     const pr = profileNow();
     return [h('h1', {}, 'More'),
@@ -1324,6 +1327,7 @@
         h('div', { class: 'row', style: 'margin-top:10px' }, h('div', { class: 'grow' }, sfNew), btn('Add', () => { const n = sfNew.value.trim().slice(0, 40); if (!n) return toast('Type a name.'); addSurface(n); save(); render(); }, 'sm')),
         h('p', { class: 'sub', style: 'margin-bottom:0' }, `Grade scale: ${C.GRADE_SCALES[S.settings.gradeScale] || 'Font'}. Other scales will be selectable here.`)),
       h('h2', {}, 'Timer'), h('div', { class: 'card' }, h('div', { class: 'cols' }, field('Get-ready time before a hang (s)', prep), h('label', { class: 'f' }, 'Sound signals', h('div', { style: 'margin-top:12px' }, sound, ' on'))),
+        field('Sounds with music', audioMode), audioHelp,
         btn('Save', () => { S.settings.prep = Math.min(60, Math.max(0, Math.round(val(prep) || 0))); save(); toast('Saved.'); }, 'sm')),
       h('h2', {}, 'Automatic backup'), cloudCard(),
       h('h2', {}, 'Data'), h('div', { class: 'card' }, h('p', { class: 'sub', style: 'margin-top:0' }, (cloudOn() ? 'Automatic backup to GitHub is active. ' : 'Data stays on this device only. "Save backup" opens the share sheet: choose "Save to Files" to put it in iCloud Drive.') + (S.settings.lastBackup ? ` Last backup: ${fmtDate(S.settings.lastBackup)}.` : ' No backup yet.')),
@@ -1484,11 +1488,14 @@
 
   /* ---------- Player ---------- */
   let P = null, ac = null, wl = null;
-  /* Suoni. Su iPhone l'audio delle web app segue l'interruttore silenzioso: con l'Audio Session API (Safari 17+)
-     si dichiara "playback", come un'app di musica, e i segnali suonano anche in modalità silenziosa (il volume conta ancora).
-     Il contesto audio si crea e si sblocca solo dentro un tocco dell'utente, con un suono muto. */
+  /* Suoni. Audio Session API (Safari 17+), due modi (impostazione "Sounds with music"):
+     - "mix" (predefinito, nota di Leo del 26 nov): tipo "transient", i segnali suonano sopra la musica di Spotify
+       senza fermarla; su iPhone seguono l'interruttore silenzioso (in modalità silenziosa non si sentono).
+     - "solo": tipo "playback", come un'app di musica: suonano anche in modalità silenziosa ma fermano la musica.
+     Il contesto audio si crea e si sblocca solo dentro un tocco dell'utente, con un suono muto; a fine esercizio si sospende. */
+  const audioType = () => (S.settings.audioMode === 'solo' ? 'playback' : 'transient');
   function audioInit() {
-    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* API non disponibile */ }
+    try { if (navigator.audioSession) navigator.audioSession.type = audioType(); } catch (e) { /* API non disponibile */ }
     try {
       if (!ac) {
         ac = new (window.AudioContext || window.webkitAudioContext)();
@@ -1496,6 +1503,10 @@
       }
       if (ac.state !== 'running') ac.resume();
     } catch (e) { ac = null; }
+  }
+  /** Timer chiuso: dopo l'ultimo segnale si sospende l'audio, così l'app non trattiene l'uscita audio del telefono. */
+  function audioRelease() {
+    setTimeout(() => { if (P || !ac) return; try { ac.suspend(); } catch (e) { /* già sospeso */ } }, 2500);
   }
   function beep(freq, dur, at = 0) {
     if (!S.settings.sound || !ac) return;
@@ -1713,6 +1724,7 @@
     const { r, b, ms, completed, works, rows, surface } = P;
     clearInterval(P.timer); P = null; $('player').hidden = true;
     try { if (wl) wl.release(); } catch (e) { /* già rilasciato */ } wl = null;
+    audioRelease();
     if (rows) return recordSheet(r, b, ms, null, null, { rows, surface });
     recordSheet(r, b, ms, works ? { done: completed, of: works } : null);
   }

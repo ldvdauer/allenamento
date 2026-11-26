@@ -76,6 +76,13 @@ const prof = await pg.evaluate(() => ({ p: __app.state.profile, bw: __app.state.
 ok(prof.p.height === 178 && prof.p.ape === -3 && prof.bw.join() === '70@2026-11-25', 'Profile: peso salvato nello storico (oggi), altezza 178, ape index -3 (' + JSON.stringify(prof) + ')');
 await go('more'); ok((await txt('#more-profile')).includes('70 kg · 178 cm · ape index -3 cm'), 'More: riepilogo del profilo');
 await shot('9c-profilo');
+// Suoni con la musica (26 nov): di default "transient" (sopra Spotify senza fermarlo), "playback" solo se scelto
+await pg.evaluate(() => { Object.defineProperty(navigator, 'audioSession', { value: { type: 'auto' }, configurable: true }); });
+const audioType = async () => { await go('diagnostics'); await clickText('Run the checks', '#view'); await sleep(300); return pg.evaluate(() => navigator.audioSession.type); };
+ok(await audioType() === 'transient' && await pg.evaluate(() => __app.state.settings.audioMode === 'mix'), 'audio: di default i segnali suonano sopra la musica (transient)');
+await go('more'); await pg.evaluate(() => { const s = [...document.querySelectorAll('#view select')].find(x => [...x.options].some(o => o.value === 'solo')); s.value = 'solo'; s.dispatchEvent(new Event('change')); }); await sleep(100);
+ok((await txt('#view')).includes('even in silent mode') && await audioType() === 'playback', 'audio: "Pause the music" → playback');
+await go('more'); await pg.evaluate(() => { const s = [...document.querySelectorAll('#view select')].find(x => [...x.options].some(o => o.value === 'solo')); s.value = 'mix'; s.dispatchEvent(new Event('change')); });
 // Home → Week: striscia di 7 giorni, ogni giorno con i suoi esercizi, frecce per cambiare settimana
 await go('home'); await clickText('Week', '.seg'); await sleep(150);
 let wk = await txt('#view');
