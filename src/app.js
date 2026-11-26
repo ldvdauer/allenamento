@@ -1079,14 +1079,7 @@
     out.push(h('div', { class: 'card' }, h('div', { class: 'ct' }, 'Progress'), h('div', { class: 'sub' }, `Latest value and change since ${fmtDate(from)}. Tap for the trend.`),
       prog.length ? prog : h('p', { class: 'sub' }, 'Add test results (Tests and maxes) or log grades on climbing exercises to see them here.')));
 
-    // Costanza: giornate fatte su previste, serie completate, sforzo e sensazione medi
-    const rpes = S.logs.filter(l => l.date >= from && l.date <= t).flatMap(l => (l.blocks || []).map(x => x.rpe)).filter(v => v > 0);
-    const exRpe = rpes.length ? rpes.reduce((a, b) => a + b, 0) / rpes.length : null;
-    const sets = C.setsCompletion(S.logs, from, t), row = (l, v) => h('div', { class: 'prog-r', style: 'cursor:default' }, h('div', { class: 'grow' }, l), h('div', { class: 'v' }, v));
-    out.push(h('div', { class: 'card' }, h('div', { class: 'ct' }, 'Consistency'),
-      row('Planned days trained', sum.due ? `${sum.dueDone} / ${sum.due}` : '—'),
-      row('Sets completed', sets.of ? `${Math.round(sets.share * 100)}%` : '—'),
-      row('Average exercise RPE', exRpe == null ? '—' : dec(exRpe.toFixed(1)))));
+    // (il riquadro Consistency è stato tolto su richiesta di Leo, 26 nov)
     return out;
   }
 

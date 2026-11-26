@@ -444,7 +444,7 @@ await pg.evaluate(() => document.querySelectorAll('.overlay').forEach(o => o.rem
 await go('analytics');
 const an = await txt('#view'); if (process.env.DBG) console.log(an.slice(0, 1400));
 ok(an.includes('Training time') && an.includes('35min') && an.includes('86%\nclimbing') && !an.includes('session type') && !/on the wall/i.test(an), 'Analisi: totale ore, ciambella con % arrampicata, niente "tipo di sessione"');
-ok(an.includes('Progress') && an.includes('Consistency') && an.includes('Planned days trained') && an.includes('Sets completed'), 'Analisi: sezioni Progress e Consistency');
+ok(an.includes('Progress') && !an.includes('Consistency') && !an.includes('Planned days trained'), 'Analisi: Progress, senza il riquadro Consistency');
 ok(!an.includes('most time') && !an.includes('Weekly volume'), 'Analisi: niente vecchi grafici');
 ok(await pg.evaluate(() => { const b = document.querySelector('#view .viz-donut-li .c-strength'); return !!b && getComputedStyle(b).backgroundColor === 'rgb(213, 81, 129)'; }), 'Analisi: legenda della ciambella con il colore della categoria (Strength = magenta)');
 await pg.evaluate(() => { const v = document.querySelectorAll('#view .viz')[1]; const hit = v.querySelectorAll('.hit'); hit[hit.length - 1].dispatchEvent(new MouseEvent('click', { bubbles: true })); });
@@ -452,7 +452,7 @@ ok(/in total/.test(await pg.evaluate(() => document.querySelectorAll('#view .viz
 await pg.evaluate(() => { const s = document.querySelector('#view .an-sel select'); s.value = 'days'; s.dispatchEvent(new Event('change', { bubbles: true })); });
 await sleep(100);
 ok((await txt('#view')).includes('days / week'), 'Analisi: metrica giorni di allenamento');
-ok((await txt('#view')).includes('Average exercise RPE') && !(await txt('#view')).includes('feeling'), 'Analisi: RPE medio degli esercizi, niente sensazione del giorno');
+ok(!(await txt('#view')).includes('Average exercise RPE') && !(await txt('#view')).includes('feeling'), 'Analisi: niente RPE medio né sensazione del giorno');
 // Toccando un esercizio registrato: "Edit log" e "Delete log"; cancellare la registrazione lascia l'esercizio nella giornata
 await go('home');
 const target = await pg.evaluate(() => { const row = document.querySelector('#view .blk'); const n = row.querySelector('.n').innerText; row.click(); return n; }); await sleep(60);
