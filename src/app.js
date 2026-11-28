@@ -14,7 +14,7 @@
 
   /* ---------- Stato e persistenza ---------- */
   // Primo avvio: nessun piano precaricato, ogni utente importa o crea i propri.
-  const fresh = () => migrate({ v: 19, plans: [], activePlan: null, exercises: {}, logs: [], tests: [] });
+  const fresh = () => migrate({ v: 20, plans: [], activePlan: null, exercises: {}, logs: [], tests: [] });
   /** I test da cui dipendono i kg degli esercizi (e il peso corporeo) devono esistere nella sezione Test. */
   function ensureTests(s) {
     const need = new Set(['bw'].concat(Object.values(s.exercises).filter(e => e.load).flatMap(e => C.refKeys(e.load.ref))));
@@ -180,7 +180,11 @@
       if (e.std === 'pushup' && /\bdip/i.test(e.name || '')) { e.std = 'dip'; e.name = 'Dips'; }
       else if (e.std === 'squat' && /pistol/i.test(e.name || '')) e.name = 'Squat';
     }
-    s.v = 19;
+    // v20: niente parentesi nei nomi della libreria (Leo, 28 nov): "Flys (compression)" → "Flys" ecc.
+    // v20: anche le superfici predefinite senza parentesi (Gym, Rock, Indoor-Lead, Outdoor-Lead), solo se non rinominate dall'utente
+    if (fromV < 20) for (const x of s.surfaces) { const d = C.DEFAULT_SURFACES.find(y => y.key === x.key); if (d && C.LEGACY_NAMES[x.name] === d.name) x.name = d.name; }
+    if (fromV < 20) for (const e of Object.values(s.exercises)) if (e.std && C.STD[e.std] && / \(/.test(e.name || '') && C.LEGACY_NAMES[e.name]) e.name = C.LEGACY_NAMES[e.name];
+    s.v = 20;
     return s;
   }
   let rescued = false;
