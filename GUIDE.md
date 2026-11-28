@@ -46,7 +46,7 @@ Every exercise has a category, shown as a coloured bar next to its name; the sam
 | Other | Mental work, activation sessions, your exercises without a category |
 
 ## Lead climbing
-Log lead on the **Lead climbing** exercise (or any climbing exercise) with the surface **Lead (gym)** or **Lead (rock)**: the grade switches to the French scale (4a–9c) and you log the routes sent. A surface you add whose name contains *lead*, *route* or *falesia* uses the French scale too.
+Log lead on the **Lead climbing** exercise (or any climbing exercise) with the surface **Indoor-Lead** or **Outdoor-Lead**: the grade switches to the French scale (4a–9c) and you log the routes sent. A surface you add whose name contains *lead*, *route* or *falesia* uses the French scale too.
 
 ## Trips
 Climbing trips and the projects you want to do there. It is a separate section: it plans nothing and does not touch days, programmes, tests or charts.

@@ -181,6 +181,8 @@
       else if (e.std === 'squat' && /pistol/i.test(e.name || '')) e.name = 'Squat';
     }
     // v20: niente parentesi nei nomi della libreria (Leo, 28 nov): "Flys (compression)" → "Flys" ecc.
+    // v20: anche le superfici predefinite senza parentesi (Gym, Rock, Indoor-Lead, Outdoor-Lead), solo se non rinominate dall'utente
+    if (fromV < 20) for (const x of s.surfaces) { const d = C.DEFAULT_SURFACES.find(y => y.key === x.key); if (d && C.LEGACY_NAMES[x.name] === d.name) x.name = d.name; }
     if (fromV < 20) for (const e of Object.values(s.exercises)) if (e.std && C.STD[e.std] && / \(/.test(e.name || '') && C.LEGACY_NAMES[e.name]) e.name = C.LEGACY_NAMES[e.name];
     s.v = 20;
     return s;
