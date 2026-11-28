@@ -72,7 +72,7 @@ days:
         reps: 4
         rest: 3min
         note: 4-5 reps
-      - name: Flys (compression)
+      - name: Flys
         sets: 3
         reps: 6
         rest: 1min30s
@@ -192,7 +192,7 @@ days:
         reps: 4
         rest: 3min
         note: 4-5 reps
-      - name: Flys (compression)
+      - name: Flys
         sets: 3
         reps: 6
         rest: 1min30s
@@ -294,7 +294,7 @@ days:
         reps: 4
         rest: 3min
         note: 4-5 reps
-      - name: Flys (compression)
+      - name: Flys
         sets: 3
         reps: 6
         rest: 1min30s
@@ -400,7 +400,7 @@ days:
         reps: 4
         rest: 3min
         note: 4-5 reps
-      - name: Flys (compression)
+      - name: Flys
         sets: 2
         reps: 6
         rest: 1min30s

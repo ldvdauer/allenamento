@@ -14,7 +14,7 @@
 
   /* ---------- Stato e persistenza ---------- */
   // Primo avvio: nessun piano precaricato, ogni utente importa o crea i propri.
-  const fresh = () => migrate({ v: 19, plans: [], activePlan: null, exercises: {}, logs: [], tests: [] });
+  const fresh = () => migrate({ v: 20, plans: [], activePlan: null, exercises: {}, logs: [], tests: [] });
   /** I test da cui dipendono i kg degli esercizi (e il peso corporeo) devono esistere nella sezione Test. */
   function ensureTests(s) {
     const need = new Set(['bw'].concat(Object.values(s.exercises).filter(e => e.load).flatMap(e => C.refKeys(e.load.ref))));
@@ -180,7 +180,9 @@
       if (e.std === 'pushup' && /\bdip/i.test(e.name || '')) { e.std = 'dip'; e.name = 'Dips'; }
       else if (e.std === 'squat' && /pistol/i.test(e.name || '')) e.name = 'Squat';
     }
-    s.v = 19;
+    // v20: niente parentesi nei nomi della libreria (Leo, 28 nov): "Flys (compression)" → "Flys" ecc.
+    if (fromV < 20) for (const e of Object.values(s.exercises)) if (e.std && C.STD[e.std] && / \(/.test(e.name || '') && C.LEGACY_NAMES[e.name]) e.name = C.LEGACY_NAMES[e.name];
+    s.v = 20;
     return s;
   }
   let rescued = false;

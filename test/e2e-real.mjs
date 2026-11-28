@@ -32,8 +32,8 @@ const logs0 = JSON.stringify(JSON.parse(bk).logs.map(l => ({ id: l.id, date: l.d
 // 1) Versione nuova: elimino "Karma - Fase 1" dalla pagina Programmes
 let pg = await page();
 ok(await homeDone(pg), 'prima: Home con la giornata del 24 registrata');
-const v19 = await pg.evaluate(() => { const ex = Object.values(__app.state.exercises); return { dips: ex.filter(e => e.std === 'dip').map(e => Core.exName(e)), or: ex.filter(e => / or /i.test(Core.exName(e))).length }; });
-ok(v19.dips.length === 4 && v19.dips.every(n => n === 'Dips') && v19.or === 0, 'migrazione v19: "Push-ups or dips" del programma → Dips, nessun nome "A or B" (' + JSON.stringify(v19) + ')');
+const v19 = await pg.evaluate(() => { const ex = Object.values(__app.state.exercises); return { dips: ex.filter(e => e.std === 'dip').map(e => Core.exName(e)), or: ex.filter(e => / or /i.test(Core.exName(e))).length, par: ex.filter(e => /[()]/.test(Core.exName(e))).map(e => Core.exName(e)) }; });
+ok(v19.dips.length === 4 && v19.dips.every(n => n === 'Dips') && v19.or === 0 && !v19.par.length, 'migrazioni v19-v20: niente parentesi; "Push-ups or dips" del programma → Dips, nessun nome "A or B" (' + JSON.stringify(v19) + ')');
 await go(pg, 'programmes'); await clickBtn(pg, 'Karma - Fase 1', '#view'); await clickBtn(pg, 'Delete programme', '.sheet');
 await pg.waitForFunction(() => [...document.querySelectorAll('.overlay')].some(o => /^Confirm/.test(o.innerText.trim())));
 const msg = await pg.evaluate(() => [...document.querySelectorAll('.overlay')].find(o => /^Confirm/.test(o.innerText.trim())).innerText);

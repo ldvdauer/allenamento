@@ -53,7 +53,7 @@ wrist-curl|conditioning|Wrist curl|7|r:3/6/120
 finger-ext|conditioning|Finger extensors|4|r:2/15/45
 weighted-pullup|conditioning|Weighted pull-ups|9|r:3/4/180
 pullup|conditioning|Pull-ups|7|r:3/6/120
-one-arm-pull|conditioning|One-arm pull-up (progression)|14|r:3/2/150=L~R
+one-arm-pull|conditioning|One-arm pull-up|14|r:3/2/150=L~R
 lockoff|conditioning|Lock-offs|9|t:3/7/90=L~R
 row|conditioning|Rows|6|r:3/8/90
 campus|strength|Campus board|12|r:5/1/150
@@ -61,7 +61,7 @@ pushup|conditioning|Push-ups|7|r:3/8/120
 dip|conditioning|Dips|7|r:3/6/120
 press|conditioning|Overhead press|7|r:3/6/120=L~R
 ext-rot|conditioning|External rotations|4|r:2/12/60
-fly|conditioning|Flys (compression)|6|r:3/8/90
+fly|conditioning|Flys|6|r:3/8/90
 iso-fly|conditioning|Isometric flys|4|t:3/10/60
 nordic|conditioning|Nordic curl|7|r:3/5/120
 deadlift|conditioning|Deadlift|10|r:3/5/180
@@ -71,7 +71,7 @@ hollow|conditioning|Hollow body hold|4|t:3/25/60
 ab-wheel|conditioning|Ab wheel|6|r:3/6/90
 pallof|conditioning|Pallof press|7|r:3/10/45=L~R
 leg-raise|conditioning|Hanging leg raise|6|r:3/8/90
-front-lever|conditioning|Front lever (progression)|9|t:4/6/120
+front-lever|conditioning|Front lever|9|t:4/6/120
 plank|conditioning|Plank|5|t:3/40/60
 limit|strength|Limit bouldering|40|
 project|strength|Project|45|
@@ -124,7 +124,7 @@ review|other|Attempt review|10|`.split('\n').map(line => {
     [/pallof/i, 'pallof'], [/push.?up/i, 'pushup'], [/\bdips?\b/i, 'dip'], [/pistol/i, 'pistol'], [/\bsquat/i, 'squat'], [/plank/i, 'plank'], [/front lever/i, 'front-lever'], [/mobilit.* anche|hip mobility/i, 'hips'], [/mobilit.* spall|shoulder mobility/i, 'shoulders'], [/butterfly|farfalla/i, 'butterfly'], [/side.?split|spaccata laterale|straddle/i, 'side-split'], [/\bfrog\b|\brana\b/i, 'frog'], [/(biceps|bicipit).*(stretch|allungament)|(stretch|allungament).*(biceps|bicipit)/i, 'biceps-stretch'], [/mobilit|stretch/i, 'stretch'],
     [/board|benchmark/i, 'board'], [/volume/i, 'volume'], [/4 ?x ?4/i, 'four-by-four'], [/circuit/i, 'circuit']];
   /* Nomi italiani delle versioni precedenti → nome attuale: servono per aggiornare i dati salvati e per riconoscere i programmi scritti in italiano. */
-  const LEGACY_NAMES = {"Peso corporeo": "Body weight", "Pinch block SX": "Pinch block L", "Pinch block DX": "Pinch block R", "Max lift SX": "Max lift L", "Max lift DX": "Max lift R", "Trazione zavorrata": "Weighted pull-up", "Indoor (palestra)": "Indoor (gym)", "Outdoor (roccia)": "Outdoor (rock)", "Riscaldamento generale": "General warm-up", "Riscaldamento sul muro": "Wall warm-up", "Attivazione dita": "Finger activation", "Attivazione spalle con elastico": "Shoulder activation with band", "Tacca minima": "Minimum edge", "Sospensione a un braccio": "One-arm hang", "Sospensione su sloper": "Sloper hang", "Sospensioni lunghe": "Long hangs", "Flessione polso": "Wrist curl", "Estensori delle dita": "Finger extensors", "Trazioni zavorrate": "Weighted pull-ups", "Trazioni": "Pull-ups", "Trazione a un braccio (progressione)": "One-arm pull-up (progression)", "Bloccaggi": "Lock-offs", "Rematore": "Rows", "Push-up o dip": "Dips", "Push-ups or dips": "Dips", "Press sopra la testa": "Overhead press", "Extrarotazioni": "External rotations", "Croci (compressione)": "Flys (compression)", "Croci isometriche": "Isometric flys", "Stacco": "Deadlift", "Squat o pistol": "Squat", "Squat or pistol": "Squat", "Leg raise alla sbarra": "Hanging leg raise", "Front lever (progressione)": "Front lever (progression)", "Progetto": "Project", "Set al flash": "Flash set", "Tecnica: movimento isolato": "Technique: isolated move", "Circuiti di resistenza": "Endurance circuits", "Roccia": "Rock", "Sessione di attivazione": "Activation session", "Mobilità anche": "Hip mobility", "Mobilità spalle": "Shoulder mobility", "Stretching generale": "General stretching", "Defaticamento": "Cool-down", "Visualizzazione del progetto": "Project visualisation", "Analisi dei tentativi": "Attempt review", "Outdoor routes": "Lead climbing"};
+  const LEGACY_NAMES = {"Peso corporeo": "Body weight", "Pinch block SX": "Pinch block L", "Pinch block DX": "Pinch block R", "Max lift SX": "Max lift L", "Max lift DX": "Max lift R", "Trazione zavorrata": "Weighted pull-up", "Indoor (palestra)": "Indoor (gym)", "Outdoor (roccia)": "Outdoor (rock)", "Riscaldamento generale": "General warm-up", "Riscaldamento sul muro": "Wall warm-up", "Attivazione dita": "Finger activation", "Attivazione spalle con elastico": "Shoulder activation with band", "Tacca minima": "Minimum edge", "Sospensione a un braccio": "One-arm hang", "Sospensione su sloper": "Sloper hang", "Sospensioni lunghe": "Long hangs", "Flessione polso": "Wrist curl", "Estensori delle dita": "Finger extensors", "Trazioni zavorrate": "Weighted pull-ups", "Trazioni": "Pull-ups", "Trazione a un braccio (progressione)": "One-arm pull-up", "One-arm pull-up (progression)": "One-arm pull-up", "Bloccaggi": "Lock-offs", "Rematore": "Rows", "Push-up o dip": "Dips", "Push-ups or dips": "Dips", "Press sopra la testa": "Overhead press", "Extrarotazioni": "External rotations", "Croci (compressione)": "Flys", "Flys (compression)": "Flys", "Croci isometriche": "Isometric flys", "Stacco": "Deadlift", "Squat o pistol": "Squat", "Squat or pistol": "Squat", "Leg raise alla sbarra": "Hanging leg raise", "Front lever (progressione)": "Front lever", "Front lever (progression)": "Front lever", "Progetto": "Project", "Set al flash": "Flash set", "Tecnica: movimento isolato": "Technique: isolated move", "Circuiti di resistenza": "Endurance circuits", "Roccia": "Rock", "Sessione di attivazione": "Activation session", "Mobilità anche": "Hip mobility", "Mobilità spalle": "Shoulder mobility", "Stretching generale": "General stretching", "Defaticamento": "Cool-down", "Visualizzazione del progetto": "Project visualisation", "Analisi dei tentativi": "Attempt review", "Outdoor routes": "Lead climbing"};
   const EXACT = Object.fromEntries(LIBRARY.map(x => [x.name.toLowerCase(), x.key]));
   for (const [old, now] of Object.entries(LEGACY_NAMES)) if (EXACT[now.toLowerCase()]) EXACT[old.toLowerCase()] = EXACT[now.toLowerCase()];
   /** Prima il nome esatto di un esercizio standard (anche nella vecchia versione italiana), poi le regole. */

@@ -786,3 +786,8 @@ test('libreria: niente esercizi "A or B" (Push-ups / Dips, Squat / Pistol squat)
   assert.equal(C.matchStd('Weighted dips'), 'dip');
   assert.equal(C.STD.pistol.interval.sides, 2, 'pistol squat per gamba');
 });
+
+test('libreria: nomi senza parentesi', () => {
+  assert.ok(!C.LIBRARY.some(x => /[()]/.test(x.name)), C.LIBRARY.filter(x => /[()]/.test(x.name)).map(x => x.name).join());
+  assert.deepEqual(['Flys (compression)', 'Front lever (progression)', 'One-arm pull-up (progression)', 'Croci (compressione)'].map(n => C.matchStd(n)), ['fly', 'front-lever', 'one-arm-pull', 'fly']);
+});
