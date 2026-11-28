@@ -105,7 +105,7 @@ days:
         sets: 3
         work: 10s
         rest: 1min
-      - name: Push-ups or dips
+      - name: Dips
         sets: 3
         reps: 6
         rest: 2min
@@ -315,7 +315,7 @@ days:
         sets: 3
         work: 10s
         rest: 1min
-      - name: Push-ups or dips
+      - name: Dips
         sets: 3
         reps: 6
         rest: 2min
@@ -444,7 +444,7 @@ days:
         sets: 2
         work: 10s
         rest: 1min
-      - name: Push-ups or dips
+      - name: Dips
         sets: 2
         reps: 6
         rest: 2min

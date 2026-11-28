@@ -778,3 +778,11 @@ test('ripristino da backup: si aggiunge solo ciò che manca, la giornata origina
   assert.ok(s.exercises.a && s.exercises.b, 'esercizi della giornata copiati dal backup');
   assert.deepEqual(C.mergeLogs(s, backup), { logs: 0, tests: 0, relinked: 0 }, 'una seconda volta non aggiunge nulla');
 });
+
+test('libreria: niente esercizi "A or B" (Push-ups / Dips, Squat / Pistol squat)', () => {
+  assert.ok(!C.LIBRARY.some(x => / or /i.test(x.name)), C.LIBRARY.filter(x => / or /i.test(x.name)).map(x => x.name).join());
+  assert.deepEqual(['Push-ups', 'Dips', 'Squat', 'Pistol squat'].map(n => C.matchStd(n)), ['pushup', 'dip', 'squat', 'pistol']);
+  assert.equal(C.matchStd('Push-ups or dips'), 'dip', 'i programmi scritti col vecchio nome diventano Dips');
+  assert.equal(C.matchStd('Weighted dips'), 'dip');
+  assert.equal(C.STD.pistol.interval.sides, 2, 'pistol squat per gamba');
+});
